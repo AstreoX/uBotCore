@@ -4,13 +4,13 @@ uBot 家族的基础层插件：提供统一的传感器帧头与状态码、仿
 
 ## 在 uBot 家族中的位置
 
-uBotCore 是 **Foundation** 层，只依赖 UE 引擎模块，不包含任何 ROS 头文件、rclcpp 或 TempoROS。上层包以它为基础：
+uBotCore 是 **Foundation** 层，只依赖 UE 引擎模块，不包含任何 ROS 头文件或 rclcpp。上层包以它为基础：
 
 | 包 | 层 | 依赖 | 内容 |
 | --- | --- | --- | --- |
 | `UBotCore` | Foundation | 仅引擎模块 | 本插件 |
 | `UBotSensor` | Capability | `UBotCore ^0.1.0` | 位姿、里程计、IMU、2D/3D 激光雷达、RGB/深度相机、烟雾等感知介质 |
-| `UBotROS` | Adapter | `UBotCore ^0.1.0`、`UBotSensor ^0.1.0`；外部插件 `TempoROS` | 发布传感器与 TF，接收速度指令 |
+| `UBotROS` | Adapter | `UBotCore ^0.1.0`、`UBotSensor ^0.1.0` | 通过自带的轻量 TCP 桥（ubot_ros_bridge）发布传感器、TF 与 /clock，接收速度指令 |
 
 以上关系来自内置包索引 `Resources/PackageIndex.json`。
 
@@ -224,7 +224,7 @@ uBot 包就是 `.uplugin` 带有顶层 `"UBot"` 对象的 UE 插件。版本取�
 | `Requires` | 依赖列表，每项含 `Name`、`Version`（版本约束，缺省为任意版本）、`Optional`（默认 `false`） |
 | `Provides` | 本包提供的能力键，如 `Sensor.IMU` |
 | `Tags` | 标签 |
-| `ExternalRequires`（可选） | 需要的非 uBot 插件，例如 `TempoROS`，仅作提示，不会被自动安装 |
+| `ExternalRequires`（可选） | 需要的非 uBot 插件（例如某个第三方 UE 插件），仅作提示，不会被自动安装 |
 | `DocsUrl`（可选） | 覆盖原生 `DocsURL` |
 
 只有存在 `"UBot"` 对象的插件才会被当作 uBot 包。可选依赖（`Optional: true`）只在对方已安装但版本不满足时才算问题，且不构成依赖边。

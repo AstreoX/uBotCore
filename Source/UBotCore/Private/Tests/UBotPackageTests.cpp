@@ -1139,7 +1139,7 @@ bool FUBotPackageBuiltInIndexTest::RunTest(const FString& Parameters)
         TestEqual(TEXT("ROS requires Sensor"), Ros->Requires[1].Name, FString(TEXT("UBotSensor")));
         TestEqual(TEXT("ROS requires Sensor ^0.1.0"), Ros->Requires[1].Version, FString(TEXT("^0.1.0")));
     }
-    TestEqual(TEXT("ROS needs TempoROS"), FString::Join(Ros->ExternalRequires, TEXT(",")), FString(TEXT("TempoROS")));
+    TestEqual(TEXT("ROS has no external requirements"), Ros->ExternalRequires.Num(), 0);
 
     // Capability keys of packages that are not installed come from this index only, so they have to
     // match the "UBot" blocks in the packages' own descriptors (see the sensor and ROS contracts).
@@ -1147,8 +1147,7 @@ bool FUBotPackageBuiltInIndexTest::RunTest(const FString& Parameters)
         FString(TEXT("Sensor.Pose,Sensor.Odometry,Sensor.IMU,Sensor.Lidar2D,Sensor.Lidar3D,Sensor.RGBCamera,Sensor.DepthCamera,Sensor.Medium")));
     TestEqual(TEXT("Sensor tags"), FString::Join(Sensor->Tags, TEXT(",")), FString(TEXT("sensor")));
     TestEqual(TEXT("ROS provides"), FString::Join(Ros->Provides, TEXT(",")),
-        FString(TEXT("ROS.SensorPublishing,ROS.TF,ROS.VelocityCommand")));
-    TestFalse(TEXT("ROS does not provide the clock (TempoROS publishes /clock)"), Ros->Provides.Contains(TEXT("ROS.Clock")));
+        FString(TEXT("ROS.SensorPublishing,ROS.TF,ROS.Clock,ROS.VelocityCommand")));
     TestEqual(TEXT("ROS tags"), FString::Join(Ros->Tags, TEXT(",")), FString(TEXT("ros,ros2,adapter")));
 
     // UBotCore is installed here, so its index entry can be compared with the descriptor it mirrors.

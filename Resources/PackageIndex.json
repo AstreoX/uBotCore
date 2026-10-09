@@ -47,7 +47,7 @@
         {
             "Name": "UBotROS",
             "FriendlyName": "uBot ROS",
-            "Description": "uBot ROS 2 adapter: publishes uBot sensors and TF and accepts velocity commands through TempoROS.",
+            "Description": "uBot ROS 2 adapter: publishes uBot sensors, TF and /clock and accepts velocity commands over a lightweight TCP bridge (ubot_ros_bridge, included). No third-party UE dependencies.",
             "Layer": "Adapter",
             "Repository": "https://github.com/AstreoX/uBotROS.git",
             "DocsUrl": "https://github.com/AstreoX/uBotROS",
@@ -56,13 +56,14 @@
             "Provides": [
                 "ROS.SensorPublishing",
                 "ROS.TF",
+                "ROS.Clock",
                 "ROS.VelocityCommand"
             ],
             "Requires": [
                 { "Name": "UBotCore", "Version": "^0.1.0" },
                 { "Name": "UBotSensor", "Version": "^0.1.0" }
             ],
-            "ExternalRequires": [ "TempoROS" ]
+            "ExternalRequires": []
         }
     ]
 }

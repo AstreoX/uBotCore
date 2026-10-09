@@ -8,7 +8,7 @@
  *
  * Index JSON: { "FormatVersion": 1, "Packages": [ { "Name", "FriendlyName", "Description",
  *   "Layer", "Repository", "DocsUrl", "Version" (latest known), "Tags", "Provides",
- *   "Requires": [ {Name, Version, Optional} ], "ExternalRequires": [ "TempoROS" ] } ] }
+ *   "Requires": [ {Name, Version, Optional} ], "ExternalRequires": [ "SomePlugin" ] } ] }
  *
  * Only "Name" is mandatory. Index entries come back with State = NotInstalled and bFromIndex = true.
  */

@@ -82,7 +82,7 @@ struct UBOTCORE_API FUBotPackageInfo
     UPROPERTY(BlueprintReadOnly, Category = "uBot|Packages")
     TArray<FUBotPackageDependency> Requires;
 
-    /** Non-uBot plugins the package needs (e.g. "TempoROS"). Informational; never installed automatically. */
+    /** Non-uBot plugins the package needs (e.g. a third-party UE plugin). Informational; never installed automatically. */
     UPROPERTY(BlueprintReadOnly, Category = "uBot|Packages")
     TArray<FString> ExternalRequires;
 
