@@ -1,0 +1,68 @@
+{
+    "FormatVersion": 1,
+    "Packages": [
+        {
+            "Name": "UBotCore",
+            "FriendlyName": "uBot Core",
+            "Description": "uBot foundation layer: shared frame header, simulation clock, UE/ROS conventions, extension interfaces and the uBot package manager.",
+            "Layer": "Foundation",
+            "Repository": "https://github.com/AstreoX/uBotCore.git",
+            "DocsUrl": "https://github.com/AstreoX/uBotCore",
+            "Version": "0.1.0",
+            "Tags": [ "core" ],
+            "Provides": [
+                "Core.FrameHeader",
+                "Core.Clock",
+                "Core.Conventions.ROS",
+                "Core.Interfaces",
+                "Core.PackageManager"
+            ],
+            "Requires": [],
+            "ExternalRequires": []
+        },
+        {
+            "Name": "UBotSensor",
+            "FriendlyName": "uBot Sensor",
+            "Description": "uBot simulated sensors: pose, odometry, IMU, 2D/3D lidar, RGB and depth cameras, with perception media such as smoke.",
+            "Layer": "Capability",
+            "Repository": "https://github.com/AstreoX/uBotSensor.git",
+            "DocsUrl": "https://github.com/AstreoX/uBotSensor",
+            "Version": "0.1.0",
+            "Tags": [ "sensor" ],
+            "Provides": [
+                "Sensor.Pose",
+                "Sensor.Odometry",
+                "Sensor.IMU",
+                "Sensor.Lidar2D",
+                "Sensor.Lidar3D",
+                "Sensor.RGBCamera",
+                "Sensor.DepthCamera",
+                "Sensor.Medium"
+            ],
+            "Requires": [
+                { "Name": "UBotCore", "Version": "^0.1.0" }
+            ],
+            "ExternalRequires": []
+        },
+        {
+            "Name": "UBotROS",
+            "FriendlyName": "uBot ROS",
+            "Description": "uBot ROS 2 adapter: publishes uBot sensors and TF and accepts velocity commands through TempoROS.",
+            "Layer": "Adapter",
+            "Repository": "https://github.com/AstreoX/uBotROS.git",
+            "DocsUrl": "https://github.com/AstreoX/uBotROS",
+            "Version": "0.1.0",
+            "Tags": [ "ros", "ros2", "adapter" ],
+            "Provides": [
+                "ROS.SensorPublishing",
+                "ROS.TF",
+                "ROS.VelocityCommand"
+            ],
+            "Requires": [
+                { "Name": "UBotCore", "Version": "^0.1.0" },
+                { "Name": "UBotSensor", "Version": "^0.1.0" }
+            ],
+            "ExternalRequires": [ "TempoROS" ]
+        }
+    ]
+}
