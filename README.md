@@ -437,6 +437,6 @@ C++ 使用 `FUBotPackageRegistry::Get()`：`GetInstalledPackages`、`FindPackage
 
 ## 版本与许可
 
-当前版本 **0.1.0**（Beta，`IsBetaVersion`）。作者 AstreoX，仓库 <https://github.com/AstreoX/uBotCore>。
+当前版本 **0.1.0**（Beta，`IsBetaVersion`），仓库 <https://github.com/AstreoX/uBotCore>。
 
-仓库目前没有包含 LICENSE 文件，因此尚未给出明确的使用、修改和再分发许可；在补充许可证之前，请不要假定可以再分发。
+Copyright 2026 AstreoX。本项目以 [Apache License 2.0](LICENSE) 发布，可以自由使用、修改和再分发（包括商业用途），再分发时需保留 `LICENSE` 与 `NOTICE` 文件，并注明你修改过的文件。
