@@ -136,8 +136,10 @@
                     "uniqueItems": true
                 },
                 "binaries": {
-                    "description": "Reserved for prebuilt binaries ({ \"Win64\": { \"url\", \"sha256\" } }); ignored today.",
-                    "type": [ "object", "null" ]
+                    "description": "Prebuilt binaries of this version: engine version (Major.Minor, e.g. \"5.5\") -> platform (\"Win64\"; others are ignored) -> archive. Installed instead of building from source when the project uses a launcher engine. null or absent: none.",
+                    "type": [ "object", "null" ],
+                    "propertyNames": { "pattern": "^[0-9]+\\.[0-9]+$" },
+                    "additionalProperties": { "$ref": "#/$defs/binaryPlatforms" }
                 }
             },
             "if": {
@@ -145,6 +147,35 @@
                 "properties": { "planned": { "const": true } }
             },
             "else": { "required": [ "ref" ] }
+        },
+        "binaryPlatforms": {
+            "description": "Archives per platform. Only \"Win64\" is installed; `ubot index validate` warns about other platforms.",
+            "type": "object",
+            "additionalProperties": { "$ref": "#/$defs/binary" }
+        },
+        "binary": {
+            "description": "A zip of the built plugin: exactly one top-level folder named after the plugin, holding its .uplugin, Binaries/Win64 (UnrealEditor-*.dll, UnrealEditor.modules), Source, Resources, Config; no .git, Intermediate or Saved. Made by `ubot package`.",
+            "type": "object",
+            "required": [ "url", "sha256" ],
+            "additionalProperties": false,
+            "properties": {
+                "url": {
+                    "description": "https://, file:// or an absolute local path (team mirrors, tests). No whitespace or quotes; plain http:// is not allowed, and an https:// URL has no backslash.",
+                    "type": "string",
+                    "pattern": "^([Hh][Tt][Tt][Pp][Ss]://[^\\s\"\\\\]+|[Ff][Ii][Ll][Ee]://[^\\s\"]+|[A-Za-z]:[\\\\/][^\\s\"]+|\\\\\\\\[^\\s\"]+|/[^\\s\"]+)$"
+                },
+                "sha256": {
+                    "description": "SHA-256 of the archive, 64 lower-case hex digits.",
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                },
+                "size": {
+                    "description": "The exact size of the archive in bytes; enforced when present. At most 2 GiB.",
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 2147483648
+                }
+            }
         },
         "requirement": {
             "type": "object",

@@ -187,6 +187,9 @@ namespace UBot::PackageIndexPrivate
         ReadRequires(Json, Out.Requires, Issues);
         ReadStringArray(Json, TEXT("enginePlugins"), Out.EnginePlugins, Issues);
         ReadStringArray(Json, TEXT("provides"), Out.Provides, Issues);
+        // "binaries" (prebuilt downloads) is only for uBot Manager, which validates it; Unreal uses the plugin
+        // found on disk however it was installed, so the field is deliberately not read. Other unknown fields
+        // are ignored the same way.
 
         OutIssues.Append(MoveTemp(Issues));
         return true;

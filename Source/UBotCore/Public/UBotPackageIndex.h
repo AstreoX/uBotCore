@@ -26,7 +26,9 @@ struct UBOTCORE_API FUBotPackageReplacement
  *     "packages": [ { "name", "friendlyName", "description": { "en", "zh-CN" }, "layer", "repository",
  *                     "folder", "docsUrl", "tags",
  *                     "versions": [ { "version", "ref", "planned", "engine", "requires": [ { "name",
- *                                     "version", "optional" } ], "enginePlugins", "provides" } ] } ],
+ *                                     "version", "optional" } ], "enginePlugins", "provides",
+ *                                     "binaries": { "<Major.Minor>": { "<platform>": { "url", "sha256",
+ *                                     "size" } } } } ] } ],
  *     "recipes": [ ... ], "replacements": [ { "legacy", "replacement", "redirects" } ] }
  *
  * A package entry becomes one FUBotPackageInfo with State = NotInstalled and bFromIndex = true:
@@ -35,8 +37,9 @@ struct UBOTCORE_API FUBotPackageReplacement
  * its Version is then the newest planned version. Requires, Provides and ExternalRequires (from
  * "enginePlugins") come from that same version. IndexVersions lists every version newest first with
  * its git "ref" (what FUBotPackageService clones), and InstallFolder is the entry's "folder".
- * Description is the text for the current UI language (see SelectLocalizedText). Recipes are not
- * used by Unreal and are ignored.
+ * Description is the text for the current UI language (see SelectLocalizedText). Recipes and a
+ * version's "binaries" (prebuilt downloads for uBot Manager; an object or null) are not used by
+ * Unreal and are ignored without being checked.
  */
 struct UBOTCORE_API FUBotPackageIndex
 {

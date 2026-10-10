@@ -1223,6 +1223,150 @@ bool FUBotPackageIndexParsingTest::RunTest(const FString& Parameters)
     return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotPackageIndexBinariesTest, "UBotCore.Packages.IndexBinaries", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotPackageIndexBinariesTest::RunTest(const FString& Parameters)
+{
+    using namespace UBotPackageTests;
+
+    // A version's "binaries" ({ "<engine Major.Minor>": { "<platform>": { "url", "sha256", "size" } } } or null)
+    // tells uBot Manager where to download prebuilt plugins. Unreal does not read it, so an index carrying it
+    // must parse exactly like the same index without it: no issue, same versions, requirements and provides.
+    const FString Template = TEXT(R"json({
+        "formatVersion": 2,
+        "packages": [
+            {
+                "name": "UBotCore",
+                "layer": "Foundation",
+                "repository": "https://github.com/AstreoX/uBotCore.git",
+                "versions": [ { "version": "0.1.0", "ref": "v0.1.0", "engine": "~5.5", "provides": [ "Core.Clock" ]@BINARIES@ } ]
+            },
+            {
+                "name": "UBotSensor",
+                "layer": "Capability",
+                "repository": "https://github.com/AstreoX/uBotSensor.git",
+                "versions": [
+                    { "version": "0.1.0", "ref": "v0.1.0", "engine": "~5.5", "requires": [ { "name": "UBotCore", "version": "^0.1.0" } ], "provides": [ "Sensor.Lidar" ]@BINARIES@ },
+                    {
+                        "version": "0.2.0",
+                        "ref": "v0.2.0",
+                        "engine": "~5.5",
+                        "requires": [ { "name": "UBotCore", "version": "^0.1.0" }, { "name": "UBotROS", "version": "^0.1.0", "optional": true } ],
+                        "enginePlugins": [ "Sockets" ],
+                        "provides": [ "Sensor.Lidar", "Sensor.Camera" ]@BINARIES@
+                    },
+                    { "version": "0.3.0", "planned": true, "provides": [ "Sensor.Radar" ] }
+                ]
+            }
+        ]
+    })json");
+    const TCHAR* const Placeholder = TEXT("@BINARIES@");
+
+    // Everything Unreal takes from an index entry, one line per package.
+    const auto Describe = [](const TArray<FUBotPackageInfo>& Packages)
+    {
+        TArray<FString> Lines;
+        for (const FUBotPackageInfo& Package : Packages)
+        {
+            TArray<FString> Versions;
+            for (const FUBotPackageIndexVersion& IndexVersion : Package.IndexVersions)
+            {
+                Versions.Add(FString::Printf(TEXT("%s=%s%s"), *IndexVersion.Version, *IndexVersion.Ref, IndexVersion.bPlanned ? TEXT("(planned)") : TEXT("")));
+            }
+            TArray<FString> Requires;
+            for (const FUBotPackageDependency& Dependency : Package.Requires)
+            {
+                Requires.Add(FString::Printf(TEXT("%s %s%s"), *Dependency.Name, *Dependency.Version, Dependency.bOptional ? TEXT(" (optional)") : TEXT("")));
+            }
+            Lines.Add(FString::Printf(TEXT("%s %s%s | available %s | versions %s | requires %s | enginePlugins %s | provides %s | layer %d | repository %s"),
+                *Package.Name, *Package.Version, Package.bPlanned ? TEXT(" (planned)") : TEXT(""),
+                *FString::Join(Package.AvailableVersions, TEXT(",")), *FString::Join(Versions, TEXT(",")),
+                *FString::Join(Requires, TEXT(",")), *FString::Join(Package.ExternalRequires, TEXT(",")),
+                *FString::Join(Package.Provides, TEXT(",")), static_cast<int32>(Package.Layer), *Package.Repository));
+        }
+        return FString::Join(Lines, TEXT("\n"));
+    };
+
+    TArray<FUBotPackageInfo> Baseline;
+    FString BaselineError = TEXT("stale");
+    const bool bBaselineParsed = FUBotPackageIndex::ParseIndexJson(Template.Replace(Placeholder, TEXT("")), Baseline, &BaselineError, nullptr, TEXT("en"));
+    if (!TestTrue(FString::Printf(TEXT("The index without binaries parses (%s)"), *BaselineError), bBaselineParsed)
+        || !TestEqual(TEXT("Both packages without binaries"), Baseline.Num(), 2))
+    {
+        return false;
+    }
+    const FUBotPackageInfo* BaselineSensor = FindByName(Baseline, TEXT("UBotSensor"));
+    if (!TestNotNull(TEXT("UBotSensor without binaries"), BaselineSensor))
+    {
+        return false;
+    }
+    TestEqual(TEXT("Without binaries the latest version is selected"), BaselineSensor->Version, FString(TEXT("0.2.0")));
+    TestTrue(TEXT("Without binaries the requirements are those of 0.2.0"), BaselineSensor->Requires.Num() == 2
+        && BaselineSensor->Requires[0].Name == TEXT("UBotCore") && BaselineSensor->Requires[0].Version == TEXT("^0.1.0") && !BaselineSensor->Requires[0].bOptional
+        && BaselineSensor->Requires[1].Name == TEXT("UBotROS") && BaselineSensor->Requires[1].bOptional);
+    TestEqual(TEXT("Without binaries the provides are those of 0.2.0"), FString::Join(BaselineSensor->Provides, TEXT(",")), FString(TEXT("Sensor.Lidar,Sensor.Camera")));
+    const FString Expected = Describe(Baseline);
+
+    struct FBinariesCase
+    {
+        const TCHAR* Label;
+        const TCHAR* Field;
+    };
+    const FBinariesCase Cases[] =
+    {
+        { TEXT("Null binaries"), TEXT(R"json(, "binaries": null)json") },
+        { TEXT("Binaries object"), TEXT(R"json(, "binaries": { "5.5": { "Win64": {
+            "url": "https://github.com/AstreoX/uBotSensor/releases/download/v0.1.0/UBotSensor-0.1.0-UE5.5-Win64.zip",
+            "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            "size": 12345678 } } })json") },
+        // Several engines, a platform uBot Manager does not recognise, a local mirror, no size and a 2 GiB size.
+        { TEXT("Binaries for several engines and platforms"), TEXT(R"json(, "binaries": {
+            "5.5": {
+                "Win64": { "url": "file:///D:/Mirror/UBotSensor-0.1.0-UE5.5-Win64.zip", "sha256": "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210", "size": 2147483648 },
+                "Linux": { "url": "https://example.com/UBotSensor-0.1.0-UE5.5-Linux.zip", "sha256": "00000000000000000000000000000000000000000000000000000000000000ff" }
+            },
+            "5.6": { "Win64": { "url": "D:\\Mirror\\UBotSensor-0.1.0-UE5.6-Win64.zip", "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" } }
+        })json") },
+        { TEXT("Empty binaries object"), TEXT(R"json(, "binaries": {})json") },
+        // Only `ubot index validate` and the schema judge the field. Unreal reads none of it, so a malformed
+        // value must not cost an index its packages, add an issue or change what is parsed.
+        { TEXT("Binaries that is a string"), TEXT(R"json(, "binaries": "https://example.com/UBotSensor.zip")json") },
+        { TEXT("Binaries that is an array"), TEXT(R"json(, "binaries": [ { "5.5": "Win64" }, 5 ])json") },
+        { TEXT("Malformed binaries entries"), TEXT(R"json(, "binaries": {
+            "five": { "Win64": { "url": 3, "sha256": "xyz", "size": -1 } },
+            "5.5": [],
+            "5.6": { "Win64": "no", "Mac": null }
+        })json") },
+    };
+
+    for (const FBinariesCase& Case : Cases)
+    {
+        const FString Json = Template.Replace(Placeholder, Case.Field);
+        TestTrue(FString::Printf(TEXT("%s: the test index carries the field"), Case.Label), Json.Contains(TEXT("\"binaries\"")) && !Json.Contains(Placeholder));
+
+        TArray<FUBotPackageInfo> Packages;
+        FString Error = TEXT("stale");
+        const bool bParsed = FUBotPackageIndex::ParseIndexJson(Json, Packages, &Error, nullptr, TEXT("en"));
+        TestTrue(FString::Printf(TEXT("%s: the index parses (%s)"), Case.Label, *Error), bParsed);
+        TestTrue(FString::Printf(TEXT("%s: no issue is reported (%s)"), Case.Label, *Error), Error.IsEmpty());
+        const FString Described = Describe(Packages);
+        TestEqualSensitive(*FString::Printf(TEXT("%s: the packages parse as without binaries"), Case.Label), *Described, *Expected);
+
+        const FUBotPackageInfo* Sensor = FindByName(Packages, TEXT("UBotSensor"));
+        if (TestNotNull(FString::Printf(TEXT("%s: UBotSensor"), Case.Label), Sensor))
+        {
+            TestEqual(FString::Printf(TEXT("%s: version"), Case.Label), Sensor->Version, BaselineSensor->Version);
+            TestTrue(FString::Printf(TEXT("%s: requirements"), Case.Label), Sensor->Requires.Num() == 2 && BaselineSensor->Requires.Num() == 2
+                && Sensor->Requires[0].Name == BaselineSensor->Requires[0].Name && Sensor->Requires[0].Version == BaselineSensor->Requires[0].Version
+                && Sensor->Requires[1].Name == BaselineSensor->Requires[1].Name && Sensor->Requires[1].bOptional == BaselineSensor->Requires[1].bOptional);
+            TestEqual(FString::Printf(TEXT("%s: provides"), Case.Label), FString::Join(Sensor->Provides, TEXT(",")), FString::Join(BaselineSensor->Provides, TEXT(",")));
+            TestEqual(FString::Printf(TEXT("%s: engine plugins"), Case.Label), FString::Join(Sensor->ExternalRequires, TEXT(",")), FString(TEXT("Sockets")));
+        }
+    }
+
+    return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotPackageIndexFormatOneTest, "UBotCore.Packages.IndexRejectsFormatOne", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FUBotPackageIndexFormatOneTest::RunTest(const FString& Parameters)
