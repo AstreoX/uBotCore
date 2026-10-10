@@ -41,7 +41,16 @@
                         "Core.Conventions.ROS",
                         "Core.Interfaces",
                         "Core.PackageManager"
-                    ]
+                    ],
+                    "binaries": {
+                        "5.5": {
+                            "Win64": {
+                                "url": "https://github.com/AstreoX/uBotCore/releases/download/v0.1.1/UBotCore-0.1.1-UE5.5-Win64.zip",
+                                "sha256": "13c7989175dfe56703bf5928a4ce2fe64d8140617af2d6eb20c29b436b7aca7b",
+                                "size": 915219
+                            }
+                        }
+                    }
                 }
             ]
         },
@@ -93,7 +102,16 @@
                         "Sensor.RGBCamera",
                         "Sensor.DepthCamera",
                         "Sensor.Medium"
-                    ]
+                    ],
+                    "binaries": {
+                        "5.5": {
+                            "Win64": {
+                                "url": "https://github.com/AstreoX/uBotSensor/releases/download/v0.1.1/UBotSensor-0.1.1-UE5.5-Win64.zip",
+                                "sha256": "bcf53292c0da9880619144a7adb144bee1767c6da64b300844d527b676efe731",
+                                "size": 901241
+                            }
+                        }
+                    }
                 }
             ]
         },
@@ -139,7 +157,16 @@
                         "ROS.TF",
                         "ROS.Clock",
                         "ROS.VelocityCommand"
-                    ]
+                    ],
+                    "binaries": {
+                        "5.5": {
+                            "Win64": {
+                                "url": "https://github.com/AstreoX/uBotROS/releases/download/v0.1.1/UBotROS-0.1.1-UE5.5-Win64.zip",
+                                "sha256": "47fe10f93ee5805a739a6a81898fadc575b46d6960eb3aa11ca14d3e89ec1063",
+                                "size": 745093
+                            }
+                        }
+                    }
                 }
             ]
         },
