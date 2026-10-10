@@ -1,3 +1,9 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/brand/ubot-mark-light.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/brand/ubot-mark-dark.svg">
+  <img alt="uBot" src="docs/brand/ubot-mark-dark.svg" height="96">
+</picture>
+
 # uBot Core
 
 uBot 家族的基础层插件：提供统一的传感器帧头与状态码、仿真时钟、UE 与 ROS 的坐标约定、采样调度器、传感器/执行器/感知介质接口、机器人身份组件，以及 uBot 的 Package 管理基础（依赖与版本校验、Package 索引、运行时状态、编辑器里的 uBot 面板、命令行）。
@@ -329,7 +335,7 @@ UE 中的加载顺序（`FUBotPackageIndex::LoadConfiguredIndex`）：
 
 ### uBot 面板
 
-从 **Window > uBot** 打开（可停靠的 nomad 标签页 `UBotPanel`），或点击状态栏右侧的 `uBot: 3 packages · 2 problems`（中文界面是 `uBot：3 个 Package · 2 个问题`）。也可以用控制台命令 `uBot.OpenPanel`，在脚本里是 `UnrealEditor.exe <Project>.uproject -ExecCmds="uBot.OpenPanel"`。
+从 **Window > uBot** 打开（可停靠的 nomad 标签页 `UBotPanel`），或点击状态栏右侧带 uBot 标志的 `uBot: 3 packages · 2 problems`（中文界面是 `uBot：3 个 Package · 2 个问题`）。也可以用控制台命令 `uBot.OpenPanel`，在脚本里是 `UnrealEditor.exe <Project>.uproject -ExecCmds="uBot.OpenPanel"`。
 
 - **Open uBot Manager**：启动 uBot Manager 并传入 `--project "<当前 .uproject 的绝对路径>"`。依次查找 `Editor Preferences > Plugins > uBot` 的 `Manager Executable`（每个用户、每个工程单独保存），`HKCU\Software\AstreoX\uBot Manager` 的 `Executable` 值（uBot Manager 启动时写入），`%LOCALAPPDATA%\uBot Manager\ubot-manager.exe`；都找不到时弹出带下载链接的通知。旁边的刷新按钮重新扫描插件并重新读取索引。
 - **Loaded Packages**：已启用的 uBot Package 和版本；索引里有更新的版本时显示 `0.1.0 · 0.1.1 available`（中文界面是 `0.1.0 · 可更新到 0.1.1`）。
@@ -491,6 +497,6 @@ C++ 使用 `FUBotPackageRegistry::Get()`：`GetInstalledPackages`、`FindPackage
 
 ## 版本与许可
 
-当前版本 **0.1.0**（Beta，`IsBetaVersion`），仓库 <https://github.com/AstreoX/uBotCore>。
+当前版本 **0.1.1**（Beta，`IsBetaVersion`），仓库 <https://github.com/AstreoX/uBotCore>。
 
 Copyright 2026 AstreoX。本项目以 [Apache License 2.0](LICENSE) 发布，可以自由使用、修改和再分发（包括商业用途），再分发时需保留 `LICENSE` 与 `NOTICE` 文件，并注明你修改过的文件。

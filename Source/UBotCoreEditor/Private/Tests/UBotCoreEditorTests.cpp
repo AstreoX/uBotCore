@@ -1,18 +1,24 @@
 #include "CoreMinimal.h"
 #include "Framework/Application/SlateApplication.h"
+#include "Framework/Docking/TabManager.h"
 #include "GenericPlatform/GenericPlatformFile.h"
 #include "HAL/FileManager.h"
 #include "HAL/IConsoleManager.h"
 #include "HAL/PlatformFileManager.h"
+#include "Interfaces/IPluginManager.h"
 #include "Misc/AutomationTest.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Guid.h"
 #include "Internationalization/Internationalization.h"
 #include "Misc/OutputDeviceRedirector.h"
+#include "Misc/Parse.h"
 #include "Misc/Paths.h"
 #include "Misc/ScopeExit.h"
+#include "Styling/SlateStyleRegistry.h"
+#include "ToolMenus.h"
 #include "UBotCoreEditor.h"
 #include "UBotCoreSettings.h"
+#include "UBotEditorStyle.h"
 #include "UBotEditorText.h"
 #include "UBotManagerLauncher.h"
 #include "UBotPackageCommandlet.h"
@@ -194,6 +200,156 @@ namespace UBotCoreEditorTestsPrivate
         {
             return Message.Contains(Text);
         });
+    }
+
+    // The first widget of the given type in the widget tree below Root (Root included), or null.
+    TSharedPtr<SWidget> FindWidgetOfType(const TSharedRef<SWidget>& Root, const FName& TypeName)
+    {
+        if (Root->GetType() == TypeName)
+        {
+            return Root;
+        }
+        if (FChildren* Children = Root->GetChildren())
+        {
+            for (int32 Index = 0; Index < Children->Num(); ++Index)
+            {
+                if (const TSharedPtr<SWidget> Found = FindWidgetOfType(Children->GetChildAt(Index), TypeName))
+                {
+                    return Found;
+                }
+            }
+        }
+        return nullptr;
+    }
+
+    // Matches the "/"-separated segments of a path against those of a UAT FileFilter pattern: "..." stands
+    // for any number of folders, "*" and "?" work inside one name. Case-insensitive like UAT on Windows.
+    bool MatchesFilterSegments(const TArray<FString>& Pattern, int32 PatternIndex, const TArray<FString>& Path, int32 PathIndex)
+    {
+        if (PatternIndex == Pattern.Num())
+        {
+            return PathIndex == Path.Num();
+        }
+        if (Pattern[PatternIndex] == TEXT("..."))
+        {
+            for (int32 Skipped = PathIndex; Skipped <= Path.Num(); ++Skipped)
+            {
+                if (MatchesFilterSegments(Pattern, PatternIndex + 1, Path, Skipped))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return PathIndex < Path.Num()
+            && Path[PathIndex].MatchesWildcard(Pattern[PatternIndex])
+            && MatchesFilterSegments(Pattern, PatternIndex + 1, Path, PathIndex + 1);
+    }
+
+    bool MatchesFilterRule(FString Rule, const FString& RelativePath)
+    {
+        Rule.ReplaceInline(TEXT("\\"), TEXT("/"));
+        if (Rule.StartsWith(TEXT("/")))
+        {
+            Rule.RightChopInline(1);
+        }
+        else if (!Rule.Contains(TEXT("/")) && !Rule.StartsWith(TEXT("...")))
+        {
+            // Without a folder the rule applies in every folder.
+            Rule = TEXT(".../") + Rule;
+        }
+        if (Rule.EndsWith(TEXT("/")))
+        {
+            Rule += TEXT("...");
+        }
+        TArray<FString> PatternSegments;
+        Rule.ParseIntoArray(PatternSegments, TEXT("/"), /*InCullEmpty*/ true);
+        TArray<FString> PathSegments;
+        RelativePath.ParseIntoArray(PathSegments, TEXT("/"), /*InCullEmpty*/ true);
+        return MatchesFilterSegments(PatternSegments, 0, PathSegments, 0);
+    }
+
+    // Whether UAT's BuildPlugin copies the file (path relative to the plugin root, "/" separators) into the
+    // plugin it packages: its built-in include rules, then the rules of the [FilterPlugin] section of the
+    // plugin's Config/FilterPlugin.ini, where a leading "-" excludes and the last matching rule wins.
+    bool IsStagedByBuildPlugin(const FString& RelativePath, const TArray<FString>& FilterPluginLines)
+    {
+        bool bStaged = false;
+        for (const TCHAR* Rule : { TEXT("/Resources/..."), TEXT("/Content/..."), TEXT("/Source/..."), TEXT("/Shaders/...") })
+        {
+            bStaged = bStaged || MatchesFilterRule(Rule, RelativePath);
+        }
+        if (MatchesFilterRule(TEXT("/Tests/..."), RelativePath))
+        {
+            bStaged = false;
+        }
+
+        bool bInSection = false;
+        for (const FString& RawLine : FilterPluginLines)
+        {
+            FString Line = RawLine.TrimStartAndEnd();
+            if (Line.IsEmpty() || Line.StartsWith(TEXT(";")))
+            {
+                continue;
+            }
+            if (Line.StartsWith(TEXT("[")))
+            {
+                bInSection = Line == TEXT("[FilterPlugin]");
+                continue;
+            }
+            if (!bInSection)
+            {
+                continue;
+            }
+            const bool bExclude = Line.StartsWith(TEXT("-"));
+            if (bExclude)
+            {
+                Line.RightChopInline(1);
+                Line.TrimStartInline();
+            }
+            if (MatchesFilterRule(Line, RelativePath))
+            {
+                bStaged = !bExclude;
+            }
+        }
+        return bStaged;
+    }
+
+    // The relative targets of the src="..." and srcset="..." attributes of the README's HTML (the first
+    // entry of a srcset), without web links.
+    TArray<FString> GetReadmeImagePaths(const FString& Readme)
+    {
+        TArray<FString> Paths;
+        for (const TCHAR* Attribute : { TEXT("src=\""), TEXT("srcset=\"") })
+        {
+            int32 From = 0;
+            while (true)
+            {
+                const int32 Found = Readme.Find(Attribute, ESearchCase::CaseSensitive, ESearchDir::FromStart, From);
+                if (Found == INDEX_NONE)
+                {
+                    break;
+                }
+                const int32 ValueStart = Found + FCString::Strlen(Attribute);
+                const int32 ValueEnd = Readme.Find(TEXT("\""), ESearchCase::CaseSensitive, ESearchDir::FromStart, ValueStart);
+                if (ValueEnd == INDEX_NONE)
+                {
+                    break;
+                }
+                FString Value = Readme.Mid(ValueStart, ValueEnd - ValueStart).TrimStartAndEnd();
+                int32 Space = INDEX_NONE;
+                if (Value.FindChar(TEXT(' '), Space))
+                {
+                    Value.LeftInline(Space);
+                }
+                if (!Value.IsEmpty() && !Value.Contains(TEXT("://")) && !Value.StartsWith(TEXT("#")))
+                {
+                    Paths.AddUnique(Value);
+                }
+                From = ValueEnd + 1;
+            }
+        }
+        return Paths;
     }
 }
 
@@ -1138,6 +1294,175 @@ bool FUBotOpenPanelCommandTest::RunTest(const FString& Parameters)
         AddExpectedErrorPlain(TEXT("there is no panel to open"), EAutomationExpectedErrorFlags::Contains, 1);
         TestTrue(TEXT("The command is handled"), IConsoleManager::Get().ProcessUserConsoleInput(FUBotCoreEditorModule::OpenPanelCommandName, *GLog, nullptr));
     }
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotPanelIconsTest, "UBotCore.Panel.Icons",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotPanelIconsTest::RunTest(const FString& Parameters)
+{
+    const TSharedPtr<IPlugin> CorePlugin = IPluginManager::Get().FindPlugin(TEXT("UBotCore"));
+    if (!TestTrue(TEXT("UBotCore plugin is discovered"), CorePlugin.IsValid()))
+    {
+        return false;
+    }
+    const FString ResourcesDir = FPaths::Combine(CorePlugin->GetBaseDir(), TEXT("Resources"));
+
+    // The Plugins browser icon: a 128x128 PNG (signature, then width and height big-endian in IHDR).
+    TArray<uint8> Png;
+    if (TestTrue(TEXT("Resources/Icon128.png loads"), FFileHelper::LoadFileToArray(Png, *FPaths::Combine(ResourcesDir, TEXT("Icon128.png")), FILEREAD_Silent))
+        && TestTrue(TEXT("Icon128.png has an IHDR"), Png.Num() >= 24))
+    {
+        static const uint8 PngSignature[8] = { 0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n' };
+        TestTrue(TEXT("Icon128.png is a PNG"), FMemory::Memcmp(Png.GetData(), PngSignature, sizeof(PngSignature)) == 0);
+        const auto ReadBigEndian = [&Png](int32 Offset)
+        {
+            return int32((uint32(Png[Offset]) << 24) | (uint32(Png[Offset + 1]) << 16) | (uint32(Png[Offset + 2]) << 8) | uint32(Png[Offset + 3]));
+        };
+        TestEqual(TEXT("Icon128.png width"), ReadBigEndian(16), 128);
+        TestEqual(TEXT("Icon128.png height"), ReadBigEndian(20), 128);
+    }
+
+    // The tab icon: the mark centred in a square viewBox, so the 16x16 brush does not squash it.
+    const FString SvgPath = FPaths::Combine(ResourcesDir, TEXT("Icons"), TEXT("UBotTab.svg"));
+    FString Svg;
+    FString ViewBox;
+    if (TestTrue(TEXT("Resources/Icons/UBotTab.svg loads"), FFileHelper::LoadFileToString(Svg, *SvgPath))
+        && TestTrue(TEXT("UBotTab.svg has a viewBox"), FParse::Value(*Svg, TEXT("viewBox="), ViewBox, /*bShouldStopOnSeparator*/ false)))
+    {
+        TArray<FString> Numbers;
+        ViewBox.ParseIntoArrayWS(Numbers);
+        if (TestEqual(TEXT("viewBox has four numbers"), Numbers.Num(), 4))
+        {
+            TestEqual(TEXT("viewBox is square"), FCString::Atod(*Numbers[2]), FCString::Atod(*Numbers[3]));
+        }
+    }
+
+    // The style set exists only with the editor UI. Say so in the report when the rest is skipped.
+    if (!FSlateApplication::IsInitialized())
+    {
+        AddInfo(TEXT("The editor UI is not running: the style set, tab, Window menu and status bar checks were skipped."));
+        return true;
+    }
+
+    const ISlateStyle* Style = FSlateStyleRegistry::FindSlateStyle(FUBotEditorStyle::StyleSetName);
+    if (TestNotNull(TEXT("UBotEditorStyle is registered"), Style))
+    {
+        const FSlateBrush* Brush = Style->GetOptionalBrush(FUBotEditorStyle::TabIconName, nullptr, nullptr);
+        if (TestNotNull(TEXT("UBot.TabIcon exists"), Brush))
+        {
+            TestTrue(TEXT("UBot.TabIcon is Resources/Icons/UBotTab.svg"), FPaths::IsSamePath(Brush->GetResourceName().ToString(), SvgPath));
+            TestTrue(TEXT("UBot.TabIcon is a vector image"), Brush->GetImageType() == ESlateBrushImageType::Vector);
+            const FVector2f ImageSize = Brush->GetImageSize();
+            TestEqual(TEXT("UBot.TabIcon width"), ImageSize.X, 16.0f);
+            TestEqual(TEXT("UBot.TabIcon height"), ImageSize.Y, 16.0f);
+        }
+    }
+
+    const auto IsTabIcon = [](const FSlateIcon& Icon)
+    {
+        return Icon.GetStyleSetName() == FUBotEditorStyle::StyleSetName && Icon.GetStyleName() == FUBotEditorStyle::TabIconName;
+    };
+
+    const TSharedPtr<FTabSpawnerEntry> Spawner = FGlobalTabmanager::Get()->FindTabSpawnerFor(FUBotCoreEditorModule::PanelTabName);
+    if (TestTrue(TEXT("The uBot tab spawner is registered"), Spawner.IsValid()))
+    {
+        TestTrue(TEXT("The uBot tab shows the uBot mark"), IsTabIcon(Spawner->GetIcon()));
+    }
+
+    // With the editor UI the module has registered both entries, so a missing menu is a failure.
+    UToolMenus* ToolMenus = UToolMenus::Get();
+    if (!TestNotNull(TEXT("UToolMenus is available with the editor UI"), ToolMenus))
+    {
+        return false;
+    }
+
+    UToolMenu* WindowMenu = ToolMenus->FindMenu("LevelEditor.MainMenu.Window");
+    if (TestNotNull(TEXT("LevelEditor.MainMenu.Window exists"), WindowMenu))
+    {
+        const FToolMenuSection* Section = WindowMenu->FindSection("uBot");
+        const FToolMenuEntry* Entry = Section != nullptr ? Section->FindEntry("OpenUBotPanel") : nullptr;
+        if (TestNotNull(TEXT("Window > uBot entry"), Entry))
+        {
+            TestTrue(TEXT("Window > uBot shows the uBot mark"), IsTabIcon(Entry->Icon.Get()));
+        }
+    }
+
+    // The status bar entry draws the mark next to its text. It must look the brush up whenever it paints and
+    // not keep the brush pointer of the style set, which Unregister() frees.
+    UToolMenu* StatusBarMenu = ToolMenus->FindMenu("LevelEditor.StatusBar.ToolBar");
+    if (TestNotNull(TEXT("LevelEditor.StatusBar.ToolBar exists"), StatusBarMenu))
+    {
+        const FToolMenuSection* Section = StatusBarMenu->FindSection("uBot");
+        const FToolMenuEntry* Entry = Section != nullptr ? Section->FindEntry("UBotStatus") : nullptr;
+        if (TestNotNull(TEXT("Status bar uBot entry"), Entry) && TestTrue(TEXT("The status bar entry makes its widget"), Entry->MakeCustomWidget.IsBound()))
+        {
+            const TSharedRef<SWidget> StatusWidget = Entry->MakeCustomWidget.Execute(FToolMenuContext(), FToolMenuCustomWidgetContext());
+            const TSharedPtr<SWidget> ImageWidget = UBotCoreEditorTestsPrivate::FindWidgetOfType(StatusWidget, TEXT("SImage"));
+            if (TestTrue(TEXT("The status bar entry shows an image"), ImageWidget.IsValid()))
+            {
+                // Its colour is a plain value, so the one attribute that can be bound to a getter is its brush.
+                TestTrue(TEXT("The status bar image gets its brush from a getter, not from a brush pointer kept once"), ImageWidget->HasRegisteredSlateAttribute());
+            }
+        }
+    }
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotPackagedReadmeImagesTest, "UBotCore.Package.ReadmeImages",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotPackagedReadmeImagesTest::RunTest(const FString& Parameters)
+{
+    using namespace UBotCoreEditorTestsPrivate;
+
+    // UAT's BuildPlugin (the Plugins browser's Package action, or RunUAT BuildPlugin for a distribution) stages
+    // Resources/ and Source/, but docs/ only when Config/FilterPlugin.ini lists it. The README.md links its
+    // logo relative to the plugin root, so the packaged README shows a broken image unless the logo is staged.
+    int32 PluginsChecked = 0;
+    const TCHAR* const PluginNames[] = { TEXT("UBotCore"), TEXT("UBotSensor"), TEXT("UBotROS") };
+    for (const TCHAR* PluginName : PluginNames)
+    {
+        const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(PluginName);
+        if (!Plugin.IsValid())
+        {
+            AddInfo(FString::Printf(TEXT("%s is not part of this project, so its README is not checked."), PluginName));
+            continue;
+        }
+        ++PluginsChecked;
+
+        const FString BaseDir = Plugin->GetBaseDir();
+        FString Readme;
+        if (!TestTrue(*FString::Printf(TEXT("%s has a README.md"), PluginName), FFileHelper::LoadFileToString(Readme, *FPaths::Combine(BaseDir, TEXT("README.md")))))
+        {
+            continue;
+        }
+
+        TArray<FString> FilterLines;
+        FFileHelper::LoadFileToStringArray(FilterLines, *FPaths::Combine(BaseDir, TEXT("Config"), TEXT("FilterPlugin.ini")));
+        TestTrue(*FString::Printf(TEXT("%s stages its README.md"), PluginName), IsStagedByBuildPlugin(TEXT("README.md"), FilterLines));
+
+        const TArray<FString> ImagePaths = GetReadmeImagePaths(Readme);
+        TestTrue(*FString::Printf(TEXT("The README.md of %s shows an image"), PluginName), ImagePaths.Num() > 0);
+        for (const FString& ImagePath : ImagePaths)
+        {
+            TestTrue(*FString::Printf(TEXT("%s: README image %s exists"), PluginName, *ImagePath), FPaths::FileExists(FPaths::Combine(BaseDir, ImagePath)));
+            TestTrue(*FString::Printf(TEXT("%s: README image %s is staged by BuildPlugin"), PluginName, *ImagePath), IsStagedByBuildPlugin(ImagePath, FilterLines));
+        }
+    }
+
+    // The staging rules themselves, on what the READMEs rely on.
+    const TArray<FString> Rules = { TEXT("[FilterPlugin]"), TEXT("; comment"), TEXT("/README.md"), TEXT("/docs/brand/..."), TEXT("-/docs/brand/secret.svg") };
+    TestTrue(TEXT("A listed file is staged"), IsStagedByBuildPlugin(TEXT("README.md"), Rules));
+    TestTrue(TEXT("A file below a listed folder is staged"), IsStagedByBuildPlugin(TEXT("docs/brand/ubot-mark-dark.svg"), Rules));
+    TestFalse(TEXT("An excluded file is not staged"), IsStagedByBuildPlugin(TEXT("docs/brand/secret.svg"), Rules));
+    TestFalse(TEXT("A sibling folder is not staged"), IsStagedByBuildPlugin(TEXT("docs/PROTOCOL.md"), Rules));
+    TestFalse(TEXT("docs/ is not staged by default"), IsStagedByBuildPlugin(TEXT("docs/brand/ubot-mark-dark.svg"), TArray<FString>{ TEXT("[FilterPlugin]"), TEXT("/README.md") }));
+    TestTrue(TEXT("Resources/ is staged by default"), IsStagedByBuildPlugin(TEXT("Resources/Icons/UBotTab.svg"), TArray<FString>()));
+    TestFalse(TEXT("A rule outside [FilterPlugin] does not count"), IsStagedByBuildPlugin(TEXT("README.md"), TArray<FString>{ TEXT("[Other]"), TEXT("/README.md") }));
+
+    TestTrue(TEXT("At least UBotCore was checked"), PluginsChecked > 0);
     return true;
 }
 

@@ -28,6 +28,20 @@
                         "Core.Interfaces",
                         "Core.PackageManager"
                     ]
+                },
+                {
+                    "version": "0.1.1",
+                    "ref": "v0.1.1",
+                    "engine": "~5.5",
+                    "requires": [],
+                    "enginePlugins": [],
+                    "provides": [
+                        "Core.FrameHeader",
+                        "Core.Clock",
+                        "Core.Conventions.ROS",
+                        "Core.Interfaces",
+                        "Core.PackageManager"
+                    ]
                 }
             ]
         },
@@ -61,6 +75,25 @@
                         "Sensor.DepthCamera",
                         "Sensor.Medium"
                     ]
+                },
+                {
+                    "version": "0.1.1",
+                    "ref": "v0.1.1",
+                    "engine": "~5.5",
+                    "requires": [
+                        { "name": "UBotCore", "version": "^0.1.0" }
+                    ],
+                    "enginePlugins": [],
+                    "provides": [
+                        "Sensor.Pose",
+                        "Sensor.Odometry",
+                        "Sensor.IMU",
+                        "Sensor.Lidar2D",
+                        "Sensor.Lidar3D",
+                        "Sensor.RGBCamera",
+                        "Sensor.DepthCamera",
+                        "Sensor.Medium"
+                    ]
                 }
             ]
         },
@@ -79,6 +112,22 @@
                 {
                     "version": "0.1.0",
                     "ref": "v0.1.0",
+                    "engine": "~5.5",
+                    "requires": [
+                        { "name": "UBotCore", "version": "^0.1.0" },
+                        { "name": "UBotSensor", "version": "^0.1.0" }
+                    ],
+                    "enginePlugins": [],
+                    "provides": [
+                        "ROS.SensorPublishing",
+                        "ROS.TF",
+                        "ROS.Clock",
+                        "ROS.VelocityCommand"
+                    ]
+                },
+                {
+                    "version": "0.1.1",
+                    "ref": "v0.1.1",
                     "engine": "~5.5",
                     "requires": [
                         { "name": "UBotCore", "version": "^0.1.0" },

@@ -13,12 +13,15 @@
 #include "Textures/SlateIcon.h"
 #include "ToolMenus.h"
 #include "UBotCore.h"
+#include "UBotEditorStyle.h"
 #include "UBotEditorText.h"
 #include "UBotPackageService.h"
 #include "UBotPanelModel.h"
 #include "UBotRuntimeStatus.h"
 #include "Widgets/Docking/SDockTab.h"
+#include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SButton.h"
+#include "Widgets/SBoxPanel.h"
 #include "Widgets/Text/STextBlock.h"
 
 const FName FUBotCoreEditorModule::PanelTabName(TEXT("UBotPanel"));
@@ -51,6 +54,7 @@ void FUBotCoreEditorModule::StartupModule()
     }
 
     UBot::EditorText::RegisterChineseText();
+    FUBotEditorStyle::Register();
 
     PanelModel = MakeShared<FUBotPanelModel>();
     PanelModel->Initialize();
@@ -60,7 +64,7 @@ void FUBotCoreEditorModule::StartupModule()
             FOnSpawnTab::CreateRaw(this, &FUBotCoreEditorModule::SpawnPanelTab))
         .SetDisplayName(UBot::EditorText::TabTitle())
         .SetTooltipText(UBot::EditorText::TabTooltip())
-        .SetIcon(FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Package"))
+        .SetIcon(FUBotEditorStyle::GetTabIcon())
         // The explicit Window menu entry below replaces the automatic listing.
         .SetMenuType(ETabSpawnerMenuType::Hidden);
     bTabSpawnerRegistered = true;
@@ -101,6 +105,9 @@ void FUBotCoreEditorModule::ShutdownModule()
         FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(PanelTabName);
     }
     bTabSpawnerRegistered = false;
+
+    // Only after the tab spawner and the menus that show its icon are gone.
+    FUBotEditorStyle::Unregister();
 
     if (PanelModel.IsValid())
     {
@@ -158,7 +165,7 @@ void FUBotCoreEditorModule::RegisterMenus()
             "OpenUBotPanel",
             UBot::EditorText::TabTitle(),
             UBot::EditorText::OpenPanelTooltip(),
-            FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Package"),
+            FUBotEditorStyle::GetTabIcon(),
             FUIAction(FExecuteAction::CreateStatic(&FUBotCoreEditorModule::OpenPanel)));
     }
 
@@ -182,6 +189,10 @@ TSharedRef<SDockTab> FUBotCoreEditorModule::SpawnPanelTab(const FSpawnTabArgs& A
 TSharedRef<SWidget> FUBotCoreEditorModule::MakeStatusBarEntry()
 {
     const TWeakPtr<FUBotPanelModel> WeakModel = PanelModel;
+    // The FSlateIcon holds the style set's and the brush's names, not the brush. The image looks the brush up
+    // again whenever it is painted, so it can never keep a brush of the style set after Unregister() freed it
+    // (a hot unload or reload of this module while the editor runs).
+    const FSlateIcon Icon = FUBotEditorStyle::GetTabIcon();
     return SNew(SButton)
         .ButtonStyle(&FAppStyle::Get().GetWidgetStyle<FButtonStyle>("SimpleButton"))
         .ContentPadding(FMargin(6.0f, 0.0f))
@@ -193,13 +204,33 @@ TSharedRef<SWidget> FUBotCoreEditorModule::MakeStatusBarEntry()
             return FReply::Handled();
         })
         [
-            SNew(STextBlock)
-            .ColorAndOpacity(FSlateColor::UseSubduedForeground())
-            .Text_Lambda([WeakModel]()
-            {
-                const TSharedPtr<FUBotPanelModel> Model = WeakModel.Pin();
-                return Model.IsValid() ? Model->GetStatusBarText() : FText::GetEmpty();
-            })
+            SNew(SHorizontalBox)
+
+            + SHorizontalBox::Slot()
+            .AutoWidth()
+            .VAlign(VAlign_Center)
+            .Padding(0.0f, 0.0f, 4.0f, 0.0f)
+            [
+                SNew(SImage)
+                .Image_Lambda([Icon]()
+                {
+                    return Icon.GetIcon();
+                })
+                .ColorAndOpacity(FSlateColor::UseSubduedForeground())
+            ]
+
+            + SHorizontalBox::Slot()
+            .AutoWidth()
+            .VAlign(VAlign_Center)
+            [
+                SNew(STextBlock)
+                .ColorAndOpacity(FSlateColor::UseSubduedForeground())
+                .Text_Lambda([WeakModel]()
+                {
+                    const TSharedPtr<FUBotPanelModel> Model = WeakModel.Pin();
+                    return Model.IsValid() ? Model->GetStatusBarText() : FText::GetEmpty();
+                })
+            ]
         ];
 }
 
