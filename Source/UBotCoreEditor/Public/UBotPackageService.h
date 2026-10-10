@@ -44,10 +44,20 @@ public:
 
     /**
      * Clones Name and its missing required dependencies (dependencies first) from the repositories
-     * listed in the package index into <ProjectDir>/<PackageInstallDirectory>/<RepoFolder>,
-     * registers them with the plugin manager and enables Name.
+     * listed in the package index into <ProjectDir>/<PackageInstallDirectory>/<Folder>, registers them
+     * with the plugin manager and enables Name. Each package is cloned at the git ref of its newest
+     * installable index version and goes into the index entry's "folder" (default: the last segment of
+     * its repository without ".git"). Planned versions are refused.
      */
     void InstallPackageAsync(const FString& Name, FOnPackageOperationComplete OnComplete);
+
+    /**
+     * Same as above, but Name itself is installed at the index version Version ("0.1.0", "v0.1.0"; empty
+     * means the newest installable one). Required packages still get their newest installable version.
+     * If Name is already installed, Version must equal the installed version (the call then succeeds
+     * without cloning), otherwise the call fails; use UpdatePackageAsync to change versions.
+     */
+    void InstallPackageAsync(const FString& Name, const FString& Version, FOnPackageOperationComplete OnComplete);
 
     /** Runs "git -C <BaseDir> pull --ff-only" for an installed package that is a git working copy. */
     void UpdatePackageAsync(const FString& Name, FOnPackageOperationComplete OnComplete);
@@ -88,8 +98,41 @@ public:
     /** Last path segment of a repository URL without ".git"; empty when no safe folder name results. */
     static FString RepositoryFolderName(const FString& RepositoryUrl);
 
-    /** Rejects URLs that could inject git options or select a command-running transport. */
+    /**
+     * Enforces the repository URL allow-list of the uBot Manager spec (section 5.4), the same policy as
+     * the manager: https://, http://, ssh://, file://, scp-like user@host:path and absolute local paths.
+     * Rejects everything else (git://, "host:path", relative paths, "<transport>::<address>" remote
+     * helpers), whitespace, quotes, control characters and anything that starts with '-' (a git option).
+     */
     static bool IsRepositoryUrlAllowed(const FString& RepositoryUrl, FString* OutReason = nullptr);
+
+    /**
+     * Name of the folder below GetInstallDirectory() that Package is cloned into: the index entry's
+     * "folder" when present, else the last segment of its repository without ".git". Both must be one
+     * safe path segment (FUBotPackageIndex::IsSafeFolderName). Empty, with OutReason set, otherwise.
+     */
+    static FString ResolveInstallFolder(const FUBotPackageInfo& Package, FString* OutReason = nullptr);
+
+    /**
+     * The index version of Package that an install clones: the one named RequestedVersion (compared as
+     * a semantic version, so "v0.1.0" finds "0.1.0"), or the newest installable one when it is empty.
+     * Returns null with OutReason set when there is none, the version is planned, or it lists no safe git ref.
+     */
+    static const FUBotPackageIndexVersion* FindInstallVersion(const FUBotPackageInfo& Package,
+        const FString& RequestedVersion, FString& OutReason);
+
+    /** True for 7 to 40 hexadecimal digits: a commit id, which "git clone --branch" does not accept. */
+    static bool IsCommitId(const FString& Ref);
+
+    /**
+     * Arguments (without the executable) of the git command that clones Repository at Ref into
+     * Destination. A tag or branch is cloned with --branch; a commit id is cloned at the default branch
+     * and needs MakeCheckoutArguments() afterwards. "--" keeps the URL from being read as an option.
+     */
+    static FString MakeCloneArguments(const FString& Repository, const FString& Ref, const FString& Destination);
+
+    /** Arguments of the git command that detaches the clone in Destination at the commit or ref Ref. */
+    static FString MakeCheckoutArguments(const FString& Destination, const FString& Ref);
 
     /** Quotes one process argument for FPlatformProcess::CreateProc on the current platform. */
     static FString QuoteArgument(const FString& Argument);
@@ -119,9 +162,15 @@ public:
     static bool PlanDisable(const TArray<FUBotPackageInfo>& Packages, const FString& Name, bool bForce,
         TArray<FString>& OutToDisable, TArray<FString>& OutMessages);
 
-    /** Packages to clone for Name (dependencies first). False when one cannot be installed from an index. */
+    /**
+     * Packages to clone for Name (dependencies first). False when one cannot be installed from an index
+     * (not listed, planned, no repository, a refused repository URL, no usable version ref or an unsafe
+     * install folder). RequestedVersion selects the version of Name itself, see FindInstallVersion().
+     * An installed Name with a non-empty RequestedVersion also fails unless RequestedVersion equals the
+     * installed version, since installing never changes the version of an installed package.
+     */
     static bool PlanInstall(const TArray<FUBotPackageInfo>& Packages, const FString& Name,
-        TArray<FString>& OutToInstall, TArray<FString>& OutMessages);
+        TArray<FString>& OutToInstall, TArray<FString>& OutMessages, const FString& RequestedVersion = FString());
 
 private:
     struct FCloneTask;
@@ -133,7 +182,8 @@ private:
     bool EnablePackageInternal(const FString& Name, TArray<FString>& OutMessages);
     bool ApplyEnabledStates(const TArray<FString>& PackageNames, bool bEnabled, TArray<FString>& OutMessages);
     bool PrepareCloneTasks(const TArray<FUBotPackageInfo>& Packages, const TArray<FString>& PackageNames,
-        TArray<FCloneTask>& OutTasks, TArray<FString>& OutMessages) const;
+        const FString& RootName, const FString& RequestedVersion, TArray<FCloneTask>& OutTasks,
+        TArray<FString>& OutMessages) const;
 
     void RunNextInstallStep(const TSharedRef<FGitOperation>& Operation);
     bool LaunchGit(const TSharedRef<FGitOperation>& Operation, const FString& Arguments, const FString& WorkingDirectory);

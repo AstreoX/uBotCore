@@ -5,6 +5,7 @@
 #include "UBotCoreSettings.h"
 #include "UBotExtensionRegistry.h"
 #include "UBotPackageRegistry.h"
+#include "UBotRuntimeStatus.h"
 
 DEFINE_LOG_CATEGORY(LogUBot);
 
@@ -16,11 +17,23 @@ void FUBotCoreModule::StartupModule()
     FUBotPackageRegistry::Get().Refresh();
     LoadingCompleteHandle = FCoreDelegates::OnAllModuleLoadingPhasesComplete.AddRaw(
         this, &FUBotCoreModule::HandleAllModuleLoadingPhasesComplete);
+
+    // In the editor, UBotCoreEditor maps PIE sessions instead.
+    if (!GIsEditor)
+    {
+        FUBotRuntimeStatus::Get().StartGameSessionTracking();
+    }
 }
 
 void FUBotCoreModule::ShutdownModule()
 {
     FCoreDelegates::OnAllModuleLoadingPhasesComplete.Remove(LoadingCompleteHandle);
+
+    FUBotRuntimeStatus& RuntimeStatus = FUBotRuntimeStatus::Get();
+    RuntimeStatus.StopGameSessionTracking();
+    // A session still running now (the process is exiting) is written as it stands.
+    RuntimeStatus.EndSession();
+
     FUBotExtensionRegistry::Get().UnregisterAllFromPackage(TEXT("UBotCore"));
 }
 

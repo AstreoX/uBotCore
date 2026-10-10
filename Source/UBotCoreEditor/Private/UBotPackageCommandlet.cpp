@@ -13,7 +13,7 @@ namespace UBotPackageCommandletPrivate
 
     void PrintUsage()
     {
-        UE_LOG(LogUBot, Display, TEXT("Usage: -run=UBotPackage [-List] [-Validate] [-Install=<Name>] [-Update=<Name>]"));
+        UE_LOG(LogUBot, Display, TEXT("Usage: -run=UBotPackage [-List] [-Validate] [-Install=<Name>[@<Version>]] [-Update=<Name>]"));
         UE_LOG(LogUBot, Display, TEXT("       [-Enable=<Name>] [-Disable=<Name> [-Force]] [-Timeout=<Seconds>]"));
     }
 
@@ -29,7 +29,7 @@ namespace UBotPackageCommandletPrivate
     {
         if (!Package.bInstalled)
         {
-            return TEXT("Not installed");
+            return Package.bPlanned ? TEXT("Planned") : TEXT("Not installed");
         }
         bool bPendingEnabled = false;
         if (Service.GetPendingEnabledState(Package.Name, bPendingEnabled) && bPendingEnabled != Package.bEnabled)
@@ -37,62 +37,6 @@ namespace UBotPackageCommandletPrivate
             return bPendingEnabled ? TEXT("Enabled after restart") : TEXT("Disabled after restart");
         }
         return Package.bEnabled ? TEXT("Enabled") : TEXT("Disabled");
-    }
-
-    void PrintTable(const TArray<FUBotPackageInfo>& Packages, const FUBotPackageService& Service)
-    {
-        constexpr int32 NumColumns = 5;
-        TArray<TArray<FString>> Rows;
-        Rows.Add({ TEXT("Name"), TEXT("Version"), TEXT("Layer"), TEXT("State"), TEXT("Problems") });
-        for (const FUBotPackageInfo& Package : Packages)
-        {
-            Rows.Add({
-                Package.Name,
-                Package.Version.IsEmpty() ? FString(TEXT("-")) : Package.Version,
-                FString(LexToString(Package.Layer)),
-                GetStateLabel(Package, Service),
-                FString::FromInt(Package.Problems.Num()) });
-        }
-
-        int32 Widths[NumColumns] = {};
-        for (const TArray<FString>& Row : Rows)
-        {
-            for (int32 Column = 0; Column < NumColumns; ++Column)
-            {
-                Widths[Column] = FMath::Max(Widths[Column], Row[Column].Len());
-            }
-        }
-
-        auto FormatRow = [&Widths](const TArray<FString>& Row)
-        {
-            FString Line;
-            for (int32 Column = 0; Column < NumColumns; ++Column)
-            {
-                Line += Column + 1 < NumColumns ? Row[Column].RightPad(Widths[Column] + 2) : Row[Column];
-            }
-            return Line;
-        };
-
-        int32 TotalWidth = 0;
-        for (const int32 Width : Widths)
-        {
-            TotalWidth += Width + 2;
-        }
-
-        UE_LOG(LogUBot, Display, TEXT("%s"), *FormatRow(Rows[0]));
-        UE_LOG(LogUBot, Display, TEXT("%s"), *FString::ChrN(TotalWidth - 2, TEXT('-')));
-        for (int32 RowIndex = 1; RowIndex < Rows.Num(); ++RowIndex)
-        {
-            UE_LOG(LogUBot, Display, TEXT("%s"), *FormatRow(Rows[RowIndex]));
-        }
-
-        for (const FUBotPackageInfo& Package : Packages)
-        {
-            for (const FString& Problem : Package.Problems)
-            {
-                UE_LOG(LogUBot, Display, TEXT("  %s: %s"), *Package.Name, *Problem);
-            }
-        }
     }
 
     bool RunAsyncOperation(const TCHAR* Action, const FString& PackageName, double TimeoutSeconds,
@@ -137,6 +81,77 @@ namespace UBotPackageCommandletPrivate
     }
 }
 
+TArray<FString> UUBotPackageCommandlet::FormatPackageList(const TArray<FUBotPackageInfo>& Packages, const FUBotPackageService& Service)
+{
+    using namespace UBotPackageCommandletPrivate;
+
+    // Requirements are only checked for installed packages: an index entry that is not installed,
+    // planned or not, has nothing to fail. This is the rule uBot Manager applies as well.
+    auto CountProblems = [](const FUBotPackageInfo& Package)
+    {
+        return Package.bInstalled ? Package.Problems.Num() : 0;
+    };
+
+    constexpr int32 NumColumns = 5;
+    TArray<TArray<FString>> Rows;
+    Rows.Add({ TEXT("Name"), TEXT("Version"), TEXT("Layer"), TEXT("State"), TEXT("Problems") });
+    for (const FUBotPackageInfo& Package : Packages)
+    {
+        Rows.Add({
+            Package.Name,
+            Package.Version.IsEmpty() ? FString(TEXT("-")) : Package.Version,
+            FString(LexToString(Package.Layer)),
+            GetStateLabel(Package, Service),
+            FString::FromInt(CountProblems(Package)) });
+    }
+
+    int32 Widths[NumColumns] = {};
+    for (const TArray<FString>& Row : Rows)
+    {
+        for (int32 Column = 0; Column < NumColumns; ++Column)
+        {
+            Widths[Column] = FMath::Max(Widths[Column], Row[Column].Len());
+        }
+    }
+
+    auto FormatRow = [&Widths](const TArray<FString>& Row)
+    {
+        FString Line;
+        for (int32 Column = 0; Column < NumColumns; ++Column)
+        {
+            Line += Column + 1 < NumColumns ? Row[Column].RightPad(Widths[Column] + 2) : Row[Column];
+        }
+        return Line;
+    };
+
+    int32 TotalWidth = 0;
+    for (const int32 Width : Widths)
+    {
+        TotalWidth += Width + 2;
+    }
+
+    TArray<FString> Lines;
+    Lines.Add(FormatRow(Rows[0]));
+    Lines.Add(FString::ChrN(TotalWidth - 2, TEXT('-')));
+    for (int32 RowIndex = 1; RowIndex < Rows.Num(); ++RowIndex)
+    {
+        Lines.Add(FormatRow(Rows[RowIndex]));
+    }
+
+    for (const FUBotPackageInfo& Package : Packages)
+    {
+        if (!Package.bInstalled)
+        {
+            continue;
+        }
+        for (const FString& Problem : Package.Problems)
+        {
+            Lines.Add(FString::Printf(TEXT("  %s: %s"), *Package.Name, *Problem));
+        }
+    }
+    return Lines;
+}
+
 UUBotPackageCommandlet::UUBotPackageCommandlet()
 {
     IsClient = false;
@@ -148,12 +163,12 @@ UUBotPackageCommandlet::UUBotPackageCommandlet()
     UseCommandletResultAsExitCode = true;
 
     HelpDescription = TEXT("Lists, validates, installs, updates, enables and disables uBot packages.");
-    HelpUsage = TEXT("UnrealEditor-Cmd <Project>.uproject -run=UBotPackage [-List] [-Validate] [-Install=<Name>] [-Update=<Name>] [-Enable=<Name>] [-Disable=<Name> [-Force]] [-Timeout=<Seconds>]");
+    HelpUsage = TEXT("UnrealEditor-Cmd <Project>.uproject -run=UBotPackage [-List] [-Validate] [-Install=<Name>[@<Version>]] [-Update=<Name>] [-Enable=<Name>] [-Disable=<Name> [-Force]] [-Timeout=<Seconds>]");
     HelpParamNames = { TEXT("List"), TEXT("Validate"), TEXT("Install"), TEXT("Update"), TEXT("Enable"), TEXT("Disable"), TEXT("Force"), TEXT("Timeout") };
     HelpParamDescriptions = {
         TEXT("Print the installed and indexed packages."),
         TEXT("Validate the installed packages; any problem makes the commandlet fail."),
-        TEXT("Clone a package and its missing dependencies from the package index, then enable it."),
+        TEXT("Clone a package (at <Version>, default the newest) and its missing dependencies from the package index, then enable it."),
         TEXT("Run git pull --ff-only in an installed package."),
         TEXT("Enable a package and its required packages in the project file."),
         TEXT("Disable a package in the project file."),
@@ -216,6 +231,14 @@ int32 UUBotPackageCommandlet::Main(const FString& Params)
         }
     }
 
+    FString InstallPackageName;
+    FString InstallVersion;
+    if (InstallName && !TryParsePackageSpec(*InstallName, InstallPackageName, InstallVersion))
+    {
+        UE_LOG(LogUBot, Error, TEXT("-Install expects <Name> or <Name>@<Version>, got '%s'."), **InstallName);
+        return 1;
+    }
+
     FUBotPackageRegistry::Get().Refresh();
     FUBotPackageService& Service = FUBotPackageService::Get();
     bool bSuccess = true;
@@ -223,9 +246,9 @@ int32 UUBotPackageCommandlet::Main(const FString& Params)
     if (InstallName)
     {
         bSuccess &= RunAsyncOperation(TEXT("Installing"), *InstallName, TimeoutSeconds,
-            [&Service, InstallName](FUBotPackageService::FOnPackageOperationComplete OnComplete)
+            [&Service, &InstallPackageName, &InstallVersion](FUBotPackageService::FOnPackageOperationComplete OnComplete)
             {
-                Service.InstallPackageAsync(*InstallName, MoveTemp(OnComplete));
+                Service.InstallPackageAsync(InstallPackageName, InstallVersion, MoveTemp(OnComplete));
             });
     }
 
@@ -269,7 +292,10 @@ int32 UUBotPackageCommandlet::Main(const FString& Params)
 
     if (bList)
     {
-        PrintTable(View, Service);
+        for (const FString& Line : FormatPackageList(View, Service))
+        {
+            UE_LOG(LogUBot, Display, TEXT("%s"), *Line);
+        }
     }
 
     for (const FString& IndexError : IndexErrors)
@@ -297,6 +323,32 @@ int32 UUBotPackageCommandlet::Main(const FString& Params)
     }
 
     return bSuccess ? 0 : 1;
+}
+
+bool UUBotPackageCommandlet::TryParsePackageSpec(const FString& Text, FString& OutName, FString& OutVersion)
+{
+    const FString Trimmed = Text.TrimStartAndEnd();
+    int32 AtIndex = INDEX_NONE;
+    if (!Trimmed.FindChar(TEXT('@'), AtIndex))
+    {
+        if (Trimmed.IsEmpty())
+        {
+            return false;
+        }
+        OutName = Trimmed;
+        OutVersion.Reset();
+        return true;
+    }
+
+    const FString Name = Trimmed.Left(AtIndex).TrimStartAndEnd();
+    const FString Version = Trimmed.Mid(AtIndex + 1).TrimStartAndEnd();
+    if (Name.IsEmpty() || Version.IsEmpty())
+    {
+        return false;
+    }
+    OutName = Name;
+    OutVersion = Version;
+    return true;
 }
 
 bool UUBotPackageCommandlet::TryParseTimeoutSeconds(const FString& Text, double& OutSeconds)

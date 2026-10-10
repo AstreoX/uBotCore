@@ -32,8 +32,8 @@ public:
     FString PackageInstallDirectory = TEXT("Plugins/uBot");
 
     /**
-     * Extra package index JSON files (absolute or project-relative). Core's own
-     * Resources/PackageIndex.json is always loaded first.
+     * Extra package index files (format 2, absolute or project-relative), loaded after the main
+     * index: Saved/uBot/index.json written by uBot Manager, or else UBotCore's Index/index.json.
      */
     UPROPERTY(Config, EditAnywhere, Category = "Packages")
     TArray<FString> AdditionalPackageIndexFiles;

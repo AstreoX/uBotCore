@@ -19,6 +19,7 @@
 #include "UBotCoreSettings.h"
 #include "UBotPackageIndex.h"
 #include "UBotPackageRegistry.h"
+#include "UBotSemVer.h"
 #include "UObject/Class.h"
 
 namespace UBotPackageServicePrivate
@@ -74,6 +75,36 @@ namespace UBotPackageServicePrivate
     bool PathExists(const FString& Path)
     {
         return IFileManager::Get().DirectoryExists(*Path) || IFileManager::Get().FileExists(*Path);
+    }
+
+    // Absolute local repository paths: a drive path ("C:\x", "C:/x"), a UNC path ("\\server\share") or "/x".
+    bool IsAbsoluteLocalPath(const FString& Text)
+    {
+        if (Text.Len() >= 3 && Text[1] == TEXT(':') && (Text[2] == TEXT('\\') || Text[2] == TEXT('/'))
+            && ((Text[0] >= TEXT('a') && Text[0] <= TEXT('z')) || (Text[0] >= TEXT('A') && Text[0] <= TEXT('Z'))))
+        {
+            return true;
+        }
+        return Text.StartsWith(TEXT("\\\\")) || Text.StartsWith(TEXT("/"));
+    }
+
+    // "user@host:path" with a non-empty user, host and path and no slash before the colon.
+    bool IsScpLikeAddress(const FString& Text)
+    {
+        int32 ColonIndex = INDEX_NONE;
+        if (!Text.FindChar(TEXT(':'), ColonIndex))
+        {
+            return false;
+        }
+
+        const FString Authority = Text.Left(ColonIndex);
+        int32 AtIndex = INDEX_NONE;
+        if (!Authority.FindLastChar(TEXT('@'), AtIndex))
+        {
+            return false;
+        }
+        return AtIndex > 0 && AtIndex + 1 < Authority.Len() && ColonIndex + 1 < Text.Len()
+            && !Authority.Contains(TEXT("/")) && !Authority.Contains(TEXT("\\"));
     }
 
     bool ResolveGitExecutable(FString& OutExecutable, TArray<FString>& OutMessages)
@@ -197,6 +228,8 @@ namespace UBotPackageServicePrivate
 struct FUBotPackageService::FCloneTask
 {
     FString PackageName;
+    FString Version;
+    FString Ref;
     FString Repository;
     FString TargetDirectory;
 };
@@ -209,7 +242,15 @@ struct FUBotPackageService::FGitOperation
         Update
     };
 
+    // An install clones each package and, for a commit id, checks it out in a second git step.
+    enum class EInstallStep : uint8
+    {
+        Clone,
+        Checkout
+    };
+
     EKind Kind = EKind::Install;
+    EInstallStep InstallStep = EInstallStep::Clone;
     FString PackageName;
     FString StepDescription;
     FString PreviousVersion;
@@ -440,6 +481,11 @@ bool FUBotPackageService::ApplyEnabledStates(const TArray<FString>& PackageNames
 
 void FUBotPackageService::InstallPackageAsync(const FString& Name, FOnPackageOperationComplete OnComplete)
 {
+    InstallPackageAsync(Name, FString(), MoveTemp(OnComplete));
+}
+
+void FUBotPackageService::InstallPackageAsync(const FString& Name, const FString& Version, FOnPackageOperationComplete OnComplete)
+{
     using namespace UBotPackageServicePrivate;
 
     check(IsInGameThread());
@@ -454,7 +500,9 @@ void FUBotPackageService::InstallPackageAsync(const FString& Name, FOnPackageOpe
     const TArray<FUBotPackageInfo> View = BuildEffectiveView();
     TArray<FString> ToInstall;
     TArray<FCloneTask> Tasks;
-    if (!PlanInstall(View, Name, ToInstall, Messages) || !PrepareCloneTasks(View, ToInstall, Tasks, Messages))
+    const FString RequestedVersion = Version.TrimStartAndEnd();
+    if (!PlanInstall(View, Name, ToInstall, Messages, RequestedVersion)
+        || !PrepareCloneTasks(View, ToInstall, Name, RequestedVersion, Tasks, Messages))
     {
         DispatchCompletion(MoveTemp(OnComplete), false, MoveTemp(Messages));
         return;
@@ -471,7 +519,12 @@ void FUBotPackageService::InstallPackageAsync(const FString& Name, FOnPackageOpe
     }
     else
     {
-        Messages.Add(FString::Printf(TEXT("Installing into %s: %s."), *GetInstallDirectory(), *JoinNames(ToInstall)));
+        TArray<FString> Installing;
+        for (const FCloneTask& Task : Tasks)
+        {
+            Installing.Add(FString::Printf(TEXT("%s %s"), *Task.PackageName, *Task.Version));
+        }
+        Messages.Add(FString::Printf(TEXT("Installing into %s: %s."), *GetInstallDirectory(), *JoinNames(Installing)));
     }
 
     const TSharedRef<FGitOperation> Operation = MakeShared<FGitOperation>();
@@ -486,7 +539,7 @@ void FUBotPackageService::InstallPackageAsync(const FString& Name, FOnPackageOpe
 }
 
 bool FUBotPackageService::PrepareCloneTasks(const TArray<FUBotPackageInfo>& Packages, const TArray<FString>& PackageNames,
-    TArray<FCloneTask>& OutTasks, TArray<FString>& OutMessages) const
+    const FString& RootName, const FString& RequestedVersion, TArray<FCloneTask>& OutTasks, TArray<FString>& OutMessages) const
 {
     using namespace UBotPackageServicePrivate;
 
@@ -515,10 +568,30 @@ bool FUBotPackageService::PrepareCloneTasks(const TArray<FUBotPackageInfo>& Pack
             continue;
         }
 
+        // Only the requested package gets the requested version; what it requires gets the newest one.
+        const bool bRoot = Package->Name.Equals(RootName, ESearchCase::IgnoreCase);
+        FString Reason;
+        const FUBotPackageIndexVersion* Version = FindInstallVersion(*Package, bRoot ? RequestedVersion : FString(), Reason);
+        if (!Version)
+        {
+            OutMessages.Add(FString::Printf(TEXT("Cannot install %s: %s."), *Package->Name, *Reason));
+            bSuccess = false;
+            continue;
+        }
+        const FString Folder = ResolveInstallFolder(*Package, &Reason);
+        if (Folder.IsEmpty())
+        {
+            OutMessages.Add(FString::Printf(TEXT("Cannot install %s: %s."), *Package->Name, *Reason));
+            bSuccess = false;
+            continue;
+        }
+
         FCloneTask Task;
         Task.PackageName = Package->Name;
+        Task.Version = Version->Version;
+        Task.Ref = Version->Ref;
         Task.Repository = Package->Repository.TrimStartAndEnd();
-        Task.TargetDirectory = FPaths::Combine(InstallDirectory, RepositoryFolderName(Task.Repository));
+        Task.TargetDirectory = FPaths::Combine(InstallDirectory, Folder);
 
         if (PathExists(Task.TargetDirectory))
         {
@@ -618,13 +691,12 @@ void FUBotPackageService::RunNextInstallStep(const TSharedRef<FGitOperation>& Op
         return;
     }
 
-    // "--" ends option parsing so the URL can never be read as a git option.
-    const FString Arguments = FString::Printf(TEXT("clone -- %s %s"),
-        *QuoteArgument(Task.Repository), *QuoteArgument(Task.TargetDirectory));
+    const FString Arguments = MakeCloneArguments(Task.Repository, Task.Ref, Task.TargetDirectory);
 
-    Operation->StepDescription = FString::Printf(TEXT("Cloning %s"), *Task.PackageName);
-    Operation->Messages.Add(FString::Printf(TEXT("Cloning %s from %s into %s ..."),
-        *Task.PackageName, *RedactUrlCredentials(Task.Repository), *Task.TargetDirectory));
+    Operation->InstallStep = FGitOperation::EInstallStep::Clone;
+    Operation->StepDescription = FString::Printf(TEXT("Cloning %s %s"), *Task.PackageName, *Task.Version);
+    Operation->Messages.Add(FString::Printf(TEXT("Cloning %s %s (%s) from %s into %s ..."),
+        *Task.PackageName, *Task.Version, *Task.Ref, *RedactUrlCredentials(Task.Repository), *Task.TargetDirectory));
 
     if (!LaunchGit(Operation, Arguments, ParentDirectory))
     {
@@ -820,15 +892,52 @@ void FUBotPackageService::HandleCloneFinished(const TSharedRef<FGitOperation>& O
     using namespace UBotPackageServicePrivate;
 
     const FCloneTask Task = Operation->CurrentClone;
+    const bool bCheckoutFinished = Operation->InstallStep == FGitOperation::EInstallStep::Checkout;
     if (ReturnCode != 0)
     {
-        Operation->Messages.Add(FString::Printf(TEXT("git clone of %s failed with exit code %d."), *Task.PackageName, ReturnCode));
+        if (bCheckoutFinished)
+        {
+            Operation->Messages.Add(FString::Printf(TEXT("git checkout of %s in %s failed with exit code %d."),
+                *Task.Ref, *Task.TargetDirectory, ReturnCode));
+
+            // The clone worked, so the folder exists but holds the wrong revision, and it did not exist
+            // before this install created it. Left behind, it would only block the next install.
+            FString CleanupMessage;
+            RemoveIncompleteClone(Task.TargetDirectory, CleanupMessage);
+            if (!CleanupMessage.IsEmpty())
+            {
+                Operation->Messages.Add(MoveTemp(CleanupMessage));
+            }
+        }
+        else
+        {
+            Operation->Messages.Add(FString::Printf(TEXT("git clone of %s failed with exit code %d."), *Task.PackageName, ReturnCode));
+        }
         if (Operation->InstalledPackages.Num() > 0)
         {
             Operation->Messages.Add(FString::Printf(TEXT("Packages installed before the failure stay installed: %s."),
                 *JoinNames(Operation->InstalledPackages)));
         }
         FinishOperation(Operation, false);
+        return;
+    }
+
+    if (!bCheckoutFinished && IsCommitId(Task.Ref))
+    {
+        // "git clone --branch" only takes branches and tags, so a commit id is checked out afterwards.
+        Operation->InstallStep = FGitOperation::EInstallStep::Checkout;
+        Operation->StepDescription = FString::Printf(TEXT("Checking out %s %s"), *Task.PackageName, *Task.Version);
+        Operation->Messages.Add(FString::Printf(TEXT("Checking out %s in %s ..."), *Task.Ref, *Task.TargetDirectory));
+        if (!LaunchGit(Operation, MakeCheckoutArguments(Task.TargetDirectory, Task.Ref), Task.TargetDirectory))
+        {
+            FString CleanupMessage;
+            RemoveIncompleteClone(Task.TargetDirectory, CleanupMessage);
+            if (!CleanupMessage.IsEmpty())
+            {
+                Operation->Messages.Add(MoveTemp(CleanupMessage));
+            }
+            FinishOperation(Operation, false);
+        }
         return;
     }
 
@@ -1122,6 +1231,8 @@ FString FUBotPackageService::RepositoryFolderName(const FString& RepositoryUrl)
 
 bool FUBotPackageService::IsRepositoryUrlAllowed(const FString& RepositoryUrl, FString* OutReason)
 {
+    using namespace UBotPackageServicePrivate;
+
     auto Reject = [OutReason](const FString& Reason)
     {
         if (OutReason)
@@ -1142,9 +1253,9 @@ bool FUBotPackageService::IsRepositoryUrlAllowed(const FString& RepositoryUrl, F
     }
     for (const TCHAR Character : Url)
     {
-        if (Character == TEXT('"') || Character < 32 || Character == 127)
+        if (Character == TEXT('"') || Character < 32 || Character == 127 || FChar::IsWhitespace(Character))
         {
-            return Reject(TEXT("the repository URL contains quotes or control characters"));
+            return Reject(TEXT("the repository URL contains whitespace, quotes or control characters"));
         }
     }
 
@@ -1168,11 +1279,14 @@ bool FUBotPackageService::IsRepositoryUrlAllowed(const FString& RepositoryUrl, F
         }
     }
 
+    // SPEC 5.4: https, http, ssh and file URLs, scp-like "user@host:path" and absolute local paths.
+    // Anything else, such as git:// (unauthenticated and unencrypted), "host:path" or a relative
+    // path, is read by git as a different transport or as a path relative to the working directory.
     const int32 SchemeIndex = Url.Find(TEXT("://"), ESearchCase::CaseSensitive);
     if (SchemeIndex != INDEX_NONE)
     {
         const FString Scheme = Url.Left(SchemeIndex).ToLower();
-        static const TCHAR* const AllowedSchemes[] = { TEXT("https"), TEXT("http"), TEXT("ssh"), TEXT("git"), TEXT("file") };
+        static const TCHAR* const AllowedSchemes[] = { TEXT("https"), TEXT("http"), TEXT("ssh"), TEXT("file") };
         bool bAllowedScheme = false;
         for (const TCHAR* AllowedScheme : AllowedSchemes)
         {
@@ -1184,8 +1298,16 @@ bool FUBotPackageService::IsRepositoryUrlAllowed(const FString& RepositoryUrl, F
         }
         if (!bAllowedScheme)
         {
-            return Reject(FString::Printf(TEXT("the URL scheme '%s' is not allowed (use https, http, ssh, git or file)"), *Scheme));
+            return Reject(FString::Printf(TEXT("the URL scheme '%s' is not allowed (use https, http, ssh or file)"), *Scheme));
         }
+        if (Url.Len() == SchemeIndex + 3)
+        {
+            return Reject(TEXT("the repository URL has no address"));
+        }
+    }
+    else if (!IsAbsoluteLocalPath(Url) && !IsScpLikeAddress(Url))
+    {
+        return Reject(TEXT("use an https://, ssh:// or file:// URL, user@host:path or an absolute path"));
     }
 
     if (RepositoryFolderName(Url).IsEmpty())
@@ -1193,6 +1315,153 @@ bool FUBotPackageService::IsRepositoryUrlAllowed(const FString& RepositoryUrl, F
         return Reject(TEXT("no folder name can be derived from the repository URL"));
     }
     return true;
+}
+
+FString FUBotPackageService::ResolveInstallFolder(const FUBotPackageInfo& Package, FString* OutReason)
+{
+    auto Reject = [OutReason](const FString& Reason)
+    {
+        if (OutReason)
+        {
+            *OutReason = Reason;
+        }
+        return FString();
+    };
+
+    // The index entry's "folder" wins; otherwise the folder follows the repository name. Either way it
+    // names a single folder below the install directory.
+    const FString Explicit = Package.InstallFolder.TrimStartAndEnd();
+    if (!Explicit.IsEmpty())
+    {
+        return FUBotPackageIndex::IsSafeFolderName(Explicit)
+            ? Explicit
+            : Reject(FString::Printf(TEXT("the index \"folder\" '%s' is not one safe folder name (letters, digits, '.', '_' and '-')"), *Explicit));
+    }
+
+    const FString Derived = RepositoryFolderName(Package.Repository);
+    if (Derived.IsEmpty())
+    {
+        return Reject(TEXT("no folder name can be derived from the repository URL; set \"folder\" in the index entry"));
+    }
+    return FUBotPackageIndex::IsSafeFolderName(Derived)
+        ? Derived
+        : Reject(FString::Printf(TEXT("the folder name '%s' derived from the repository URL is not one safe folder name; set \"folder\" in the index entry"), *Derived));
+}
+
+const FUBotPackageIndexVersion* FUBotPackageService::FindInstallVersion(const FUBotPackageInfo& Package,
+    const FString& RequestedVersion, FString& OutReason)
+{
+    OutReason.Reset();
+
+    const FString Requested = RequestedVersion.TrimStartAndEnd();
+    FUBotSemVer RequestedSemVer;
+    if (!Requested.IsEmpty() && !FUBotSemVer::Parse(Requested, RequestedSemVer))
+    {
+        OutReason = FString::Printf(TEXT("'%s' is not a semantic version"), *Requested);
+        return nullptr;
+    }
+
+    const FUBotPackageIndexVersion* Chosen = nullptr;
+    FUBotSemVer ChosenSemVer;
+    for (const FUBotPackageIndexVersion& Candidate : Package.IndexVersions)
+    {
+        FUBotSemVer CandidateSemVer;
+        if (!FUBotSemVer::Parse(Candidate.Version, CandidateSemVer))
+        {
+            continue;
+        }
+
+        if (!Requested.IsEmpty())
+        {
+            if (CandidateSemVer == RequestedSemVer)
+            {
+                Chosen = &Candidate;
+                break;
+            }
+        }
+        else if (!Candidate.bPlanned && (Chosen == nullptr || CandidateSemVer > ChosenSemVer))
+        {
+            Chosen = &Candidate;
+            ChosenSemVer = CandidateSemVer;
+        }
+    }
+
+    if (Chosen == nullptr)
+    {
+        if (Requested.IsEmpty())
+        {
+            OutReason = TEXT("its package index entry lists no installable version");
+        }
+        else
+        {
+            TArray<FString> Installable;
+            for (const FUBotPackageIndexVersion& Candidate : Package.IndexVersions)
+            {
+                if (!Candidate.bPlanned)
+                {
+                    Installable.Add(Candidate.Version);
+                }
+            }
+            OutReason = FString::Printf(TEXT("the package index has no version '%s' (installable: %s)"), *Requested,
+                Installable.Num() > 0 ? *FString::Join(Installable, TEXT(", ")) : TEXT("none"));
+        }
+        return nullptr;
+    }
+    if (Chosen->bPlanned)
+    {
+        OutReason = FString::Printf(TEXT("version %s is planned and cannot be installed yet"), *Chosen->Version);
+        return nullptr;
+    }
+    if (Chosen->Ref.IsEmpty())
+    {
+        OutReason = FString::Printf(TEXT("its package index entry lists no \"ref\" for version %s"), *Chosen->Version);
+        return nullptr;
+    }
+    if (!FUBotPackageIndex::IsSafeGitRef(Chosen->Ref))
+    {
+        OutReason = FString::Printf(TEXT("the \"ref\" '%s' of version %s is not a safe git ref"), *Chosen->Ref, *Chosen->Version);
+        return nullptr;
+    }
+    return Chosen;
+}
+
+bool FUBotPackageService::IsCommitId(const FString& Ref)
+{
+    if (Ref.Len() < 7 || Ref.Len() > 40)
+    {
+        return false;
+    }
+    for (const TCHAR Character : Ref)
+    {
+        const bool bHexDigit = (Character >= TEXT('0') && Character <= TEXT('9'))
+            || (Character >= TEXT('a') && Character <= TEXT('f'))
+            || (Character >= TEXT('A') && Character <= TEXT('F'));
+        if (!bHexDigit)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+FString FUBotPackageService::MakeCloneArguments(const FString& Repository, const FString& Ref, const FString& Destination)
+{
+    // Cloning a tag leaves a detached HEAD; the advice git prints about that is only noise here.
+    FString Arguments = TEXT("-c advice.detachedHead=false clone");
+    if (!Ref.IsEmpty() && !IsCommitId(Ref))
+    {
+        Arguments += FString::Printf(TEXT(" --branch %s"), *QuoteArgument(Ref));
+    }
+    // "--" ends option parsing so the URL can never be read as a git option.
+    Arguments += FString::Printf(TEXT(" -- %s %s"), *QuoteArgument(Repository), *QuoteArgument(Destination));
+    return Arguments;
+}
+
+FString FUBotPackageService::MakeCheckoutArguments(const FString& Destination, const FString& Ref)
+{
+    // The trailing "--" tells git that Ref is a revision and not a path.
+    return FString::Printf(TEXT("-c advice.detachedHead=false -C %s checkout --detach %s --"),
+        *QuoteArgument(Destination), *QuoteArgument(Ref));
 }
 
 FString FUBotPackageService::QuoteArgument(const FString& Argument)
@@ -1460,7 +1729,7 @@ bool FUBotPackageService::PlanDisable(const TArray<FUBotPackageInfo>& Packages, 
 }
 
 bool FUBotPackageService::PlanInstall(const TArray<FUBotPackageInfo>& Packages, const FString& Name,
-    TArray<FString>& OutToInstall, TArray<FString>& OutMessages)
+    TArray<FString>& OutToInstall, TArray<FString>& OutMessages, const FString& RequestedVersion)
 {
     using namespace UBotPackageServicePrivate;
 
@@ -1492,6 +1761,28 @@ bool FUBotPackageService::PlanInstall(const TArray<FUBotPackageInfo>& Packages, 
         }
         if (IsInstalled(*Entry))
         {
+            // An installed dependency is left alone, but a requested version of the root has to be the
+            // installed one: this call never changes versions (that is UpdatePackageAsync's job), and
+            // reporting success for another version would hide that nothing was cloned.
+            const FString Requested = RequestedVersion.TrimStartAndEnd();
+            if (!Requested.IsEmpty() && Entry->Name.Equals(Package->Name, ESearchCase::IgnoreCase))
+            {
+                FUBotSemVer RequestedSemVer;
+                FUBotSemVer InstalledSemVer;
+                if (!FUBotSemVer::Parse(Requested, RequestedSemVer))
+                {
+                    OutMessages.Add(FString::Printf(TEXT("Cannot install %s: '%s' is not a semantic version."), *Entry->Name, *Requested));
+                    bSuccess = false;
+                }
+                else if (!FUBotSemVer::Parse(Entry->Version, InstalledSemVer) || InstalledSemVer != RequestedSemVer)
+                {
+                    const FString InstalledVersion = Entry->Version.IsEmpty() ? FString(TEXT("(unknown version)")) : Entry->Version;
+                    OutMessages.Add(FString::Printf(
+                        TEXT("Cannot install %s %s: version %s is already installed. Use -Update=%s or uBot Manager to change versions."),
+                        *Entry->Name, *Requested, *InstalledVersion, *Entry->Name));
+                    bSuccess = false;
+                }
+            }
             continue;
         }
 
@@ -1503,6 +1794,11 @@ bool FUBotPackageService::PlanInstall(const TArray<FUBotPackageInfo>& Packages, 
             OutMessages.Add(FString::Printf(TEXT("Cannot install %s: it is not listed in a package index."), *Entry->Name));
             bSuccess = false;
         }
+        else if (Entry->bPlanned)
+        {
+            OutMessages.Add(FString::Printf(TEXT("Cannot install %s: it is planned and cannot be installed yet."), *Entry->Name));
+            bSuccess = false;
+        }
         else if (Repository.IsEmpty())
         {
             OutMessages.Add(FString::Printf(TEXT("Cannot install %s: its package index entry has no repository."), *Entry->Name));
@@ -1511,6 +1807,16 @@ bool FUBotPackageService::PlanInstall(const TArray<FUBotPackageInfo>& Packages, 
         else if (!IsRepositoryUrlAllowed(Repository, &Reason))
         {
             OutMessages.Add(FString::Printf(TEXT("Cannot install %s from '%s': %s."), *Entry->Name, *RedactUrlCredentials(Repository), *Reason));
+            bSuccess = false;
+        }
+        else if (!FindInstallVersion(*Entry, Entry->Name.Equals(Package->Name, ESearchCase::IgnoreCase) ? RequestedVersion : FString(), Reason))
+        {
+            OutMessages.Add(FString::Printf(TEXT("Cannot install %s: %s."), *Entry->Name, *Reason));
+            bSuccess = false;
+        }
+        else if (ResolveInstallFolder(*Entry, &Reason).IsEmpty())
+        {
+            OutMessages.Add(FString::Printf(TEXT("Cannot install %s: %s."), *Entry->Name, *Reason));
             bSuccess = false;
         }
         else

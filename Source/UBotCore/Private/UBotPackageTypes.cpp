@@ -6,7 +6,6 @@ EUBotPackageLayer ParsePackageLayer(const FString& Text)
     {
         EUBotPackageLayer::Foundation,
         EUBotPackageLayer::Capability,
-        EUBotPackageLayer::Composition,
         EUBotPackageLayer::Adapter,
         EUBotPackageLayer::Content
     };
@@ -30,8 +29,6 @@ const TCHAR* LexToString(EUBotPackageLayer Layer)
         return TEXT("Foundation");
     case EUBotPackageLayer::Capability:
         return TEXT("Capability");
-    case EUBotPackageLayer::Composition:
-        return TEXT("Composition");
     case EUBotPackageLayer::Adapter:
         return TEXT("Adapter");
     case EUBotPackageLayer::Content:

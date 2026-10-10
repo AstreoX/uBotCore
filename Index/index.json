@@ -1,0 +1,284 @@
+{
+    "$schema": "./index.schema.json",
+    "formatVersion": 2,
+    "name": "uBot",
+    "packages": [
+        {
+            "name": "UBotCore",
+            "friendlyName": "uBot Core",
+            "description": {
+                "en": "Frame header, sim clock, UE/ROS conventions, shared interfaces and package management.",
+                "zh-CN": "帧头、仿真时钟、UE/ROS 坐标约定、通用接口与 Package 管理。"
+            },
+            "layer": "Foundation",
+            "repository": "https://github.com/AstreoX/uBotCore.git",
+            "docsUrl": "https://github.com/AstreoX/uBotCore",
+            "tags": [ "core" ],
+            "versions": [
+                {
+                    "version": "0.1.0",
+                    "ref": "v0.1.0",
+                    "engine": "~5.5",
+                    "requires": [],
+                    "enginePlugins": [],
+                    "provides": [
+                        "Core.FrameHeader",
+                        "Core.Clock",
+                        "Core.Conventions.ROS",
+                        "Core.Interfaces",
+                        "Core.PackageManager"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "UBotSensor",
+            "friendlyName": "uBot Sensor",
+            "description": {
+                "en": "Pose, IMU, odometry, 2D/3D lidar, RGB and depth cameras.",
+                "zh-CN": "位姿、IMU、里程计、2D/3D 激光雷达、RGB 与深度相机。"
+            },
+            "layer": "Capability",
+            "repository": "https://github.com/AstreoX/uBotSensor.git",
+            "docsUrl": "https://github.com/AstreoX/uBotSensor",
+            "tags": [ "sensor" ],
+            "versions": [
+                {
+                    "version": "0.1.0",
+                    "ref": "v0.1.0",
+                    "engine": "~5.5",
+                    "requires": [
+                        { "name": "UBotCore", "version": "^0.1.0" }
+                    ],
+                    "enginePlugins": [],
+                    "provides": [
+                        "Sensor.Pose",
+                        "Sensor.Odometry",
+                        "Sensor.IMU",
+                        "Sensor.Lidar2D",
+                        "Sensor.Lidar3D",
+                        "Sensor.RGBCamera",
+                        "Sensor.DepthCamera",
+                        "Sensor.Medium"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "UBotROS",
+            "friendlyName": "uBot ROS",
+            "description": {
+                "en": "ROS 2 over a TCP bridge: sensors, TF, /clock, cmd_vel.",
+                "zh-CN": "经 TCP 桥接 ROS 2：传感器、TF、/clock、cmd_vel。"
+            },
+            "layer": "Adapter",
+            "repository": "https://github.com/AstreoX/uBotROS.git",
+            "docsUrl": "https://github.com/AstreoX/uBotROS",
+            "tags": [ "ros", "ros2", "adapter" ],
+            "versions": [
+                {
+                    "version": "0.1.0",
+                    "ref": "v0.1.0",
+                    "engine": "~5.5",
+                    "requires": [
+                        { "name": "UBotCore", "version": "^0.1.0" },
+                        { "name": "UBotSensor", "version": "^0.1.0" }
+                    ],
+                    "enginePlugins": [],
+                    "provides": [
+                        "ROS.SensorPublishing",
+                        "ROS.TF",
+                        "ROS.Clock",
+                        "ROS.VelocityCommand"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "UBotVehicles",
+            "friendlyName": "uBot Vehicles",
+            "description": {
+                "en": "Differential and Ackermann ground vehicles on Chaos Vehicles.",
+                "zh-CN": "差速与阿克曼地面车辆，基于 Chaos Vehicles。"
+            },
+            "layer": "Capability",
+            "repository": "https://github.com/AstreoX/uBotVehicles.git",
+            "tags": [ "vehicle" ],
+            "versions": [
+                {
+                    "version": "0.1.0",
+                    "planned": true,
+                    "requires": [
+                        { "name": "UBotCore", "version": "^0.1.0" }
+                    ],
+                    "enginePlugins": [ "ChaosVehiclesPlugin" ],
+                    "provides": [ "Actuation.Velocity", "Body.Wheeled" ]
+                }
+            ]
+        },
+        {
+            "name": "UBotAerial",
+            "friendlyName": "uBot Aerial",
+            "description": {
+                "en": "Multirotors with velocity and attitude control.",
+                "zh-CN": "多旋翼，速度与姿态控制。"
+            },
+            "layer": "Capability",
+            "repository": "https://github.com/AstreoX/uBotAerial.git",
+            "tags": [ "aerial" ],
+            "versions": [
+                {
+                    "version": "0.1.0",
+                    "planned": true,
+                    "requires": [
+                        { "name": "UBotCore", "version": "^0.1.0" }
+                    ],
+                    "enginePlugins": [],
+                    "provides": [ "Actuation.Velocity", "Body.Multirotor" ]
+                }
+            ]
+        },
+        {
+            "name": "UBotEnvironment",
+            "friendlyName": "uBot Environment",
+            "description": {
+                "en": "Smoke, fog and other effects that degrade perception.",
+                "zh-CN": "烟雾、雾等影响感知的环境效果。"
+            },
+            "layer": "Capability",
+            "repository": "https://github.com/AstreoX/uBotEnvironment.git",
+            "tags": [ "environment" ],
+            "versions": [
+                {
+                    "version": "0.1.0",
+                    "planned": true,
+                    "requires": [
+                        { "name": "UBotCore", "version": "^0.1.0" }
+                    ],
+                    "enginePlugins": [],
+                    "provides": [ "Env.Smoke", "Env.Fog" ]
+                }
+            ]
+        },
+        {
+            "name": "UBotMCP",
+            "friendlyName": "uBot MCP",
+            "description": {
+                "en": "Sensors and actuators exposed to LLMs over MCP.",
+                "zh-CN": "通过 MCP 向大模型开放传感器与执行器。"
+            },
+            "layer": "Adapter",
+            "repository": "https://github.com/AstreoX/uBotMCP.git",
+            "tags": [ "mcp", "llm", "adapter" ],
+            "versions": [
+                {
+                    "version": "0.1.0",
+                    "planned": true,
+                    "requires": [
+                        { "name": "UBotCore", "version": "^0.1.0" },
+                        { "name": "UBotSensor", "version": "^0.1.0" }
+                    ],
+                    "enginePlugins": [],
+                    "provides": [ "MCP.Tools" ]
+                }
+            ]
+        },
+        {
+            "name": "UBotLearning",
+            "friendlyName": "uBot Learning",
+            "description": {
+                "en": "Bridge to UE Learning Agents.",
+                "zh-CN": "对接 UE Learning Agents。"
+            },
+            "layer": "Adapter",
+            "repository": "https://github.com/AstreoX/uBotLearning.git",
+            "tags": [ "learning", "adapter" ],
+            "versions": [
+                {
+                    "version": "0.1.0",
+                    "planned": true,
+                    "requires": [
+                        { "name": "UBotCore", "version": "^0.1.0" }
+                    ],
+                    "enginePlugins": [ "LearningAgents" ],
+                    "provides": [ "Learning.Observations", "Learning.Actions" ]
+                }
+            ]
+        },
+        {
+            "name": "UBotCombat",
+            "friendlyName": "uBot Combat",
+            "description": {
+                "en": "Turrets, ammunition, CIWS and other combat content.",
+                "zh-CN": "炮塔、弹药、CIWS 等作战场景内容。"
+            },
+            "layer": "Content",
+            "repository": "https://github.com/AstreoX/uBotCombat.git",
+            "tags": [ "combat", "content" ],
+            "versions": [
+                {
+                    "version": "0.1.0",
+                    "planned": true,
+                    "requires": [
+                        { "name": "UBotCore", "version": "^0.1.0" },
+                        { "name": "UBotSensor", "version": "^0.1.0" },
+                        { "name": "UBotEnvironment", "version": "^0.1.0" }
+                    ],
+                    "enginePlugins": [],
+                    "provides": [ "Content.Combat" ]
+                }
+            ]
+        }
+    ],
+    "recipes": [
+        {
+            "id": "sensors-only",
+            "name": { "en": "Sensors Only", "zh-CN": "仅传感器" },
+            "description": { "en": "Sensor data in Blueprints only.", "zh-CN": "只在蓝图里使用传感器数据。" },
+            "packages": [ "UBotCore", "UBotSensor" ],
+            "checks": []
+        },
+        {
+            "id": "ros-sensors",
+            "name": { "en": "ROS 2 Sensors", "zh-CN": "ROS 2 传感器" },
+            "description": { "en": "Publish sensors, TF and /clock to ROS 2.", "zh-CN": "把传感器、TF 和 /clock 发布到 ROS 2。" },
+            "packages": [ "UBotCore", "UBotSensor", "UBotROS" ],
+            "checks": [ "rosBridge" ]
+        },
+        {
+            "id": "ros-ground-robot",
+            "name": { "en": "ROS Ground Robot", "zh-CN": "ROS 地面机器人" },
+            "description": { "en": "Ground vehicle for Nav2 and SLAM.", "zh-CN": "地面车辆接入 Nav2 和 SLAM。" },
+            "packages": [ "UBotCore", "UBotSensor", "UBotVehicles", "UBotROS" ],
+            "checks": [ "rosBridge" ]
+        },
+        {
+            "id": "llm-drone",
+            "name": { "en": "LLM Drone", "zh-CN": "大模型无人机" },
+            "description": { "en": "An LLM flies a drone over MCP.", "zh-CN": "大模型通过 MCP 控制无人机。" },
+            "packages": [ "UBotCore", "UBotSensor", "UBotAerial", "UBotMCP" ],
+            "checks": []
+        },
+        {
+            "id": "smoke-combat",
+            "name": { "en": "Smoke Combat Demo", "zh-CN": "烟雾作战演示" },
+            "description": { "en": "Combat scene with smoke interference.", "zh-CN": "带烟雾干扰的作战场景。" },
+            "packages": [ "UBotCore", "UBotSensor", "UBotEnvironment", "UBotCombat" ],
+            "checks": []
+        },
+        {
+            "id": "custom",
+            "name": { "en": "Custom", "zh-CN": "自定义" },
+            "description": { "en": "Start from UBotCore and pick the rest.", "zh-CN": "从 UBotCore 开始，其余自己挑。" },
+            "packages": [ "UBotCore" ],
+            "checks": []
+        }
+    ],
+    "replacements": [
+        {
+            "legacy": "AgentSensorCore",
+            "replacement": "UBotSensor",
+            "redirects": "Config/DefaultUBotSensor.ini"
+        }
+    ]
+}

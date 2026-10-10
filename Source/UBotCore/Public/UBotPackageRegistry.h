@@ -37,18 +37,18 @@ public:
     static bool ParseDescriptor(const FJsonObject& DescriptorJson, const FString& PluginName, FUBotPackageInfo& Out, FString* OutError = nullptr);
 
     /**
-     * Reads the catalog fields shared by the descriptor "UBot" block and package index entries:
-     * Layer, Repository, DocsUrl, Tags, Provides, Requires and ExternalRequires. Absent fields leave
-     * Out untouched. Malformed fields or entries are skipped and described in OutIssues; returns
-     * false when any issue was added.
+     * Reads the fields of a descriptor "UBot" block: Layer, Repository, DocsUrl, Tags, Provides,
+     * Requires and EnginePlugins (into ExternalRequires; the older key "ExternalRequires" is still
+     * accepted and merged). Absent fields leave Out untouched. Malformed fields or entries are
+     * skipped and described in OutIssues; returns false when any issue was added.
      */
     static bool ParseMetadataJson(const FJsonObject& Json, FUBotPackageInfo& Out, TArray<FString>& OutIssues);
 
     /**
-     * Recomputes Problems for every entry: missing required package (absent from the set or not
-     * installed), version constraint not met, enabled package requiring a disabled one,
-     * unparsable constraint, dependency cycle. Optional requirements only produce a problem when
-     * the package is installed but version-incompatible (or their constraint is unparsable).
+     * Recomputes Problems and ProblemDetails for every entry: missing required package (absent from
+     * the set or not installed), version constraint not met, enabled package requiring a disabled
+     * one, unparsable constraint, dependency cycle. Optional requirements only produce a problem
+     * when the package is installed but version-incompatible (or their constraint is unparsable).
      */
     static void ValidatePackageSet(TArray<FUBotPackageInfo>& Packages);
 
@@ -81,6 +81,9 @@ public:
     const FUBotPackageInfo* FindPackage(const FString& Name) const;
 
     bool IsPackageEnabled(const FString& Name) const;
+
+    /** Descriptor problems found by the last Refresh, each naming the package and its descriptor path. */
+    const TArray<FString>& GetDescriptorIssues() const;
 
     /**
      * Validates the installed set and logs every problem and descriptor issue as a Warning. Also

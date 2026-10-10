@@ -1,16 +1,27 @@
 #include "CoreMinimal.h"
+#include "Framework/Application/SlateApplication.h"
 #include "GenericPlatform/GenericPlatformFile.h"
 #include "HAL/FileManager.h"
+#include "HAL/IConsoleManager.h"
 #include "HAL/PlatformFileManager.h"
 #include "Misc/AutomationTest.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Guid.h"
+#include "Internationalization/Internationalization.h"
+#include "Misc/OutputDeviceRedirector.h"
 #include "Misc/Paths.h"
+#include "Misc/ScopeExit.h"
+#include "UBotCoreEditor.h"
 #include "UBotCoreSettings.h"
+#include "UBotEditorText.h"
+#include "UBotManagerLauncher.h"
 #include "UBotPackageCommandlet.h"
+#include "UBotPackageIndex.h"
 #include "UBotPackageRegistry.h"
 #include "UBotPackageService.h"
 #include "UBotPackageTypes.h"
+#include "UBotPanelModel.h"
+#include "UBotRuntimeStatus.h"
 #include "UObject/Package.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -104,11 +115,26 @@ namespace UBotCoreEditorTestsPrivate
         return Package;
     }
 
+    // Appends a version the way FUBotPackageIndex records it (newest first is the caller's business).
+    void AddIndexVersion(FUBotPackageInfo& Package, const TCHAR* Version, const TCHAR* Ref, bool bPlanned = false)
+    {
+        FUBotPackageIndexVersion& IndexVersion = Package.IndexVersions.AddDefaulted_GetRef();
+        IndexVersion.Version = Version;
+        IndexVersion.Ref = Ref;
+        IndexVersion.bPlanned = bPlanned;
+        if (!bPlanned)
+        {
+            Package.AvailableVersions.Add(Version);
+        }
+    }
+
+    // An index entry with one installable version, 0.1.0 at the tag v0.1.0.
     FUBotPackageInfo MakeIndexOnlyPackage(const TCHAR* Name, const TCHAR* Repository)
     {
         FUBotPackageInfo Package = MakePackage(Name, false, false);
         Package.bFromIndex = true;
         Package.Repository = Repository;
+        AddIndexVersion(Package, TEXT("0.1.0"), TEXT("v0.1.0"));
         return Package;
     }
 
@@ -225,9 +251,12 @@ bool FUBotPackageManagerRepositoryUrlPolicyTest::RunTest(const FString& Paramete
         TEXT("http://example.com/team/uBotSonar.git"),
         TEXT("git@github.com:AstreoX/uBotROS.git"),
         TEXT("ssh://git@example.com/team/uBotLidar.git"),
-        TEXT("git://example.com/team/uBotLidar.git"),
         TEXT("file:///C:/Repos/uBotLocal.git"),
         TEXT("https://[::1]/team/uBotLocal.git"),
+        TEXT("C:/Repos/uBotLocal.git"),
+        TEXT("C:\\Repos\\uBotLocal.git"),
+        TEXT("/srv/git/uBotLocal.git"),
+        TEXT("\\\\server\\share\\uBotLocal.git"),
     };
     for (const TCHAR* Url : Allowed)
     {
@@ -248,6 +277,20 @@ bool FUBotPackageManagerRepositoryUrlPolicyTest::RunTest(const FString& Paramete
         TEXT("https://example.com/team/uBot\"Sonar.git"),
         TEXT("https://example.com/team/uBotSonar.git\n--config=x"),
         TEXT("https://example.com/team/.git"),
+        // SPEC 5.4 allows no other transports: git:// is unauthenticated and unencrypted, and a bare
+        // "host:path", a relative path or a path with whitespace is read by git as something else.
+        TEXT("git://example.com/team/uBotLidar.git"),
+        TEXT("relative/path.git"),
+        TEXT("..\\..\\other"),
+        TEXT("host:path"),
+        TEXT("@host:path"),
+        TEXT("git@host:"),
+        TEXT("git@:path"),
+        TEXT("https://example.com/team/uBot Sonar.git"),
+        TEXT("https://example.com/team/uBot\tSonar.git"),
+        TEXT(" https://example.com/team/uBotSonar.git"),
+        TEXT("https://"),
+        TEXT("ssh://"),
     };
     for (const TCHAR* Url : Rejected)
     {
@@ -450,6 +493,76 @@ bool FUBotPackageManagerInstallPlanTest::RunTest(const FString& Parameters)
 
         TestTrue(TEXT("Installed target succeeds"), FUBotPackageService::PlanInstall(Packages, TEXT("UBotSensor"), ToInstall, Messages));
         TestEqual(TEXT("Nothing to install"), ToInstall.Num(), 0);
+    }
+
+    // A requested version of an installed target must be the installed one: installing never changes
+    // versions, so anything else has to fail instead of reporting "already installed".
+    {
+        FUBotPackageInfo InstalledSensor = MakePackage(TEXT("UBotSensor"), true, false);
+        InstalledSensor.Version = TEXT("0.1.0");
+        AddIndexVersion(InstalledSensor, TEXT("0.1.0"), TEXT("v0.1.0"));
+        AddIndexVersion(InstalledSensor, TEXT("0.2.0"), TEXT("v0.2.0"));
+        const TArray<FUBotPackageInfo> Packages = MakeChain(InstalledSensor, MakeIndexOnlyPackage(TEXT("UBotROS"), RosRepository));
+
+        for (const TCHAR* Same : { TEXT("0.1.0"), TEXT("v0.1.0"), TEXT(" 0.1 ") })
+        {
+            TArray<FString> ToInstall;
+            TArray<FString> Messages;
+            TestTrue(*FString::Printf(TEXT("The installed version '%s' succeeds"), Same),
+                FUBotPackageService::PlanInstall(Packages, TEXT("UBotSensor"), ToInstall, Messages, Same));
+            TestEqual(TEXT("Nothing to clone"), ToInstall.Num(), 0);
+        }
+
+        // Another version fails whether or not the index lists it, and the message says what to do.
+        for (const TCHAR* Other : { TEXT("0.2.0"), TEXT("9.9.9") })
+        {
+            TArray<FString> ToInstall;
+            TArray<FString> Messages;
+            TestFalse(*FString::Printf(TEXT("Version '%s' of an installed package fails"), Other),
+                FUBotPackageService::PlanInstall(Packages, TEXT("UBotSensor"), ToInstall, Messages, Other));
+            TestEqual(TEXT("No plan"), ToInstall.Num(), 0);
+            TestTrue(TEXT("The message names the package and the requested version"),
+                MessagesMention(Messages, TEXT("Cannot install UBotSensor")) && MessagesMention(Messages, Other));
+            TestTrue(TEXT("The message says the installed version is in the way"),
+                MessagesMention(Messages, TEXT("0.1.0 is already installed")) && MessagesMention(Messages, TEXT("-Update=UBotSensor")));
+        }
+
+        {
+            TArray<FString> ToInstall;
+            TArray<FString> Messages;
+            TestFalse(TEXT("Text that is no version fails"), FUBotPackageService::PlanInstall(Packages, TEXT("UBotSensor"), ToInstall, Messages, TEXT("junk")));
+            TestTrue(TEXT("The message says why"), MessagesMention(Messages, TEXT("semantic version")));
+        }
+
+        // An installed package whose own version is unreadable cannot match any request.
+        {
+            FUBotPackageInfo UnreadableSensor = InstalledSensor;
+            UnreadableSensor.Version = TEXT("not-a-version-at-all!");
+            const TArray<FUBotPackageInfo> Unreadable = MakeChain(UnreadableSensor, MakeIndexOnlyPackage(TEXT("UBotROS"), RosRepository));
+            TArray<FString> ToInstall;
+            TArray<FString> Messages;
+            TestFalse(TEXT("An unreadable installed version fails"), FUBotPackageService::PlanInstall(Unreadable, TEXT("UBotSensor"), ToInstall, Messages, TEXT("0.1.0")));
+        }
+
+        // The request belongs to the target only: an installed dependency keeps its own version.
+        {
+            FUBotPackageInfo OlderSensor = InstalledSensor;
+            OlderSensor.Version = TEXT("0.0.5");
+            const TArray<FUBotPackageInfo> WithOlderSensor = MakeChain(OlderSensor, MakeIndexOnlyPackage(TEXT("UBotROS"), RosRepository));
+            TArray<FString> ToInstall;
+            TArray<FString> Messages;
+            TestTrue(TEXT("An installed dependency is not compared with the request"),
+                FUBotPackageService::PlanInstall(WithOlderSensor, TEXT("UBotROS"), ToInstall, Messages, TEXT("0.1.0")));
+            TestNames(*this, TEXT("Only ROS is cloned"), ToInstall, { TEXT("UBotROS") });
+        }
+
+        // Without a requested version an installed target stays an idempotent success.
+        {
+            TArray<FString> ToInstall;
+            TArray<FString> Messages;
+            TestTrue(TEXT("No version requested succeeds"), FUBotPackageService::PlanInstall(Packages, TEXT("UBotSensor"), ToInstall, Messages, FString()));
+            TestTrue(TEXT("Blank version requested succeeds"), FUBotPackageService::PlanInstall(Packages, TEXT("UBotSensor"), ToInstall, Messages, TEXT("  ")));
+        }
     }
 
     // Entries that cannot be cloned safely block the plan.
@@ -656,6 +769,51 @@ bool FUBotPackageManagerCommandletArgumentsTest::RunTest(const FString& Paramete
         }
     }
 
+    // -Install=<Name>[@<Version>]
+    {
+        struct FCase
+        {
+            const TCHAR* Text;
+            bool bValid;
+            const TCHAR* Name;
+            const TCHAR* Version;
+        };
+
+        const FCase Cases[] =
+        {
+            { TEXT("UBotSensor"), true, TEXT("UBotSensor"), TEXT("") },
+            { TEXT("UBotSensor@0.1.0"), true, TEXT("UBotSensor"), TEXT("0.1.0") },
+            { TEXT(" UBotSensor @ v0.1.0 "), true, TEXT("UBotSensor"), TEXT("v0.1.0") },
+            { TEXT("UBotSensor@1.0.0-rc.1"), true, TEXT("UBotSensor"), TEXT("1.0.0-rc.1") },
+            { TEXT(""), false, TEXT(""), TEXT("") },
+            { TEXT("   "), false, TEXT(""), TEXT("") },
+            { TEXT("@0.1.0"), false, TEXT(""), TEXT("") },
+            { TEXT("UBotSensor@"), false, TEXT(""), TEXT("") },
+            { TEXT("UBotSensor@  "), false, TEXT(""), TEXT("") },
+        };
+        for (const FCase& Case : Cases)
+        {
+            FString Name = TEXT("untouched");
+            FString Version = TEXT("untouched");
+            const bool bParsed = UUBotPackageCommandlet::TryParsePackageSpec(Case.Text, Name, Version);
+            TestEqual(*FString::Printf(TEXT("TryParsePackageSpec('%s') validity"), Case.Text), bParsed, Case.bValid);
+            if (Case.bValid)
+            {
+                TestEqualSensitive(*FString::Printf(TEXT("TryParsePackageSpec('%s') name"), Case.Text), *Name, Case.Name);
+                TestEqualSensitive(*FString::Printf(TEXT("TryParsePackageSpec('%s') version"), Case.Text), *Version, Case.Version);
+            }
+            else
+            {
+                TestEqualSensitive(*FString::Printf(TEXT("TryParsePackageSpec('%s') leaves the outputs alone"), Case.Text), *Name, TEXT("untouched"));
+            }
+        }
+
+        AddExpectedErrorPlain(TEXT("-Install expects <Name> or <Name>@<Version>"), EAutomationExpectedErrorFlags::Contains, 2);
+        UUBotPackageCommandlet* Commandlet = NewObject<UUBotPackageCommandlet>(GetTransientPackage());
+        TestEqual(TEXT("Main('-Install=@0.1.0') fails"), Commandlet->Main(TEXT("-Install=@0.1.0")), 1);
+        TestEqual(TEXT("Main('-Install=UBotSensor@') fails"), Commandlet->Main(TEXT("-Install=UBotSensor@")), 1);
+    }
+
     // Malformed arguments fail before anything runs: a bare action switch ("-Install" or
     // "-Install Name") and an unusable timeout must not exit 0 as if nothing was asked.
     {
@@ -689,6 +847,529 @@ bool FUBotPackageManagerCommandletArgumentsTest::RunTest(const FString& Paramete
             TestEqual(*FString::Printf(TEXT("Main('%s') fails"), Params), Commandlet->Main(Params), 1);
         }
     }
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotPackageManagerPlannedInstallTest, "UBotCore.PackageManager.PlannedPackagesAreNotInstalled",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotPackageManagerPlannedInstallTest::RunTest(const FString& Parameters)
+{
+    using namespace UBotCoreEditorTestsPrivate;
+
+    FUBotPackageInfo PlannedSensor = MakeIndexOnlyPackage(TEXT("UBotSensor"), TEXT("https://github.com/AstreoX/uBotSensor.git"));
+    PlannedSensor.bPlanned = true;
+    PlannedSensor.IndexVersions.Reset();
+    PlannedSensor.AvailableVersions.Reset();
+    AddIndexVersion(PlannedSensor, TEXT("0.1.0"), TEXT(""), /*bPlanned*/ true);
+    const TArray<FUBotPackageInfo> Packages = MakeChain(PlannedSensor, MakeIndexOnlyPackage(TEXT("UBotROS"), TEXT("https://github.com/AstreoX/uBotROS.git")));
+
+    TArray<FString> ToInstall;
+    TArray<FString> Messages;
+    TestFalse(TEXT("A planned dependency blocks the install"), FUBotPackageService::PlanInstall(Packages, TEXT("UBotROS"), ToInstall, Messages));
+    TestEqual(TEXT("No partial plan"), ToInstall.Num(), 0);
+    TestTrue(TEXT("The planned package is named"), MessagesMention(Messages, TEXT("Cannot install UBotSensor: it is planned")));
+
+    Messages.Reset();
+    TestFalse(TEXT("A planned package cannot be installed"), FUBotPackageService::PlanInstall(Packages, TEXT("UBotSensor"), ToInstall, Messages));
+    TestTrue(TEXT("The refusal says why"), MessagesMention(Messages, TEXT("planned")));
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotPackageManagerInstallVersionTest, "UBotCore.PackageManager.InstallVersion",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotPackageManagerInstallVersionTest::RunTest(const FString& Parameters)
+{
+    using namespace UBotCoreEditorTestsPrivate;
+
+    // Versions in no particular order, as a hand-built entry may list them; a planned one is the highest.
+    FUBotPackageInfo Sensor = MakeIndexOnlyPackage(TEXT("UBotSensor"), TEXT("https://github.com/AstreoX/uBotSensor.git"));
+    Sensor.IndexVersions.Reset();
+    Sensor.AvailableVersions.Reset();
+    AddIndexVersion(Sensor, TEXT("0.2.0"), TEXT("v0.2.0"));
+    AddIndexVersion(Sensor, TEXT("1.0.0"), TEXT(""), /*bPlanned*/ true);
+    AddIndexVersion(Sensor, TEXT("0.10.0"), TEXT("v0.10.0"));
+    AddIndexVersion(Sensor, TEXT("0.9.1"), TEXT("0123abc"));
+
+    FString Reason;
+    {
+        const FUBotPackageIndexVersion* Newest = FUBotPackageService::FindInstallVersion(Sensor, FString(), Reason);
+        if (TestNotNull(TEXT("The newest installable version is chosen"), Newest))
+        {
+            TestEqualSensitive(TEXT("Version by SemVer precedence, not by text or position"), *Newest->Version, TEXT("0.10.0"));
+            TestEqualSensitive(TEXT("Its tag is what gets cloned"), *Newest->Ref, TEXT("v0.10.0"));
+        }
+    }
+    {
+        const FUBotPackageIndexVersion* Exact = FUBotPackageService::FindInstallVersion(Sensor, TEXT("0.9.1"), Reason);
+        if (TestNotNull(TEXT("A named version is chosen"), Exact))
+        {
+            TestEqualSensitive(TEXT("Its ref is a commit id here"), *Exact->Ref, TEXT("0123abc"));
+        }
+        const FUBotPackageIndexVersion* Prefixed = FUBotPackageService::FindInstallVersion(Sensor, TEXT(" v0.2.0 "), Reason);
+        if (TestNotNull(TEXT("The version is compared as a semantic version"), Prefixed))
+        {
+            TestEqualSensitive(TEXT("v0.2.0 finds 0.2.0"), *Prefixed->Version, TEXT("0.2.0"));
+        }
+    }
+
+    TestNull(TEXT("A planned version is refused"), FUBotPackageService::FindInstallVersion(Sensor, TEXT("1.0.0"), Reason));
+    TestTrue(TEXT("The refusal says planned"), Reason.Contains(TEXT("planned")));
+    TestNull(TEXT("An unknown version is refused"), FUBotPackageService::FindInstallVersion(Sensor, TEXT("0.3.0"), Reason));
+    TestTrue(TEXT("The refusal names the installable versions"), Reason.Contains(TEXT("0.3.0")) && Reason.Contains(TEXT("0.10.0")) && !Reason.Contains(TEXT("1.0.0")));
+    TestNull(TEXT("Text that is no version is refused"), FUBotPackageService::FindInstallVersion(Sensor, TEXT("latest"), Reason));
+    TestTrue(TEXT("The refusal says why"), Reason.Contains(TEXT("semantic version")));
+
+    // Refs git must never see.
+    for (const TCHAR* Ref : { TEXT(""), TEXT("--upload-pack=calc"), TEXT("-x"), TEXT("v1 .0"), TEXT("v1\t0"), TEXT("a..b"), TEXT("v1\"0"), TEXT("a:b"), TEXT("a~1"), TEXT("a^") })
+    {
+        FUBotPackageInfo Bad = MakeIndexOnlyPackage(TEXT("UBotSensor"), TEXT("https://github.com/AstreoX/uBotSensor.git"));
+        Bad.IndexVersions[0].Ref = Ref;
+        TestNull(*FString::Printf(TEXT("Ref '%s' is refused"), Ref), FUBotPackageService::FindInstallVersion(Bad, FString(), Reason));
+        TestTrue(*FString::Printf(TEXT("Ref '%s' is explained"), Ref), Reason.Contains(TEXT("ref")));
+    }
+
+    FUBotPackageInfo NoVersions = MakeIndexOnlyPackage(TEXT("UBotSensor"), TEXT("https://github.com/AstreoX/uBotSensor.git"));
+    NoVersions.IndexVersions.Reset();
+    TestNull(TEXT("An entry without versions has nothing to install"), FUBotPackageService::FindInstallVersion(NoVersions, FString(), Reason));
+
+    // PlanInstall: the requested version applies to the requested package only.
+    {
+        const FUBotPackageInfo Ros = MakeIndexOnlyPackage(TEXT("UBotROS"), TEXT("https://github.com/AstreoX/uBotROS.git"));
+        const TArray<FUBotPackageInfo> Packages = MakeChain(Sensor, Ros);
+
+        TArray<FString> ToInstall;
+        TArray<FString> Messages;
+        TestTrue(TEXT("The newest versions install"), FUBotPackageService::PlanInstall(Packages, TEXT("UBotROS"), ToInstall, Messages));
+
+        // UBotROS has only 0.1.0; asking for another version of it fails and names the package.
+        Messages.Reset();
+        TestFalse(TEXT("An unknown version of the target blocks the plan"),
+            FUBotPackageService::PlanInstall(Packages, TEXT("UBotROS"), ToInstall, Messages, TEXT("0.2.0")));
+        TestEqual(TEXT("No partial plan"), ToInstall.Num(), 0);
+        TestTrue(TEXT("The message names ROS and the version"), MessagesMention(Messages, TEXT("Cannot install UBotROS")) && MessagesMention(Messages, TEXT("0.2.0")));
+
+        // The same request does not leak into the dependency: UBotSensor still gets its newest version.
+        Messages.Reset();
+        TestTrue(TEXT("The requested version exists"), FUBotPackageService::PlanInstall(Packages, TEXT("UBotROS"), ToInstall, Messages, TEXT("0.1.0")));
+        TestNames(*this, TEXT("Dependencies first"), ToInstall, { TEXT("UBotSensor"), TEXT("UBotROS") });
+
+        // Installing the sensor at a planned version is refused, at an installable one it works.
+        Messages.Reset();
+        TestFalse(TEXT("A planned version blocks the plan"), FUBotPackageService::PlanInstall(Packages, TEXT("UBotSensor"), ToInstall, Messages, TEXT("1.0.0")));
+        TestTrue(TEXT("The refusal says planned"), MessagesMention(Messages, TEXT("planned")));
+        Messages.Reset();
+        TestTrue(TEXT("An older installable version works"), FUBotPackageService::PlanInstall(Packages, TEXT("UBotSensor"), ToInstall, Messages, TEXT("0.2.0")));
+    }
+
+    // An entry that lists no ref for its version blocks the install.
+    {
+        FUBotPackageInfo NoRef = MakeIndexOnlyPackage(TEXT("UBotSensor"), TEXT("https://github.com/AstreoX/uBotSensor.git"));
+        NoRef.IndexVersions[0].Ref.Reset();
+        const TArray<FUBotPackageInfo> Packages = MakeChain(NoRef, MakeIndexOnlyPackage(TEXT("UBotROS"), TEXT("https://github.com/AstreoX/uBotROS.git")));
+        TArray<FString> ToInstall;
+        TArray<FString> Messages;
+        TestFalse(TEXT("A version without a ref blocks the plan"), FUBotPackageService::PlanInstall(Packages, TEXT("UBotROS"), ToInstall, Messages));
+        TestTrue(TEXT("The message names the package and the ref"), MessagesMention(Messages, TEXT("UBotSensor")) && MessagesMention(Messages, TEXT("\"ref\"")));
+    }
+
+    // The install folder: the index "folder", else the repository name; one safe segment either way.
+    {
+        FUBotPackageInfo Package = MakeIndexOnlyPackage(TEXT("UBotSensor"), TEXT("https://github.com/AstreoX/uBotSensor-fork.git"));
+        TestEqualSensitive(TEXT("The folder follows the repository"), *FUBotPackageService::ResolveInstallFolder(Package, &Reason), TEXT("uBotSensor-fork"));
+
+        Package.InstallFolder = TEXT("uBotSensor");
+        TestEqualSensitive(TEXT("The index folder wins"), *FUBotPackageService::ResolveInstallFolder(Package, &Reason), TEXT("uBotSensor"));
+
+        Package.InstallFolder = TEXT("  uBot_Sensor.v2  ");
+        TestEqualSensitive(TEXT("Surrounding whitespace is ignored"), *FUBotPackageService::ResolveInstallFolder(Package, &Reason), TEXT("uBot_Sensor.v2"));
+
+        for (const TCHAR* Folder : { TEXT(".."), TEXT("."), TEXT("../Escape"), TEXT("a/b"), TEXT("a\\b"), TEXT("C:"), TEXT("a b"), TEXT("a*"), TEXT("a\"b") })
+        {
+            Package.InstallFolder = Folder;
+            TestTrue(*FString::Printf(TEXT("Folder '%s' is refused"), Folder), FUBotPackageService::ResolveInstallFolder(Package, &Reason).IsEmpty());
+            TestTrue(*FString::Printf(TEXT("Folder '%s' is explained"), Folder), Reason.Contains(TEXT("folder")));
+        }
+
+        // A folder derived from the repository must be safe as well.
+        FUBotPackageInfo Plus = MakeIndexOnlyPackage(TEXT("UBotSensor"), TEXT("https://example.com/team/uBot+Sonar.git"));
+        TestTrue(TEXT("An unsafe derived folder is refused"), FUBotPackageService::ResolveInstallFolder(Plus, &Reason).IsEmpty());
+        TestTrue(TEXT("The refusal points at the index folder"), Reason.Contains(TEXT("\"folder\"")));
+        Plus.InstallFolder = TEXT("uBotSonar");
+        TestEqualSensitive(TEXT("Setting the index folder fixes it"), *FUBotPackageService::ResolveInstallFolder(Plus, &Reason), TEXT("uBotSonar"));
+
+        // PlanInstall refuses an unsafe index folder before anything is cloned.
+        FUBotPackageInfo Escaping = MakeIndexOnlyPackage(TEXT("UBotSensor"), TEXT("https://github.com/AstreoX/uBotSensor.git"));
+        Escaping.InstallFolder = TEXT("../../Source");
+        const TArray<FUBotPackageInfo> Packages = MakeChain(Escaping, MakeIndexOnlyPackage(TEXT("UBotROS"), TEXT("https://github.com/AstreoX/uBotROS.git")));
+        TArray<FString> ToInstall;
+        TArray<FString> Messages;
+        TestFalse(TEXT("An escaping folder blocks the plan"), FUBotPackageService::PlanInstall(Packages, TEXT("UBotROS"), ToInstall, Messages));
+        TestEqual(TEXT("No partial plan"), ToInstall.Num(), 0);
+        TestTrue(TEXT("The message names the package and the folder"), MessagesMention(Messages, TEXT("UBotSensor")) && MessagesMention(Messages, TEXT("\"folder\"")));
+    }
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotPackageManagerCloneArgumentsTest, "UBotCore.PackageManager.CloneArguments",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotPackageManagerCloneArgumentsTest::RunTest(const FString& Parameters)
+{
+    const TCHAR* Repository = TEXT("https://example.com/team/uBotSensor.git");
+    const TCHAR* Destination = TEXT("C:/Project/Plugins/uBot/uBotSensor");
+
+    // A tag or branch is cloned directly, and "--" keeps the URL from being read as an option.
+    TestEqualSensitive(TEXT("Tag"), *FUBotPackageService::MakeCloneArguments(Repository, TEXT("v0.1.0"), Destination),
+        TEXT("-c advice.detachedHead=false clone --branch \"v0.1.0\" -- \"https://example.com/team/uBotSensor.git\" \"C:/Project/Plugins/uBot/uBotSensor\""));
+    TestEqualSensitive(TEXT("Branch"), *FUBotPackageService::MakeCloneArguments(Repository, TEXT("release/0.1"), Destination),
+        TEXT("-c advice.detachedHead=false clone --branch \"release/0.1\" -- \"https://example.com/team/uBotSensor.git\" \"C:/Project/Plugins/uBot/uBotSensor\""));
+
+    // A commit id is not a branch or tag: "git clone --branch" rejects it, so it is checked out afterwards.
+    TestEqualSensitive(TEXT("Commit id"), *FUBotPackageService::MakeCloneArguments(Repository, TEXT("0123abcdef"), Destination),
+        TEXT("-c advice.detachedHead=false clone -- \"https://example.com/team/uBotSensor.git\" \"C:/Project/Plugins/uBot/uBotSensor\""));
+    TestEqualSensitive(TEXT("Checkout"), *FUBotPackageService::MakeCheckoutArguments(Destination, TEXT("0123abcdef")),
+        TEXT("-c advice.detachedHead=false -C \"C:/Project/Plugins/uBot/uBotSensor\" checkout --detach \"0123abcdef\" --"));
+
+    struct FCase
+    {
+        const TCHAR* Ref;
+        bool bCommitId;
+    };
+    const FCase Cases[] =
+    {
+        { TEXT("0123abc"), true },
+        { TEXT("0123456789abcdef0123456789abcdef01234567"), true },
+        { TEXT("ABCDEF1234"), true },
+        { TEXT("0123ab"), false },
+        { TEXT("0123456789abcdef0123456789abcdef012345678"), false },
+        { TEXT("0123abg"), false },
+        { TEXT("v0.1.0"), false },
+        { TEXT("main"), false },
+        { TEXT("release/0.1"), false },
+        { TEXT(""), false },
+    };
+    for (const FCase& Case : Cases)
+    {
+        TestEqual(*FString::Printf(TEXT("IsCommitId('%s')"), Case.Ref), FUBotPackageService::IsCommitId(Case.Ref), Case.bCommitId);
+    }
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotPackageManagerListOutputTest, "UBotCore.PackageManager.ListOutput",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotPackageManagerListOutputTest::RunTest(const FString& Parameters)
+{
+    using namespace UBotCoreEditorTestsPrivate;
+
+    // An installed package with a problem, and index entries that require things that are not installed.
+    TArray<FUBotPackageInfo> View;
+    View.Add(MakePackage(TEXT("UBotCore"), true, true, EUBotPackageLayer::Foundation));
+    FUBotPackageInfo& Environment = View.Add_GetRef(MakePackage(TEXT("UBotEnvironment"), true, true));
+    AddRequire(Environment, TEXT("UBotCore"), TEXT("^0.2.0"));
+    FUBotPackageInfo& Combat = View.Add_GetRef(MakeIndexOnlyPackage(TEXT("UBotCombat"), TEXT("https://github.com/AstreoX/uBotCombat.git")));
+    Combat.bPlanned = true;
+    AddRequire(Combat, TEXT("UBotMissing"));
+    FUBotPackageInfo& Vehicles = View.Add_GetRef(MakeIndexOnlyPackage(TEXT("UBotVehicles"), TEXT("https://github.com/AstreoX/uBotVehicles.git")));
+    AddRequire(Vehicles, TEXT("UBotMissing"));
+    FUBotPackageRegistry::ValidatePackageSet(View);
+
+    // ValidatePackageSet does report the index-only entries; -List has to leave those out.
+    for (const TCHAR* Name : { TEXT("UBotCombat"), TEXT("UBotVehicles") })
+    {
+        const FUBotPackageInfo* Validated = View.FindByPredicate([Name](const FUBotPackageInfo& Package) { return Package.Name == Name; });
+        if (!TestNotNull(*FString::Printf(TEXT("%s entry"), Name), Validated)
+            || !TestTrue(*FString::Printf(TEXT("The validated index-only entry %s has a problem"), Name), Validated->Problems.Num() > 0))
+        {
+            return false;
+        }
+    }
+
+    const TArray<FString> Lines = UUBotPackageCommandlet::FormatPackageList(View, FUBotPackageService::Get());
+    auto FindLine = [&Lines](const TCHAR* Text)
+    {
+        return Lines.FindByPredicate([Text](const FString& Line) { return Line.Contains(Text); });
+    };
+
+    const FString* EnvironmentRow = FindLine(TEXT("UBotEnvironment  "));
+    if (TestNotNull(TEXT("Installed package row"), EnvironmentRow))
+    {
+        TestTrue(TEXT("An installed package counts its problem"), EnvironmentRow->EndsWith(TEXT("1")));
+    }
+    const FString* CombatRow = FindLine(TEXT("UBotCombat  "));
+    if (TestNotNull(TEXT("Planned package row"), CombatRow))
+    {
+        TestTrue(TEXT("The planned package is listed as planned"), CombatRow->Contains(TEXT("Planned")));
+        TestTrue(TEXT("A planned package reports no problems"), CombatRow->EndsWith(TEXT("0")));
+    }
+    const FString* VehiclesRow = FindLine(TEXT("UBotVehicles  "));
+    if (TestNotNull(TEXT("Not installed package row"), VehiclesRow))
+    {
+        TestTrue(TEXT("A package that is not installed reports no problems"), VehiclesRow->EndsWith(TEXT("0")));
+    }
+
+    TestNotNull(TEXT("The installed package's problem is listed"), FindLine(TEXT("  UBotEnvironment: ")));
+    TestNull(TEXT("No problem line for the planned package"), FindLine(TEXT("  UBotCombat: ")));
+    TestNull(TEXT("No problem line for the package that is not installed"), FindLine(TEXT("  UBotVehicles: ")));
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotOpenPanelCommandTest, "UBotCore.Panel.OpenPanelCommand",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotOpenPanelCommandTest::RunTest(const FString& Parameters)
+{
+    // Headless scripts open the panel with -ExecCmds="uBot.OpenPanel".
+    TestEqualSensitive(TEXT("Command name"), FUBotCoreEditorModule::OpenPanelCommandName, TEXT("uBot.OpenPanel"));
+
+    IConsoleObject* Object = IConsoleManager::Get().FindConsoleObject(FUBotCoreEditorModule::OpenPanelCommandName);
+    if (TestNotNull(TEXT("The module registers uBot.OpenPanel"), Object))
+    {
+        TestNotNull(TEXT("It is a console command"), Object->AsCommand());
+        TestFalse(TEXT("It has a help text"), FString(Object->GetHelp()).IsEmpty());
+    }
+
+    // Without Slate there is no panel; the command says so instead of failing. With Slate it would open a
+    // tab in the editor running the tests, so it is not executed there.
+    if (!FSlateApplication::IsInitialized())
+    {
+        AddExpectedErrorPlain(TEXT("there is no panel to open"), EAutomationExpectedErrorFlags::Contains, 1);
+        TestTrue(TEXT("The command is handled"), IConsoleManager::Get().ProcessUserConsoleInput(FUBotCoreEditorModule::OpenPanelCommandName, *GLog, nullptr));
+    }
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotPanelPackageRowsTest, "UBotCore.Panel.PackageRows",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotPanelPackageRowsTest::RunTest(const FString& Parameters)
+{
+    using namespace UBotCoreEditorTestsPrivate;
+
+    TArray<FUBotPackageInfo> View;
+    FUBotPackageInfo& Ros = View.Add_GetRef(MakePackage(TEXT("UBotROS"), true, true, EUBotPackageLayer::Adapter));
+    Ros.AvailableVersions = { TEXT("0.1.0") };
+    FUBotPackageInfo& Sensor = View.Add_GetRef(MakePackage(TEXT("UBotSensor"), true, true, EUBotPackageLayer::Capability));
+    Sensor.AvailableVersions = { TEXT("0.1.1"), TEXT("0.1.0") };
+    FUBotPackageInfo& Core = View.Add_GetRef(MakePackage(TEXT("UBotCore"), true, true, EUBotPackageLayer::Foundation));
+    Core.AvailableVersions = { TEXT("0.1.0-rc.1") };
+    FUBotPackageInfo& Broken = View.Add_GetRef(MakePackage(TEXT("UBotEnvironment"), true, true, EUBotPackageLayer::Capability));
+    Broken.Version = TEXT("0.2.0");
+    Broken.Problems.Add(TEXT("Requires 'UBotCore' ^0.2.0, but version 0.1.0 is installed."));
+    View.Add(MakePackage(TEXT("UBotCombat"), true, false, EUBotPackageLayer::Content));
+    View.Add(MakeIndexOnlyPackage(TEXT("UBotVehicles"), TEXT("https://github.com/AstreoX/uBotVehicles.git")));
+
+    const TArray<FUBotPanelRow> Rows = FUBotPanelModel::MakePackageRows(View);
+    TArray<FString> Names;
+    for (const FUBotPanelRow& Row : Rows)
+    {
+        Names.Add(Row.Name.ToString());
+    }
+    TestNames(*this, TEXT("Enabled installed packages in layer order, then by name"), Names,
+        { TEXT("UBotCore"), TEXT("UBotEnvironment"), TEXT("UBotSensor"), TEXT("UBotROS") });
+
+    if (Rows.Num() == 4)
+    {
+        TestEqual(TEXT("Plain version"), Rows[0].Value.BuildSourceString(), FString(TEXT("0.1.0")));
+        TestFalse(TEXT("An older prerelease is no update"), Rows[0].bHighlightValue);
+        TestEqual(TEXT("Clean package dot"), Rows[0].Dot, EUBotRuntimeSeverity::Ok);
+        TestEqual(TEXT("Package with problems"), Rows[1].Dot, EUBotRuntimeSeverity::Warning);
+        TestEqual(TEXT("Update available"), Rows[2].Value.BuildSourceString(), FString(TEXT("0.1.0 · 0.1.1 available")));
+        TestTrue(TEXT("Update is highlighted"), Rows[2].bHighlightValue);
+        TestFalse(TEXT("Up to date"), Rows[3].bHighlightValue);
+    }
+
+    TestEqual(TEXT("Newer version"), FUBotPanelModel::FindUpdate(TEXT("0.1.0"), { TEXT("0.2.0"), TEXT("0.1.0") }), FString(TEXT("0.2.0")));
+    TestTrue(TEXT("Same version"), FUBotPanelModel::FindUpdate(TEXT("0.2.0"), { TEXT("0.2.0") }).IsEmpty());
+    TestTrue(TEXT("Installed newer than the index"), FUBotPanelModel::FindUpdate(TEXT("0.3.0-dev"), { TEXT("0.2.0") }).IsEmpty());
+    TestTrue(TEXT("Nothing in the index"), FUBotPanelModel::FindUpdate(TEXT("0.1.0"), {}).IsEmpty());
+    TestTrue(TEXT("Unparsable installed version"), FUBotPanelModel::FindUpdate(TEXT("dev"), { TEXT("0.2.0") }).IsEmpty());
+
+    const TArray<FUBotPanelRow> Points = FUBotPanelModel::MakeExtensionPointRows({
+        TPair<FName, int32>(FName(TEXT("UBotROS.SensorPublisher")), 7), TPair<FName, int32>(FName(TEXT("Other.Point")), 1) });
+    if (TestEqual(TEXT("Two extension points"), Points.Num(), 2))
+    {
+        TestEqual(TEXT("Point id"), Points[0].Name.ToString(), FString(TEXT("UBotROS.SensorPublisher")));
+        TestTrue(TEXT("Implementation count"), Points[0].Value.BuildSourceString().StartsWith(TEXT("7 implementation")));
+        TestTrue(TEXT("Singular count"), Points[1].Value.BuildSourceString().StartsWith(TEXT("1 implementation")));
+    }
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotPanelProblemRowsTest, "UBotCore.Panel.ProblemRows",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotPanelProblemRowsTest::RunTest(const FString& Parameters)
+{
+    using namespace UBotCoreEditorTestsPrivate;
+
+    TArray<FUBotPackageInfo> Installed;
+    Installed.Add(MakePackage(TEXT("UBotCore"), true, true, EUBotPackageLayer::Foundation));
+    FUBotPackageInfo& Environment = Installed.Add_GetRef(MakePackage(TEXT("UBotEnvironment"), true, true));
+    AddRequire(Environment, TEXT("UBotCore"), TEXT("^0.2.0"));
+    AddRequire(Environment, TEXT("UBotMaps"), TEXT(""));
+    FUBotPackageInfo& Combat = Installed.Add_GetRef(MakePackage(TEXT("UBotCombat"), true, true, EUBotPackageLayer::Content));
+    AddRequire(Combat, TEXT("UBotSensor"), TEXT("^0.1.0"));
+    Installed.Add(MakePackage(TEXT("UBotSensor"), true, false));
+    FUBotPackageInfo& Disabled = Installed.Add_GetRef(MakePackage(TEXT("UBotDisabled"), true, false));
+    AddRequire(Disabled, TEXT("UBotNowhere"), TEXT("^1.0"));
+    FUBotPackageRegistry::ValidatePackageSet(Installed);
+
+    TArray<FUBotPackageReplacement> Replacements;
+    Replacements.Add({ TEXT("AgentSensorCore"), TEXT("UBotSensor"), TEXT("Config/DefaultUBotSensor.ini") });
+    Replacements.Add({ TEXT("AgentCombatCore"), TEXT("UBotCombat"), FString() });
+
+    FUBotRuntimeProblem Runtime;
+    Runtime.Id = TEXT("ros.bridge");
+    Runtime.Package = TEXT("UBotROS");
+    Runtime.Severity = EUBotRuntimeSeverity::Info;
+    Runtime.Code = TEXT("rosBridgeUnreachable");
+    Runtime.Message = FText::FromString(TEXT("Could not connect to ubot_ros_bridge at 127.0.0.1:8268."));
+
+    const TArray<FUBotPanelRow> Rows = FUBotPanelModel::MakeProblemRows(Installed, { TEXT("uBot package 'X' (X.uplugin): bad layer") }, Replacements,
+        [](const FString& Plugin) { return Plugin == TEXT("AgentSensorCore") || Plugin == TEXT("UBotSensor") || Plugin == TEXT("UBotCombat"); },
+        { Runtime }, { TEXT("Cannot read package index 'x.json'.") });
+
+    TArray<FString> Names;
+    for (const FUBotPanelRow& Row : Rows)
+    {
+        Names.Add(Row.Name.BuildSourceString());
+    }
+    TestNames(*this, TEXT("Problem rows"), Names, {
+        TEXT("UBotEnvironment requires UBotCore ^0.2.0"),
+        TEXT("UBotEnvironment requires UBotMaps, which is not installed"),
+        TEXT("UBotCombat requires UBotSensor, which is disabled"),
+        TEXT("uBot package 'X' (X.uplugin): bad layer"),
+        TEXT("AgentSensorCore and UBotSensor both enabled"),
+        TEXT("Could not connect to ubot_ros_bridge at 127.0.0.1:8268."),
+        TEXT("Package index: Cannot read package index 'x.json'."),
+    });
+    if (Rows.Num() == 7)
+    {
+        TestEqual(TEXT("Requirement problems are warnings"), Rows[0].Dot, EUBotRuntimeSeverity::Warning);
+        TestTrue(TEXT("The tooltip has the full problem"), Rows[0].ToolTip.ToString().Contains(TEXT("version 0.1.0 is installed")));
+        TestEqual(TEXT("Runtime problems keep their severity"), Rows[5].Dot, EUBotRuntimeSeverity::Info);
+    }
+
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotPanelRuntimeRowsTest, "UBotCore.Panel.RuntimeRows",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotPanelRuntimeRowsTest::RunTest(const FString& Parameters)
+{
+    FUBotRuntimeItem Bridge;
+    Bridge.Id = TEXT("ros.bridge");
+    Bridge.Label = FText::FromString(TEXT("ROS bridge"));
+    Bridge.Value = TEXT("connected");
+    Bridge.ValueText = FText::FromString(TEXT("Connected"));
+    Bridge.Detail = TEXT("127.0.0.1:8268");
+    Bridge.Severity = EUBotRuntimeSeverity::Ok;
+    FUBotRuntimeItem Plain;
+    Plain.Id = TEXT("other");
+    Plain.Value = TEXT("on");
+
+    const TArray<FUBotPanelRow> Playing = FUBotPanelModel::MakeRuntimeRows({ Bridge, Plain }, 12.4812, false, 60.0, nullptr);
+    if (TestEqual(TEXT("Items, sim time and fixed time step"), Playing.Num(), 4))
+    {
+        TestEqual(TEXT("Item label"), Playing[0].Name.ToString(), FString(TEXT("ROS bridge")));
+        TestEqual(TEXT("Item value and detail"), Playing[0].Value.ToString(), FString(TEXT("Connected · 127.0.0.1:8268")));
+        TestEqual(TEXT("Item severity"), Playing[0].Dot, EUBotRuntimeSeverity::Ok);
+        TestEqual(TEXT("Label falls back to the id"), Playing[1].Name.ToString(), FString(TEXT("other")));
+        TestEqual(TEXT("Value without display text or detail"), Playing[1].Value.ToString(), FString(TEXT("on")));
+        TestEqual(TEXT("Sim time row id"), Playing[2].Id, FUBotPanelModel::SimTimeRowId);
+        TestEqual(TEXT("Sim time"), Playing[2].Value.BuildSourceString(), FString(TEXT("12.48 s")));
+        TestEqual(TEXT("Fixed time step off"), Playing[3].Value.BuildSourceString(), FString(TEXT("Off")));
+    }
+
+    FUBotSessionInfo Last;
+    Last.Kind = EUBotSessionKind::PIE;
+    Last.StartedAt = FDateTime(2026, 10, 10, 8, 0, 0);
+    Last.EndedAt = FDateTime(2026, 10, 10, 8, 5, 0);
+    const TArray<FUBotPanelRow> Idle = FUBotPanelModel::MakeRuntimeRows({}, TOptional<double>(), true, 60.0, &Last);
+    if (TestEqual(TEXT("Fixed time step and last session"), Idle.Num(), 2))
+    {
+        TestEqual(TEXT("Fixed time step rate"), Idle[0].Value.BuildSourceString(), FString(TEXT("60 Hz")));
+        TestTrue(TEXT("Last session kind"), Idle[1].Value.ToString().StartsWith(TEXT("PIE · ")));
+    }
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotPanelLocalizationTest, "UBotCore.Panel.ChineseText",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotPanelLocalizationTest::RunTest(const FString& Parameters)
+{
+    namespace Text = UBot::EditorText;
+
+    FInternationalization& I18N = FInternationalization::Get();
+    FInternationalization::FCultureStateSnapshot Snapshot;
+    I18N.BackupCultureState(Snapshot);
+    ON_SCOPE_EXIT
+    {
+        I18N.RestoreCultureState(Snapshot);
+    };
+
+    // Registered again so the test does not depend on the module having started with Slate.
+    Text::RegisterChineseText();
+
+    if (!TestTrue(TEXT("Switch to zh-Hans"), I18N.SetCurrentLanguage(TEXT("zh-Hans"))))
+    {
+        return false;
+    }
+    TestEqual(TEXT("Open uBot Manager"), Text::OpenManager().ToString(), FString(TEXT("打开 uBot Manager")));
+    TestEqual(TEXT("Loaded Packages keeps Package in English"), Text::SectionPackages().ToString(), FString(TEXT("已加载的 Package")));
+    TestEqual(TEXT("Update hint"), FText::Format(Text::UpdateAvailable(), FText::FromString(TEXT("0.1.0")), FText::FromString(TEXT("0.1.1"))).ToString(),
+        FString(TEXT("0.1.0 · 可更新到 0.1.1")));
+    TestEqual(TEXT("Status bar"), FUBotPanelModel::MakeStatusBarText(3, 2).ToString(), FString(TEXT("uBot：3 个 Package · 2 个问题")));
+    TestEqual(TEXT("Implementations"), FText::Format(Text::Implementations(), 7).ToString(), FString(TEXT("7 个实现")));
+
+    TestTrue(TEXT("Switch back to English"), I18N.SetCurrentLanguage(TEXT("en")));
+    TestEqual(TEXT("English status bar, singular"), FUBotPanelModel::MakeStatusBarText(1, 1).ToString(), FString(TEXT("uBot: 1 package · 1 problem")));
+    TestEqual(TEXT("English status bar, plural"), FUBotPanelModel::MakeStatusBarText(3, 2).ToString(), FString(TEXT("uBot: 3 packages · 2 problems")));
+    TestEqual(TEXT("English implementations"), FText::Format(Text::Implementations(), 7).ToString(), FString(TEXT("7 implementations")));
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotManagerLauncherTest, "UBotCore.Panel.ManagerDiscovery",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotManagerLauncherTest::RunTest(const FString& Parameters)
+{
+    const FString Configured = TEXT("D:/Tools/uBot/ubot-manager.exe");
+    const FString Registered = TEXT("C:/Users/Me/AppData/Local/uBot Manager/ubot-manager.exe");
+    const FString LocalAppData = TEXT("C:/Users/Me/AppData/Local");
+    const FString Installed = TEXT("C:/Users/Me/AppData/Local/uBot Manager/ubot-manager.exe");
+
+    auto Resolve = [&](const FString& InConfigured, const FString& InRegistered, std::initializer_list<FString> Existing)
+    {
+        TArray<FString> Files(Existing);
+        return FUBotManagerLauncher::ResolveExecutable(InConfigured, InRegistered, LocalAppData, [&Files](const FString& Path)
+        {
+            return Files.ContainsByPredicate([&Path](const FString& File) { return FPaths::IsSamePath(File, Path); });
+        });
+    };
+
+    TestTrue(TEXT("The setting wins"), FPaths::IsSamePath(Resolve(Configured, TEXT("D:/Other/ubot-manager.exe"), { Configured, TEXT("D:/Other/ubot-manager.exe") }), Configured));
+    TestTrue(TEXT("Then the registered path"), FPaths::IsSamePath(Resolve(FString(), TEXT("D:/Other/ubot-manager.exe"), { TEXT("D:/Other/ubot-manager.exe"), Installed }), TEXT("D:/Other/ubot-manager.exe")));
+    TestTrue(TEXT("A missing configured file is skipped"), FPaths::IsSamePath(Resolve(Configured, FString(), { Installed }), Installed));
+    TestTrue(TEXT("Quotes around the registered value are ignored"), FPaths::IsSamePath(Resolve(FString(), TEXT("\"D:\\Other\\ubot-manager.exe\""), { TEXT("D:/Other/ubot-manager.exe") }), TEXT("D:/Other/ubot-manager.exe")));
+    TestTrue(TEXT("Then LOCALAPPDATA"), FPaths::IsSamePath(Resolve(FString(), FString(), { Installed }), Installed));
+    TestTrue(TEXT("Nothing found"), Resolve(Configured, Registered, {}).IsEmpty());
+    TestTrue(TEXT("A relative setting is taken from the project directory"), FPaths::IsSamePath(
+        Resolve(TEXT("Tools/ubot-manager.exe"), FString(), { FPaths::Combine(FPaths::ProjectDir(), TEXT("Tools/ubot-manager.exe")) }),
+        FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectDir(), TEXT("Tools/ubot-manager.exe")))));
+
+    const FString Arguments = FUBotManagerLauncher::MakeArguments(TEXT("C:/My Projects/Robot Sim/RobotSim.uproject"));
+#if PLATFORM_WINDOWS
+    TestEqual(TEXT("--project with the quoted absolute path"), Arguments, FString(TEXT("--project \"C:\\My Projects\\Robot Sim\\RobotSim.uproject\"")));
+#else
+    TestTrue(TEXT("--project with the quoted path"), Arguments.StartsWith(TEXT("--project \"")));
+#endif
+    TestEqual(TEXT("Releases page"), FString(FUBotManagerLauncher::ReleasesUrl), FString(TEXT("https://github.com/AstreoX/uBotManager/releases")));
     return true;
 }
 

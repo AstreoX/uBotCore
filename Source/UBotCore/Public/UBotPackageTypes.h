@@ -10,7 +10,6 @@ enum class EUBotPackageLayer : uint8
     Unknown,
     Foundation,
     Capability,
-    Composition,
     Adapter,
     Content
 };
@@ -21,6 +20,44 @@ enum class EUBotPackageState : uint8
     NotInstalled,
     Disabled,
     Enabled
+};
+
+/** What a package problem is about; see FUBotPackageRegistry::ValidatePackageSet. */
+UENUM(BlueprintType)
+enum class EUBotPackageProblemKind : uint8
+{
+    /** A required package is not installed. */
+    RequiresMissing,
+    /** An installed package does not satisfy a version constraint, or its version is not a semantic version. */
+    RequiresVersion,
+    /** An enabled package requires a disabled one. */
+    RequiresDisabled,
+    /** A requirement without a package name or with an unparsable constraint. */
+    InvalidRequirement,
+    /** The package is on a dependency cycle. */
+    DependencyCycle
+};
+
+/** Structured form of one entry of FUBotPackageInfo::Problems. */
+USTRUCT(BlueprintType)
+struct UBOTCORE_API FUBotPackageProblem
+{
+    GENERATED_BODY()
+
+    UPROPERTY(BlueprintReadOnly, Category = "uBot|Packages")
+    EUBotPackageProblemKind Kind = EUBotPackageProblemKind::InvalidRequirement;
+
+    /** The required package; empty for cycles and requirements without a name. */
+    UPROPERTY(BlueprintReadOnly, Category = "uBot|Packages")
+    FString Dependency;
+
+    /** The requirement's version constraint as written; empty when any version is accepted. */
+    UPROPERTY(BlueprintReadOnly, Category = "uBot|Packages")
+    FString Constraint;
+
+    /** The same text as the matching entry of FUBotPackageInfo::Problems. */
+    UPROPERTY(BlueprintReadOnly, Category = "uBot|Packages")
+    FString Message;
 };
 
 /** One entry of a package's "Requires" list. */
@@ -42,6 +79,28 @@ struct UBOTCORE_API FUBotPackageDependency
     bool bOptional = false;
 };
 
+/** One entry of a package's "versions" list in the package index (format 2). */
+USTRUCT(BlueprintType)
+struct UBOTCORE_API FUBotPackageIndexVersion
+{
+    GENERATED_BODY()
+
+    /** Semantic version as written in the index, e.g. "0.1.0". */
+    UPROPERTY(BlueprintReadOnly, Category = "uBot|Packages")
+    FString Version;
+
+    /**
+     * Git tag, branch or commit id that is checked out to install this version. Empty for planned
+     * versions, and for an entry that (wrongly) lists none; such a version cannot be installed.
+     */
+    UPROPERTY(BlueprintReadOnly, Category = "uBot|Packages")
+    FString Ref;
+
+    /** True when the version is announced but not installable yet. */
+    UPROPERTY(BlueprintReadOnly, Category = "uBot|Packages")
+    bool bPlanned = false;
+};
+
 /** Everything known about a uBot package, merged from its descriptor and the package index. */
 USTRUCT(BlueprintType)
 struct UBOTCORE_API FUBotPackageInfo
@@ -58,9 +117,35 @@ struct UBOTCORE_API FUBotPackageInfo
     UPROPERTY(BlueprintReadOnly, Category = "uBot|Packages")
     FString Description;
 
-    /** Semantic version: the descriptor's VersionName, or the latest known version for index entries. */
+    /**
+     * Semantic version: the descriptor's VersionName for installed packages. For index entries the
+     * latest installable version, or the newest planned version when the package is planned.
+     */
     UPROPERTY(BlueprintReadOnly, Category = "uBot|Packages")
     FString Version;
+
+    /** Installable (non-planned) versions listed in the package index, newest first. */
+    UPROPERTY(BlueprintReadOnly, Category = "uBot|Packages")
+    TArray<FString> AvailableVersions;
+
+    /** True when the package index lists only planned versions: announced, but not installable yet. */
+    UPROPERTY(BlueprintReadOnly, Category = "uBot|Packages")
+    bool bPlanned = false;
+
+    /**
+     * Every version the package index lists (planned ones included), newest first, with the git ref
+     * each installable version is cloned at. Empty for packages that are not in an index.
+     */
+    UPROPERTY(BlueprintReadOnly, Category = "uBot|Packages")
+    TArray<FUBotPackageIndexVersion> IndexVersions;
+
+    /**
+     * "folder" of the index entry: the name of the folder below the install directory the package is
+     * cloned into. Empty means the last segment of Repository without ".git". Kept as written, so
+     * FUBotPackageService can refuse a value that is not one safe path segment.
+     */
+    UPROPERTY(BlueprintReadOnly, Category = "uBot|Packages")
+    FString InstallFolder;
 
     UPROPERTY(BlueprintReadOnly, Category = "uBot|Packages")
     EUBotPackageLayer Layer = EUBotPackageLayer::Unknown;
@@ -82,7 +167,10 @@ struct UBOTCORE_API FUBotPackageInfo
     UPROPERTY(BlueprintReadOnly, Category = "uBot|Packages")
     TArray<FUBotPackageDependency> Requires;
 
-    /** Non-uBot plugins the package needs (e.g. a third-party UE plugin). Informational; never installed automatically. */
+    /**
+     * Engine or other non-uBot plugins the package needs ("EnginePlugins" in descriptors and the
+     * index; descriptors may still use the older key "ExternalRequires"). Never installed automatically.
+     */
     UPROPERTY(BlueprintReadOnly, Category = "uBot|Packages")
     TArray<FString> ExternalRequires;
 
@@ -110,6 +198,10 @@ struct UBOTCORE_API FUBotPackageInfo
     /** Human readable problems, filled by FUBotPackageRegistry::ValidatePackageSet. */
     UPROPERTY(BlueprintReadOnly, Category = "uBot|Packages")
     TArray<FString> Problems;
+
+    /** Structured form of Problems: same order and count. */
+    UPROPERTY(BlueprintReadOnly, Category = "uBot|Packages")
+    TArray<FUBotPackageProblem> ProblemDetails;
 };
 
 /** Case-insensitive, surrounding whitespace ignored. Returns Unknown when Text names no layer. */

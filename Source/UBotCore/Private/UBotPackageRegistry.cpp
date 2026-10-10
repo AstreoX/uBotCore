@@ -364,6 +364,16 @@ namespace UBot::PackageRegistryPrivate
         }
     }
 
+    void AddProblem(FUBotPackageInfo& Package, EUBotPackageProblemKind Kind, const FString& Dependency, const FString& Constraint, FString&& Message)
+    {
+        FUBotPackageProblem& Detail = Package.ProblemDetails.AddDefaulted_GetRef();
+        Detail.Kind = Kind;
+        Detail.Dependency = Dependency;
+        Detail.Constraint = Constraint.TrimStartAndEnd();
+        Detail.Message = Message;
+        Package.Problems.Add(MoveTemp(Message));
+    }
+
     FString FormatConstraintSuffix(const FString& Constraint)
     {
         const FString Trimmed = Constraint.TrimStartAndEnd();
@@ -456,7 +466,7 @@ bool FUBotPackageRegistry::ParseMetadataJson(const FJsonObject& Json, FUBotPacka
         const bool bLayerWasString = OutIssues.Num() == IssueCountBeforeLayer;
         if (bLayerWasString && Out.Layer == EUBotPackageLayer::Unknown && !LayerText.Equals(TEXT("Unknown"), ESearchCase::IgnoreCase))
         {
-            OutIssues.Add(FString::Printf(TEXT("Unknown layer '%s' (expected Foundation, Capability, Composition, Adapter or Content)."), *LayerText));
+            OutIssues.Add(FString::Printf(TEXT("Unknown layer '%s' (expected Foundation, Capability, Adapter or Content)."), *LayerText));
         }
     }
 
@@ -464,7 +474,21 @@ bool FUBotPackageRegistry::ParseMetadataJson(const FJsonObject& Json, FUBotPacka
     ReadString(Json, TEXT("DocsUrl"), Out.DocsUrl, OutIssues);
     ReadStringArray(Json, TEXT("Tags"), Out.Tags, OutIssues);
     ReadStringArray(Json, TEXT("Provides"), Out.Provides, OutIssues);
-    ReadStringArray(Json, TEXT("ExternalRequires"), Out.ExternalRequires, OutIssues);
+    ReadStringArray(Json, TEXT("EnginePlugins"), Out.ExternalRequires, OutIssues);
+    if (Json.HasField(TEXT("ExternalRequires")))
+    {
+        // Older descriptors name their engine plugins "ExternalRequires".
+        TArray<FString> LegacyNames;
+        ReadStringArray(Json, TEXT("ExternalRequires"), LegacyNames, OutIssues);
+        if (!Json.HasField(TEXT("EnginePlugins")))
+        {
+            Out.ExternalRequires.Reset();
+        }
+        for (const FString& LegacyName : LegacyNames)
+        {
+            Out.ExternalRequires.AddUnique(LegacyName);
+        }
+    }
     ReadRequires(Json, Out.Requires, OutIssues);
 
     return OutIssues.Num() == IssueCountBefore;
@@ -479,6 +503,7 @@ void FUBotPackageRegistry::ValidatePackageSet(TArray<FUBotPackageInfo>& Packages
     for (FUBotPackageInfo& Package : Packages)
     {
         Package.Problems.Reset();
+        Package.ProblemDetails.Reset();
         const bool bPackageEnabled = IsEnabledEntry(Package);
 
         for (const FUBotPackageDependency& Dependency : Package.Requires)
@@ -486,7 +511,8 @@ void FUBotPackageRegistry::ValidatePackageSet(TArray<FUBotPackageInfo>& Packages
             const FString DependencyName = Dependency.Name.TrimStartAndEnd();
             if (DependencyName.IsEmpty())
             {
-                Package.Problems.Add(TEXT("Has a requirement without a package name."));
+                AddProblem(Package, EUBotPackageProblemKind::InvalidRequirement, FString(), Dependency.Version,
+                    TEXT("Has a requirement without a package name."));
                 continue;
             }
 
@@ -495,7 +521,8 @@ void FUBotPackageRegistry::ValidatePackageSet(TArray<FUBotPackageInfo>& Packages
             const bool bConstraintValid = FUBotVersionConstraint::Parse(Dependency.Version, Constraint, &ConstraintError);
             if (!bConstraintValid)
             {
-                Package.Problems.Add(FString::Printf(TEXT("Requirement '%s' has an unparsable version constraint: %s."), *DependencyName, *ConstraintError));
+                AddProblem(Package, EUBotPackageProblemKind::InvalidRequirement, DependencyName, Dependency.Version,
+                    FString::Printf(TEXT("Requirement '%s' has an unparsable version constraint: %s."), *DependencyName, *ConstraintError));
             }
 
             const int32 TargetIndex = FindPackageIndex(NameIndex, DependencyName);
@@ -504,7 +531,8 @@ void FUBotPackageRegistry::ValidatePackageSet(TArray<FUBotPackageInfo>& Packages
             {
                 if (!Dependency.bOptional)
                 {
-                    Package.Problems.Add(FString::Printf(TEXT("Requires '%s'%s, which is not installed."), *DependencyName, *FormatConstraintSuffix(Dependency.Version)));
+                    AddProblem(Package, EUBotPackageProblemKind::RequiresMissing, DependencyName, Dependency.Version,
+                        FString::Printf(TEXT("Requires '%s'%s, which is not installed."), *DependencyName, *FormatConstraintSuffix(Dependency.Version)));
                 }
                 continue;
             }
@@ -514,19 +542,22 @@ void FUBotPackageRegistry::ValidatePackageSet(TArray<FUBotPackageInfo>& Packages
                 FUBotSemVer InstalledVersion;
                 if (!FUBotSemVer::Parse(Target->Version, InstalledVersion))
                 {
-                    Package.Problems.Add(FString::Printf(TEXT("Requires '%s' %s, but its installed version '%s' is not a semantic version."),
-                        *DependencyName, *Constraint.ToString(), *Target->Version));
+                    AddProblem(Package, EUBotPackageProblemKind::RequiresVersion, DependencyName, Dependency.Version,
+                        FString::Printf(TEXT("Requires '%s' %s, but its installed version '%s' is not a semantic version."),
+                            *DependencyName, *Constraint.ToString(), *Target->Version));
                 }
                 else if (!Constraint.IsSatisfiedBy(InstalledVersion))
                 {
-                    Package.Problems.Add(FString::Printf(TEXT("Requires '%s' %s, but version %s is installed."),
-                        *DependencyName, *Constraint.ToString(), *Target->Version));
+                    AddProblem(Package, EUBotPackageProblemKind::RequiresVersion, DependencyName, Dependency.Version,
+                        FString::Printf(TEXT("Requires '%s' %s, but version %s is installed."),
+                            *DependencyName, *Constraint.ToString(), *Target->Version));
                 }
             }
 
             if (!Dependency.bOptional && bPackageEnabled && !IsEnabledEntry(*Target))
             {
-                Package.Problems.Add(FString::Printf(TEXT("Is enabled but requires '%s', which is disabled."), *DependencyName));
+                AddProblem(Package, EUBotPackageProblemKind::RequiresDisabled, DependencyName, Dependency.Version,
+                    FString::Printf(TEXT("Is enabled but requires '%s', which is disabled."), *DependencyName));
             }
         }
     }
@@ -545,7 +576,8 @@ void FUBotPackageRegistry::ValidatePackageSet(TArray<FUBotPackageInfo>& Packages
         {
             CycleNames.Add(Packages[Node].Name);
         }
-        Packages[PackageIndex].Problems.Add(FString::Printf(TEXT("Dependency cycle: %s."), *FString::Join(CycleNames, TEXT(" -> "))));
+        AddProblem(Packages[PackageIndex], EUBotPackageProblemKind::DependencyCycle, FString(), FString(),
+            FString::Printf(TEXT("Dependency cycle: %s."), *FString::Join(CycleNames, TEXT(" -> "))));
     }
 }
 
@@ -719,6 +751,11 @@ bool FUBotPackageRegistry::IsPackageEnabled(const FString& Name) const
 {
     const FUBotPackageInfo* Package = FindPackage(Name);
     return Package != nullptr && UBot::PackageRegistryPrivate::IsEnabledEntry(*Package);
+}
+
+const TArray<FString>& FUBotPackageRegistry::GetDescriptorIssues() const
+{
+    return DescriptorIssues;
 }
 
 int32 FUBotPackageRegistry::ValidateAndLog()

@@ -1,0 +1,195 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://raw.githubusercontent.com/AstreoX/uBotCore/main/Index/index.schema.json",
+    "title": "uBot package index",
+    "description": "Format 2 of the uBot package index read by uBot Manager and the uBot editor panel. Semantic rules (unique names, existing requirements, no dependency cycles, the repository URL policy) are checked by `ubot index validate`.",
+    "type": "object",
+    "required": [ "formatVersion", "packages" ],
+    "additionalProperties": false,
+    "properties": {
+        "$schema": { "type": "string" },
+        "formatVersion": { "const": 2 },
+        "name": {
+            "description": "Display name of this index.",
+            "type": "string"
+        },
+        "packages": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/package" }
+        },
+        "recipes": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/recipe" }
+        },
+        "replacements": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/replacement" }
+        }
+    },
+    "$defs": {
+        "pluginName": {
+            "description": "An Unreal Engine plugin name. Compared case-insensitively.",
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+        },
+        "localizedText": {
+            "description": "Text per locale; \"en\" is required, other locales (\"zh-CN\", ...) are optional.",
+            "type": "object",
+            "required": [ "en" ],
+            "properties": {
+                "en": { "type": "string", "minLength": 1 },
+                "zh-CN": { "type": "string" }
+            },
+            "additionalProperties": { "type": "string" }
+        },
+        "version": {
+            "description": "A semantic version: 1, 1.2 and 1.2.3 with an optional -prerelease; +build metadata is ignored.",
+            "type": "string",
+            "pattern": "^[vV]?[0-9]+(\\.[0-9]+){0,2}(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z.-]*)?$"
+        },
+        "constraint": {
+            "description": "Empty or \"*\" for any version, else whitespace separated comparators that all must hold: [op]version with op in = >= > <= < ^ ~ (e.g. \"^0.1.0\", \">=1.2 <2.0\", \"~5.5\").",
+            "type": "string",
+            "pattern": "^\\s*((\\*|(>=|<=|>|<|=|\\^|~)?\\s*[vV]?[0-9]+(\\.[0-9]+){0,2}(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z.-]*)?)(\\s+(\\*|(>=|<=|>|<|=|\\^|~)?\\s*[vV]?[0-9]+(\\.[0-9]+){0,2}(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z.-]*)?))*)?\\s*$"
+        },
+        "package": {
+            "type": "object",
+            "required": [ "name", "versions" ],
+            "additionalProperties": false,
+            "properties": {
+                "name": { "$ref": "#/$defs/pluginName" },
+                "friendlyName": { "type": "string" },
+                "description": { "$ref": "#/$defs/localizedText" },
+                "layer": { "enum": [ "Foundation", "Capability", "Adapter", "Content" ] },
+                "repository": {
+                    "description": "Git URL: https://, http:// (discouraged), ssh://, user@host:path, file:// or an absolute path. No leading '-', no whitespace, no <transport>:: helpers.",
+                    "type": "string",
+                    "pattern": "^[^\\s-][^\\s\"]*$",
+                    "not": { "pattern": "::" }
+                },
+                "folder": {
+                    "description": "Install folder; defaults to the last segment of the repository without \".git\".",
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9._-]+$",
+                    "not": { "enum": [ ".", ".." ] }
+                },
+                "docsUrl": { "type": "string" },
+                "tags": {
+                    "type": "array",
+                    "items": { "type": "string", "minLength": 1 },
+                    "uniqueItems": true
+                },
+                "versions": {
+                    "description": "In any order; readers sort by version precedence.",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": { "$ref": "#/$defs/packageVersion" }
+                }
+            },
+            "if": {
+                "properties": {
+                    "versions": {
+                        "contains": {
+                            "not": {
+                                "required": [ "planned" ],
+                                "properties": { "planned": { "const": true } }
+                            }
+                        }
+                    }
+                }
+            },
+            "then": { "required": [ "repository" ] }
+        },
+        "packageVersion": {
+            "type": "object",
+            "required": [ "version" ],
+            "additionalProperties": false,
+            "properties": {
+                "version": { "$ref": "#/$defs/version" },
+                "ref": {
+                    "description": "Git tag (or branch, or commit) to check out.",
+                    "type": "string",
+                    "pattern": "^[^\\s-][^\\s~^:?*\\[\\\\\"]*$"
+                },
+                "planned": {
+                    "description": "Announced but not installable yet.",
+                    "type": "boolean"
+                },
+                "engine": {
+                    "description": "Constraint over the Unreal Engine version, e.g. \"~5.5\".",
+                    "$ref": "#/$defs/constraint"
+                },
+                "requires": {
+                    "type": "array",
+                    "items": { "$ref": "#/$defs/requirement" }
+                },
+                "enginePlugins": {
+                    "description": "Engine plugins that must be enabled.",
+                    "type": "array",
+                    "items": { "$ref": "#/$defs/pluginName" },
+                    "uniqueItems": true
+                },
+                "provides": {
+                    "description": "Capability ids.",
+                    "type": "array",
+                    "items": { "type": "string", "minLength": 1 },
+                    "uniqueItems": true
+                },
+                "binaries": {
+                    "description": "Reserved for prebuilt binaries ({ \"Win64\": { \"url\", \"sha256\" } }); ignored today.",
+                    "type": [ "object", "null" ]
+                }
+            },
+            "if": {
+                "required": [ "planned" ],
+                "properties": { "planned": { "const": true } }
+            },
+            "else": { "required": [ "ref" ] }
+        },
+        "requirement": {
+            "type": "object",
+            "required": [ "name" ],
+            "additionalProperties": false,
+            "properties": {
+                "name": { "$ref": "#/$defs/pluginName" },
+                "version": { "$ref": "#/$defs/constraint" },
+                "optional": { "type": "boolean" }
+            }
+        },
+        "recipe": {
+            "type": "object",
+            "required": [ "id", "name", "description", "packages" ],
+            "additionalProperties": false,
+            "properties": {
+                "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+                "name": { "$ref": "#/$defs/localizedText" },
+                "description": { "$ref": "#/$defs/localizedText" },
+                "packages": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": { "$ref": "#/$defs/pluginName" },
+                    "uniqueItems": true
+                },
+                "checks": {
+                    "description": "Environment checks to offer; known ids: rosBridge. Unknown ids are ignored.",
+                    "type": "array",
+                    "items": { "type": "string" }
+                }
+            }
+        },
+        "replacement": {
+            "type": "object",
+            "required": [ "legacy", "replacement" ],
+            "additionalProperties": false,
+            "properties": {
+                "legacy": { "$ref": "#/$defs/pluginName" },
+                "replacement": { "$ref": "#/$defs/pluginName" },
+                "redirects": {
+                    "description": "Path inside the replacement plugin of the config file with the redirects.",
+                    "type": "string",
+                    "pattern": "^[^/\\\\.][^\\\\]*$"
+                }
+            }
+        }
+    }
+}

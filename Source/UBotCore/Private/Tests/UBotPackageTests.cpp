@@ -448,15 +448,15 @@ bool FUBotPackageLayerNamesTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Exact name"), ParsePackageLayer(TEXT("Foundation")), EUBotPackageLayer::Foundation);
     TestEqual(TEXT("Lower case and whitespace"), ParsePackageLayer(TEXT(" capability ")), EUBotPackageLayer::Capability);
     TestEqual(TEXT("Upper case"), ParsePackageLayer(TEXT("ADAPTER")), EUBotPackageLayer::Adapter);
-    TestEqual(TEXT("Composition"), ParsePackageLayer(TEXT("composition")), EUBotPackageLayer::Composition);
     TestEqual(TEXT("Content"), ParsePackageLayer(TEXT("Content")), EUBotPackageLayer::Content);
+    TestEqual(TEXT("Composition is no longer a layer"), ParsePackageLayer(TEXT("composition")), EUBotPackageLayer::Unknown);
     TestEqual(TEXT("Empty is unknown"), ParsePackageLayer(TEXT("")), EUBotPackageLayer::Unknown);
     TestEqual(TEXT("Garbage is unknown"), ParsePackageLayer(TEXT("Layers")), EUBotPackageLayer::Unknown);
 
     const EUBotPackageLayer AllLayers[] =
     {
         EUBotPackageLayer::Unknown, EUBotPackageLayer::Foundation, EUBotPackageLayer::Capability,
-        EUBotPackageLayer::Composition, EUBotPackageLayer::Adapter, EUBotPackageLayer::Content
+        EUBotPackageLayer::Adapter, EUBotPackageLayer::Content
     };
     for (const EUBotPackageLayer Layer : AllLayers)
     {
@@ -637,7 +637,21 @@ bool FUBotPackageDescriptorRequiresTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Non-boolean Optional is reported"), Issues.Contains(TEXT("\"Requires\"[4]")));
     TestEqual(TEXT("Only valid, unique tags are kept"), FString::Join(Info.Tags, TEXT(",")), FString(TEXT("a")));
     TestTrue(TEXT("Malformed tags are reported"), Issues.Contains(TEXT("\"Tags\"[1]")) && Issues.Contains(TEXT("\"Tags\"[2]")));
-    TestEqual(TEXT("ExternalRequires is read from the block"), FString::Join(Info.ExternalRequires, TEXT(",")), FString(TEXT("TempoROS")));
+    TestEqual(TEXT("The legacy key ExternalRequires is still read"), FString::Join(Info.ExternalRequires, TEXT(",")), FString(TEXT("TempoROS")));
+
+    const TSharedPtr<FJsonObject> EnginePlugins = ParseJsonObject(TEXT(R"json({ "VersionName": "1.0.0", "UBot": { "Layer": "Capability",
+        "EnginePlugins": [ "ChaosVehiclesPlugin", "EnhancedInput" ] } })json"));
+    FUBotPackageInfo EngineInfo;
+    FString EngineIssues;
+    TestTrue(TEXT("Descriptor with EnginePlugins parses"), FUBotPackageRegistry::ParseDescriptor(*EnginePlugins, TEXT("Pkg"), EngineInfo, &EngineIssues));
+    TestTrue(TEXT("EnginePlugins is not an issue"), EngineIssues.IsEmpty());
+    TestEqual(TEXT("EnginePlugins is read"), FString::Join(EngineInfo.ExternalRequires, TEXT(",")), FString(TEXT("ChaosVehiclesPlugin,EnhancedInput")));
+
+    const TSharedPtr<FJsonObject> BothKeys = ParseJsonObject(TEXT(R"json({ "VersionName": "1.0.0", "UBot": { "Layer": "Capability",
+        "EnginePlugins": [ "ChaosVehiclesPlugin" ], "ExternalRequires": [ "chaosvehiclesplugin", "LearningAgents" ] } })json"));
+    FUBotPackageInfo BothInfo;
+    TestTrue(TEXT("Descriptor with both keys parses"), FUBotPackageRegistry::ParseDescriptor(*BothKeys, TEXT("Pkg"), BothInfo));
+    TestEqual(TEXT("Both keys are merged without duplicates"), FString::Join(BothInfo.ExternalRequires, TEXT(",")), FString(TEXT("ChaosVehiclesPlugin,LearningAgents")));
 
     const TSharedPtr<FJsonObject> NotArray = ParseJsonObject(TEXT(R"json({ "VersionName": "1.0.0", "UBot": { "Layer": "Content", "Requires": "UBotCore" } })json"));
     FUBotPackageInfo NotArrayInfo;
@@ -710,6 +724,38 @@ bool FUBotPackageValidateMissingTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Unparsable installed version is reported"), PackageHasProblem(Packages, TEXT("UBotUses"), TEXT("not a semantic version")));
     TestEqual(TEXT("Any-version requirement ignores the version"), ProblemCount(Packages, TEXT("UBotUsesAny")), 0);
 
+    // ProblemDetails mirrors Problems entry by entry.
+    for (const FUBotPackageInfo& Package : Packages)
+    {
+        if (!TestEqual(FString::Printf(TEXT("%s: one detail per problem"), *Package.Name), Package.ProblemDetails.Num(), Package.Problems.Num()))
+        {
+            continue;
+        }
+        for (int32 ProblemIndex = 0; ProblemIndex < Package.Problems.Num(); ++ProblemIndex)
+        {
+            TestEqual(FString::Printf(TEXT("%s: detail %d has the problem text"), *Package.Name, ProblemIndex), Package.ProblemDetails[ProblemIndex].Message, Package.Problems[ProblemIndex]);
+        }
+    }
+
+    const FUBotPackageInfo* PlannerInfo = FindByName(Packages, TEXT("UBotPlanner"));
+    if (PlannerInfo && TestEqual(TEXT("Planner has two details"), PlannerInfo->ProblemDetails.Num(), 2))
+    {
+        const FUBotPackageProblem& Version = PlannerInfo->ProblemDetails[0];
+        TestEqual(TEXT("Version mismatch kind"), Version.Kind, EUBotPackageProblemKind::RequiresVersion);
+        TestEqual(TEXT("Version mismatch dependency"), Version.Dependency, FString(TEXT("UBotCore")));
+        TestEqual(TEXT("Version mismatch constraint"), Version.Constraint, FString(TEXT("^0.2.0")));
+        const FUBotPackageProblem& Missing = PlannerInfo->ProblemDetails[1];
+        TestEqual(TEXT("Missing dependency kind"), Missing.Kind, EUBotPackageProblemKind::RequiresMissing);
+        TestEqual(TEXT("Missing dependency name"), Missing.Dependency, FString(TEXT("UBotMaps")));
+        TestTrue(TEXT("Missing dependency without constraint"), Missing.Constraint.IsEmpty());
+    }
+    const FUBotPackageInfo* BrokenInfo = FindByName(Packages, TEXT("UBotBroken"));
+    if (BrokenInfo && TestEqual(TEXT("Broken has two details"), BrokenInfo->ProblemDetails.Num(), 2))
+    {
+        TestEqual(TEXT("Unparsable constraint kind"), BrokenInfo->ProblemDetails[0].Kind, EUBotPackageProblemKind::InvalidRequirement);
+        TestEqual(TEXT("Nameless requirement kind"), BrokenInfo->ProblemDetails[1].Kind, EUBotPackageProblemKind::InvalidRequirement);
+    }
+
     return true;
 }
 
@@ -749,6 +795,9 @@ bool FUBotPackageValidateEnabledTest::RunTest(const FString& Parameters)
 
     TestEqual(TEXT("Enabled package requiring a disabled one"), ProblemCount(Packages, TEXT("UBotSensor")), 1);
     TestTrue(TEXT("Disabled dependency is reported"), PackageHasProblem(Packages, TEXT("UBotSensor"), TEXT("which is disabled")));
+    const FUBotPackageInfo* SensorInfo = FindByName(Packages, TEXT("UBotSensor"));
+    TestTrue(TEXT("Disabled dependency detail"), SensorInfo && SensorInfo->ProblemDetails.Num() == 1
+        && SensorInfo->ProblemDetails[0].Kind == EUBotPackageProblemKind::RequiresDisabled && SensorInfo->ProblemDetails[0].Dependency == TEXT("UBotCore"));
     TestEqual(TEXT("Disabled package requiring a disabled one is fine"), ProblemCount(Packages, TEXT("UBotOffline")), 0);
 
     TestEqual(TEXT("Optional requirements: incompatible and unparsable only"), ProblemCount(Packages, TEXT("UBotOpt")), 2);
@@ -789,6 +838,8 @@ bool FUBotPackageValidateCyclesTest::RunTest(const FString& Parameters)
     FUBotPackageRegistry::ValidatePackageSet(Packages);
 
     TestEqual(TEXT("A is on one cycle"), ProblemCount(Packages, TEXT("PkgA")), 1);
+    const FUBotPackageInfo* CycleInfo = FindByName(Packages, TEXT("PkgA"));
+    TestTrue(TEXT("Cycle detail"), CycleInfo && CycleInfo->ProblemDetails.Num() == 1 && CycleInfo->ProblemDetails[0].Kind == EUBotPackageProblemKind::DependencyCycle);
     TestTrue(TEXT("A's cycle is spelled out"), PackageHasProblem(Packages, TEXT("PkgA"), TEXT("Dependency cycle: PkgA -> PkgB -> PkgC -> PkgA.")));
     TestTrue(TEXT("B's cycle starts at B"), PackageHasProblem(Packages, TEXT("PkgB"), TEXT("Dependency cycle: PkgB -> PkgC -> PkgA -> PkgB.")));
     TestEqual(TEXT("C is on one cycle"), ProblemCount(Packages, TEXT("PkgC")), 1);
@@ -927,26 +978,45 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotPackageIndexParsingTest, "UBotCore.Package
 bool FUBotPackageIndexParsingTest::RunTest(const FString& Parameters)
 {
     TArray<FUBotPackageInfo> Packages;
+    TArray<FUBotPackageReplacement> Replacements;
     FString Error = TEXT("stale");
     const bool bParsed = FUBotPackageIndex::ParseIndexJson(TEXT(R"json({
-        "FormatVersion": 1,
-        "Packages": [
-            { "Name": "UBotCore", "Layer": "Foundation", "Repository": "https://example.com/core.git", "Version": "0.1.0", "Tags": [ "core" ] },
+        "$schema": "./index.schema.json",
+        "formatVersion": 2,
+        "name": "test",
+        "packages": [
             {
-                "Name": "UBotROS",
-                "FriendlyName": "uBot ROS",
-                "Description": "ROS adapter",
-                "Layer": "Adapter",
-                "Repository": "https://example.com/ros.git",
-                "DocsUrl": "https://example.com/ros",
-                "Version": "0.2.0",
-                "Tags": [ "ros" ],
-                "Provides": [ "ROS.TF" ],
-                "Requires": [ { "Name": "UBotCore", "Version": "^0.1.0" }, { "Name": "UBotSensor", "Version": "^0.1.0", "Optional": true } ],
-                "ExternalRequires": [ "TempoROS" ]
+                "name": "UBotCore",
+                "layer": "Foundation",
+                "repository": "https://example.com/core.git",
+                "tags": [ "core" ],
+                "versions": [ { "version": "0.1.0", "ref": "v0.1.0" } ]
+            },
+            {
+                "name": "UBotROS",
+                "friendlyName": "uBot ROS",
+                "description": { "en": "ROS adapter", "zh-CN": "ROS 适配" },
+                "layer": "Adapter",
+                "repository": "https://example.com/ros.git",
+                "folder": "uBotROS",
+                "docsUrl": "https://example.com/ros",
+                "tags": [ "ros" ],
+                "versions": [
+                    {
+                        "version": "0.2.0",
+                        "ref": "v0.2.0",
+                        "engine": "~5.5",
+                        "requires": [ { "name": "UBotCore", "version": "^0.1.0" }, { "name": "UBotSensor", "version": "^0.1.0", "optional": true } ],
+                        "enginePlugins": [ "Sockets" ],
+                        "provides": [ "ROS.TF" ],
+                        "binaries": null
+                    }
+                ]
             }
-        ]
-    })json"), Packages, &Error);
+        ],
+        "recipes": [ { "id": "ros", "name": { "en": "ROS" }, "packages": [ "UBotROS" ], "checks": [ "rosBridge", "unknownCheck" ] } ],
+        "replacements": [ { "legacy": "AgentSensorCore", "replacement": "UBotSensor", "redirects": "Config/DefaultUBotSensor.ini" } ]
+    })json"), Packages, &Error, &Replacements, TEXT("en"));
 
     TestTrue(FString::Printf(TEXT("Valid index parses (%s)"), *Error), bParsed);
     TestTrue(TEXT("Success clears the error"), Error.IsEmpty());
@@ -954,8 +1024,19 @@ bool FUBotPackageIndexParsingTest::RunTest(const FString& Parameters)
     {
         const FUBotPackageInfo& Core = Packages[0];
         TestEqual(TEXT("Core name"), Core.Name, FString(TEXT("UBotCore")));
-        TestEqual(TEXT("FriendlyName falls back to Name"), Core.FriendlyName, FString(TEXT("UBotCore")));
+        TestEqual(TEXT("FriendlyName falls back to the name"), Core.FriendlyName, FString(TEXT("UBotCore")));
+        TestTrue(TEXT("No description"), Core.Description.IsEmpty());
         TestEqual(TEXT("Core layer"), Core.Layer, EUBotPackageLayer::Foundation);
+        TestEqual(TEXT("Core version"), Core.Version, FString(TEXT("0.1.0")));
+        TestEqual(TEXT("Core available versions"), FString::Join(Core.AvailableVersions, TEXT(",")), FString(TEXT("0.1.0")));
+        if (TestEqual(TEXT("Core index versions"), Core.IndexVersions.Num(), 1))
+        {
+            TestEqual(TEXT("Core version entry"), Core.IndexVersions[0].Version, FString(TEXT("0.1.0")));
+            TestEqual(TEXT("Core git ref"), Core.IndexVersions[0].Ref, FString(TEXT("v0.1.0")));
+            TestFalse(TEXT("Core version is installable"), Core.IndexVersions[0].bPlanned);
+        }
+        TestTrue(TEXT("No folder means the repository name is used"), Core.InstallFolder.IsEmpty());
+        TestFalse(TEXT("Core is not planned"), Core.bPlanned);
         TestEqual(TEXT("Index entries are not installed"), Core.State, EUBotPackageState::NotInstalled);
         TestFalse(TEXT("Index entries are not marked installed"), Core.bInstalled);
         TestTrue(TEXT("Index entries are marked as indexed"), Core.bFromIndex);
@@ -967,17 +1048,58 @@ bool FUBotPackageIndexParsingTest::RunTest(const FString& Parameters)
         TestEqual(TEXT("ROS repository"), Ros.Repository, FString(TEXT("https://example.com/ros.git")));
         TestEqual(TEXT("ROS docs"), Ros.DocsUrl, FString(TEXT("https://example.com/ros")));
         TestEqual(TEXT("ROS latest version"), Ros.Version, FString(TEXT("0.2.0")));
+        TestEqual(TEXT("ROS install folder"), Ros.InstallFolder, FString(TEXT("uBotROS")));
+        TestTrue(TEXT("ROS git ref"), Ros.IndexVersions.Num() == 1 && Ros.IndexVersions[0].Ref == TEXT("v0.2.0"));
         TestEqual(TEXT("ROS provides"), FString::Join(Ros.Provides, TEXT(",")), FString(TEXT("ROS.TF")));
-        TestEqual(TEXT("ROS external requirements"), FString::Join(Ros.ExternalRequires, TEXT(",")), FString(TEXT("TempoROS")));
+        TestEqual(TEXT("enginePlugins become ExternalRequires"), FString::Join(Ros.ExternalRequires, TEXT(",")), FString(TEXT("Sockets")));
         if (TestEqual(TEXT("ROS requirements"), Ros.Requires.Num(), 2))
         {
             TestEqual(TEXT("First requirement"), Ros.Requires[0].Name, FString(TEXT("UBotCore")));
+            TestEqual(TEXT("First requirement constraint"), Ros.Requires[0].Version, FString(TEXT("^0.1.0")));
             TestFalse(TEXT("First requirement is required"), Ros.Requires[0].bOptional);
             TestTrue(TEXT("Second requirement is optional"), Ros.Requires[1].bOptional);
         }
     }
+    if (TestEqual(TEXT("One replacement"), Replacements.Num(), 1))
+    {
+        TestEqual(TEXT("Legacy plugin"), Replacements[0].Legacy, FString(TEXT("AgentSensorCore")));
+        TestEqual(TEXT("Replacement package"), Replacements[0].Replacement, FString(TEXT("UBotSensor")));
+        TestEqual(TEXT("Redirects"), Replacements[0].Redirects, FString(TEXT("Config/DefaultUBotSensor.ini")));
+    }
 
-    TestTrue(TEXT("FormatVersion may be omitted"), FUBotPackageIndex::ParseIndexJson(TEXT(R"json({ "Packages": [] })json"), Packages));
+    // uBot Manager writes the merged index (Saved/uBot/index.json) with absent values as null.
+    {
+        const bool bMergedParsed = FUBotPackageIndex::ParseIndexJson(TEXT(R"json({
+            "formatVersion": 2,
+            "name": "merged",
+            "packages": [
+                {
+                    "name": "UBotCore", "friendlyName": "uBot Core", "description": { "en": "Core", "zh-CN": null }, "layer": "Foundation",
+                    "repository": "https://example.com/core.git", "folder": null, "docsUrl": null, "tags": [],
+                    "versions": [ { "version": "0.1.0", "ref": "v0.1.0", "planned": false, "engine": null, "requires": [], "enginePlugins": [], "provides": [], "binaries": null } ]
+                },
+                {
+                    "name": "UBotLearning", "friendlyName": null, "description": null, "layer": null, "repository": null, "tags": null,
+                    "versions": [ { "version": "0.1.0", "ref": null, "planned": true, "engine": null,
+                                    "requires": [ { "name": "UBotCore", "version": "^0.1.0", "optional": null } ], "enginePlugins": null, "provides": null } ]
+                }
+            ],
+            "recipes": [],
+            "replacements": [ { "legacy": "AgentSensorCore", "replacement": "UBotCore", "redirects": null } ]
+        })json"), Packages, &Error, &Replacements, TEXT("zh-Hans"));
+        TestTrue(FString::Printf(TEXT("Nulls count as absent values (%s)"), *Error), bMergedParsed);
+        if (TestEqual(TEXT("Both entries of the merged index"), Packages.Num(), 2))
+        {
+            TestEqual(TEXT("Missing zh-CN text falls back to en"), Packages[0].Description, FString(TEXT("Core")));
+            TestTrue(TEXT("Null-filled planned entry"), Packages[1].bPlanned && Packages[1].Requires.Num() == 1 && !Packages[1].Requires[0].bOptional);
+            TestEqual(TEXT("Null friendly name falls back to the name"), Packages[1].FriendlyName, FString(TEXT("UBotLearning")));
+            TestTrue(TEXT("Null folder means no folder"), Packages[0].InstallFolder.IsEmpty());
+            TestTrue(TEXT("A planned version has no ref"), Packages[1].IndexVersions.Num() == 1 && Packages[1].IndexVersions[0].bPlanned && Packages[1].IndexVersions[0].Ref.IsEmpty());
+        }
+        TestTrue(TEXT("Null redirects"), Replacements.Num() == 1 && Replacements[0].Redirects.IsEmpty());
+    }
+
+    TestTrue(TEXT("Empty package list parses"), FUBotPackageIndex::ParseIndexJson(TEXT(R"json({ "formatVersion": 2, "packages": [] })json"), Packages));
     TestEqual(TEXT("Empty index"), Packages.Num(), 0);
 
     TestFalse(TEXT("Invalid JSON fails"), FUBotPackageIndex::ParseIndexJson(TEXT("not json"), Packages, &Error));
@@ -986,36 +1108,282 @@ bool FUBotPackageIndexParsingTest::RunTest(const FString& Parameters)
 
     TestFalse(TEXT("Top-level array fails"), FUBotPackageIndex::ParseIndexJson(TEXT("[]"), Packages, &Error));
 
-    TestFalse(TEXT("Unsupported FormatVersion fails"), FUBotPackageIndex::ParseIndexJson(TEXT(R"json({ "FormatVersion": 2, "Packages": [ { "Name": "A" } ] })json"), Packages, &Error));
-    TestTrue(TEXT("Unsupported FormatVersion is explained"), Error.Contains(TEXT("FormatVersion")));
-    TestEqual(TEXT("Unsupported FormatVersion yields nothing"), Packages.Num(), 0);
+    TestFalse(TEXT("Missing formatVersion fails"), FUBotPackageIndex::ParseIndexJson(TEXT(R"json({ "packages": [] })json"), Packages, &Error));
+    TestTrue(TEXT("Missing formatVersion is explained"), Error.Contains(TEXT("formatVersion")));
 
-    TestFalse(TEXT("Missing Packages fails"), FUBotPackageIndex::ParseIndexJson(TEXT(R"json({ "FormatVersion": 1 })json"), Packages, &Error));
-    TestTrue(TEXT("Missing Packages is explained"), Error.Contains(TEXT("Packages")));
+    TestFalse(TEXT("Unknown formatVersion fails"), FUBotPackageIndex::ParseIndexJson(TEXT(R"json({ "formatVersion": 3, "packages": [] })json"), Packages, &Error));
+    TestTrue(TEXT("Unknown formatVersion is named"), Error.Contains(TEXT("'3'")));
+
+    TestFalse(TEXT("Missing packages fails"), FUBotPackageIndex::ParseIndexJson(TEXT(R"json({ "formatVersion": 2 })json"), Packages, &Error));
+    TestTrue(TEXT("Missing packages is explained"), Error.Contains(TEXT("packages")));
 
     const bool bPartial = FUBotPackageIndex::ParseIndexJson(TEXT(R"json({
-        "FormatVersion": 1,
-        "Packages": [
-            { "Name": "A" },
-            { "Description": "no name" },
+        "formatVersion": 2,
+        "packages": [
+            { "name": "A", "repository": "https://example.com/a.git", "versions": [ { "version": "1.0.0", "ref": "v1.0.0" } ] },
+            { "description": { "en": "no name" }, "versions": [] },
             42,
-            { "Name": "a" },
-            { "Name": "B", "Layer": "Sideways", "Version": "one" }
-        ]
-    })json"), Packages, &Error);
+            { "name": "a", "repository": "https://example.com/a2.git", "versions": [ { "version": "2.0.0", "ref": "v2.0.0" } ] },
+            { "name": "B", "layer": "Sideways", "repository": "https://example.com/b.git",
+              "versions": [ { "version": "one", "ref": "x" }, { "version": "1.0.0" }, { "version": "1.0.0", "ref": "again" } ] },
+            { "name": "C", "repository": "https://example.com/c.git", "versions": [] },
+            { "name": "D", "versions": [ { "version": "0.1.0", "ref": "v0.1.0", "engine": "five" } ] }
+        ],
+        "replacements": [ { "legacy": "Old" }, { "legacy": "Old2", "replacement": "B" }, { "legacy": "old2", "replacement": "A" } ]
+    })json"), Packages, &Error, &Replacements, TEXT("en"));
     TestFalse(TEXT("Broken entries make the parse fail"), bPartial);
-    TestEqual(TEXT("Valid entries are still returned"), Packages.Num(), 2);
-    TestTrue(TEXT("Nameless entry is reported"), Error.Contains(TEXT("Packages[1]")));
-    TestTrue(TEXT("Non-object entry is reported"), Error.Contains(TEXT("Packages[2]")));
-    TestTrue(TEXT("Duplicate entry is reported"), Error.Contains(TEXT("Packages[3]")));
+    TestEqual(TEXT("Valid entries are still returned"), Packages.Num(), 3);
+    TestTrue(TEXT("Nameless entry is reported"), Error.Contains(TEXT("packages[1]")));
+    TestTrue(TEXT("Non-object entry is reported"), Error.Contains(TEXT("packages[2]")));
+    TestTrue(TEXT("Duplicate entry is reported"), Error.Contains(TEXT("packages[3]")));
     TestTrue(TEXT("Bad layer is reported"), Error.Contains(TEXT("Sideways")));
     TestTrue(TEXT("Bad version is reported"), Error.Contains(TEXT("'one'")));
-    if (Packages.Num() == 2)
+    TestTrue(TEXT("Missing ref is reported"), Error.Contains(TEXT("no \"ref\"")));
+    TestTrue(TEXT("Duplicate version is reported"), Error.Contains(TEXT("duplicates version 1.0.0")));
+    TestTrue(TEXT("Entry without versions is reported"), Error.Contains(TEXT("packages[5]")));
+    TestTrue(TEXT("Missing repository is reported"), Error.Contains(TEXT("no \"repository\"")));
+    TestTrue(TEXT("Bad engine constraint is reported"), Error.Contains(TEXT("five")));
+    TestTrue(TEXT("Incomplete replacement is reported"), Error.Contains(TEXT("replacements[0]")));
+    TestTrue(TEXT("Duplicate replacement is reported"), Error.Contains(TEXT("replacements[2]")));
+    if (Packages.Num() == 3)
     {
-        TestEqual(TEXT("First of the duplicates wins"), Packages[0].Name, FString(TEXT("A")));
+        TestEqual(TEXT("First of the duplicates wins"), Packages[0].Version, FString(TEXT("1.0.0")));
         TestEqual(TEXT("Entry with a bad layer is kept as Unknown"), Packages[1].Layer, EUBotPackageLayer::Unknown);
+        TestEqual(TEXT("Valid versions of a partly broken entry remain"), FString::Join(Packages[1].AvailableVersions, TEXT(",")), FString(TEXT("1.0.0")));
+    }
+    TestEqual(TEXT("Valid replacements are kept"), Replacements.Num(), 1);
+
+    // An unsafe "folder" or "ref" is reported but kept as written, so that installing can refuse it
+    // instead of silently falling back to another folder or ref.
+    {
+        TArray<FUBotPackageInfo> Unsafe;
+        FString UnsafeError;
+        const bool bUnsafeParsed = FUBotPackageIndex::ParseIndexJson(TEXT(R"json({
+            "formatVersion": 2,
+            "packages": [
+                { "name": "Escape", "repository": "https://example.com/e.git", "folder": "../Escape",
+                  "versions": [ { "version": "1.0.0", "ref": "--upload-pack=calc" } ] },
+                { "name": "Tidy", "repository": "https://example.com/t.git", "folder": "Tidy_2.x-b",
+                  "versions": [ { "version": "1.0.0", "ref": "release/1.0" }, { "version": "2.0.0", "planned": true, "ref": "ignored for planned" } ] }
+            ]
+        })json"), Unsafe, &UnsafeError, nullptr, TEXT("en"));
+        TestFalse(TEXT("Unsafe folder and ref make the parse fail"), bUnsafeParsed);
+        TestTrue(TEXT("The unsafe folder is reported"), UnsafeError.Contains(TEXT("\"folder\" '../Escape'")));
+        TestTrue(TEXT("The unsafe ref is reported"), UnsafeError.Contains(TEXT("\"ref\" '--upload-pack=calc' is not a safe git ref")));
+        TestFalse(TEXT("Safe values are not reported"), UnsafeError.Contains(TEXT("Tidy")));
+        if (TestEqual(TEXT("Both entries are kept"), Unsafe.Num(), 2))
+        {
+            TestEqual(TEXT("The folder is kept as written"), Unsafe[0].InstallFolder, FString(TEXT("../Escape")));
+            TestTrue(TEXT("The ref is kept as written"), Unsafe[0].IndexVersions.Num() == 1 && Unsafe[0].IndexVersions[0].Ref == TEXT("--upload-pack=calc"));
+            TestEqual(TEXT("A safe folder is kept"), Unsafe[1].InstallFolder, FString(TEXT("Tidy_2.x-b")));
+            if (TestEqual(TEXT("Both versions are listed"), Unsafe[1].IndexVersions.Num(), 2))
+            {
+                TestEqual(TEXT("Newest first, the planned one"), Unsafe[1].IndexVersions[0].Version, FString(TEXT("2.0.0")));
+                TestTrue(TEXT("A planned version ignores its ref"), Unsafe[1].IndexVersions[0].bPlanned && Unsafe[1].IndexVersions[0].Ref.IsEmpty());
+                TestEqual(TEXT("A branch ref is allowed"), Unsafe[1].IndexVersions[1].Ref, FString(TEXT("release/1.0")));
+            }
+        }
+
+        const TCHAR* SafeRefs[] = { TEXT("v0.1.0"), TEXT("release/1.0"), TEXT("0123abc"), TEXT("feature_x-2"), TEXT("v1.0.0-rc.1+build") };
+        for (const TCHAR* Ref : SafeRefs)
+        {
+            TestTrue(*FString::Printf(TEXT("'%s' is a safe ref"), Ref), FUBotPackageIndex::IsSafeGitRef(Ref));
+        }
+        const TCHAR* UnsafeRefs[] = { TEXT(""), TEXT("-x"), TEXT("--upload-pack=calc"), TEXT("a b"), TEXT("a\tb"), TEXT("a..b"), TEXT("a~1"), TEXT("a^"), TEXT("a:b"), TEXT("a?"), TEXT("a*"), TEXT("a["), TEXT("a\\b"), TEXT("a\"b") };
+        for (const TCHAR* Ref : UnsafeRefs)
+        {
+            TestFalse(*FString::Printf(TEXT("'%s' is not a safe ref"), Ref), FUBotPackageIndex::IsSafeGitRef(Ref));
+        }
+
+        const TCHAR* SafeFolders[] = { TEXT("uBotSensor"), TEXT("uBot-Sensor_2.x"), TEXT(".hidden"), TEXT("a..b") };
+        for (const TCHAR* Folder : SafeFolders)
+        {
+            TestTrue(*FString::Printf(TEXT("'%s' is a safe folder"), Folder), FUBotPackageIndex::IsSafeFolderName(Folder));
+        }
+        const TCHAR* UnsafeFolders[] = { TEXT(""), TEXT("."), TEXT(".."), TEXT("../x"), TEXT("a/b"), TEXT("a\\b"), TEXT("C:"), TEXT("a b"), TEXT("a*"), TEXT("a\"b"), TEXT("a\tb") };
+        for (const TCHAR* Folder : UnsafeFolders)
+        {
+            TestFalse(*FString::Printf(TEXT("'%s' is not a safe folder"), Folder), FUBotPackageIndex::IsSafeFolderName(Folder));
+        }
     }
 
+    // "Composition" was never a layer of the contract (SPEC, schema and the manager know four).
+    {
+        TArray<FUBotPackageInfo> Layered;
+        FString LayerError;
+        TestFalse(TEXT("Composition is not a layer"), FUBotPackageIndex::ParseIndexJson(TEXT(R"json({ "formatVersion": 2, "packages": [
+            { "name": "C", "layer": "Composition", "repository": "https://example.com/c.git", "versions": [ { "version": "1.0.0", "ref": "v1.0.0" } ] } ] })json"),
+            Layered, &LayerError, nullptr, TEXT("en")));
+        TestTrue(TEXT("The unknown layer is named"), LayerError.Contains(TEXT("Unknown layer 'Composition'")));
+        TestFalse(TEXT("The expected layers do not list Composition"), LayerError.Contains(TEXT("(expected Foundation, Capability, Composition")));
+        TestTrue(TEXT("The expected layers are the four of the contract"), LayerError.Contains(TEXT("(expected Foundation, Capability, Adapter or Content)")));
+        TestTrue(TEXT("The entry is kept with an unknown layer"), Layered.Num() == 1 && Layered[0].Layer == EUBotPackageLayer::Unknown);
+    }
+
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotPackageIndexFormatOneTest, "UBotCore.Packages.IndexRejectsFormatOne", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotPackageIndexFormatOneTest::RunTest(const FString& Parameters)
+{
+    TArray<FUBotPackageInfo> Packages;
+    TArray<FUBotPackageReplacement> Replacements;
+    Replacements.AddDefaulted();
+    FString Error;
+
+    // The layout of the former Resources/PackageIndex.json.
+    const bool bParsed = FUBotPackageIndex::ParseIndexJson(TEXT(R"json({
+        "FormatVersion": 1,
+        "Packages": [ { "Name": "UBotCore", "Version": "0.1.0", "Repository": "https://example.com/core.git" } ]
+    })json"), Packages, &Error, &Replacements);
+
+    TestFalse(TEXT("Format 1 is rejected"), bParsed);
+    TestTrue(FString::Printf(TEXT("Format 1 gets a clear message (%s)"), *Error), Error.Contains(TEXT("format 1 is no longer supported")));
+    TestTrue(TEXT("The message names the expected format"), Error.Contains(TEXT("\"formatVersion\": 2")));
+    TestEqual(TEXT("Nothing is returned"), Packages.Num(), 0);
+    TestEqual(TEXT("Replacements are cleared"), Replacements.Num(), 0);
+
+    TestFalse(TEXT("camelCase format 1 is rejected too"), FUBotPackageIndex::ParseIndexJson(TEXT(R"json({ "formatVersion": 1, "packages": [] })json"), Packages, &Error));
+    TestTrue(TEXT("camelCase format 1 gets the same message"), Error.Contains(TEXT("format 1 is no longer supported")));
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotPackageIndexVersionSelectionTest, "UBotCore.Packages.IndexVersionSelection", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotPackageIndexVersionSelectionTest::RunTest(const FString& Parameters)
+{
+    using namespace UBotPackageTests;
+
+    TArray<FUBotPackageInfo> Packages;
+    FString Error;
+    const bool bParsed = FUBotPackageIndex::ParseIndexJson(TEXT(R"json({
+        "formatVersion": 2,
+        "packages": [
+            {
+                "name": "Mixed",
+                "repository": "https://example.com/mixed.git",
+                "versions": [
+                    { "version": "0.2.0", "ref": "v0.2.0", "requires": [ { "name": "UBotCore", "version": "^0.2.0" } ], "provides": [ "Old" ] },
+                    { "version": "0.10.0", "ref": "v0.10.0", "requires": [ { "name": "UBotCore", "version": "^0.3.0" } ], "enginePlugins": [ "ChaosVehiclesPlugin" ], "provides": [ "New" ] },
+                    { "version": "1.0.0", "planned": true, "requires": [ { "name": "UBotCore", "version": "^1.0.0" } ], "provides": [ "Future" ] },
+                    { "version": "0.10.0-rc.1", "ref": "v0.10.0-rc.1" },
+                    { "version": "0.9.1", "ref": "v0.9.1" }
+                ]
+            },
+            {
+                "name": "Announced",
+                "versions": [
+                    { "version": "0.1.0", "planned": true, "enginePlugins": [ "LearningAgents" ], "provides": [ "First" ] },
+                    { "version": "0.2.0", "planned": true, "requires": [ { "name": "UBotCore", "version": "^0.2.0" } ], "provides": [ "Second" ] }
+                ]
+            }
+        ]
+    })json"), Packages, &Error, nullptr, TEXT("en"));
+
+    TestTrue(FString::Printf(TEXT("Index parses (%s)"), *Error), bParsed);
+
+    const FUBotPackageInfo* Mixed = FindByName(Packages, TEXT("Mixed"));
+    if (TestNotNull(TEXT("Mixed package"), Mixed))
+    {
+        TestEqual(TEXT("Latest is the highest non-planned version by SemVer precedence"), Mixed->Version, FString(TEXT("0.10.0")));
+        TestEqual(TEXT("Available versions newest first, planned ones left out"), FString::Join(Mixed->AvailableVersions, TEXT(",")),
+            FString(TEXT("0.10.0,0.10.0-rc.1,0.9.1,0.2.0")));
+        TestFalse(TEXT("A package with an installable version is not planned"), Mixed->bPlanned);
+        // Every version with the ref the installer clones, planned ones included.
+        TArray<FString> Described;
+        for (const FUBotPackageIndexVersion& IndexVersion : Mixed->IndexVersions)
+        {
+            Described.Add(FString::Printf(TEXT("%s=%s%s"), *IndexVersion.Version, *IndexVersion.Ref, IndexVersion.bPlanned ? TEXT("(planned)") : TEXT("")));
+        }
+        TestEqual(TEXT("Index versions newest first with their refs"), FString::Join(Described, TEXT(",")),
+            FString(TEXT("1.0.0=(planned),0.10.0=v0.10.0,0.10.0-rc.1=v0.10.0-rc.1,0.9.1=v0.9.1,0.2.0=v0.2.0")));
+        TestEqual(TEXT("Provides come from the latest version"), FString::Join(Mixed->Provides, TEXT(",")), FString(TEXT("New")));
+        TestEqual(TEXT("Engine plugins come from the latest version"), FString::Join(Mixed->ExternalRequires, TEXT(",")), FString(TEXT("ChaosVehiclesPlugin")));
+        TestTrue(TEXT("Requirements come from the latest version"), Mixed->Requires.Num() == 1 && Mixed->Requires[0].Version == TEXT("^0.3.0"));
+    }
+
+    const FUBotPackageInfo* Announced = FindByName(Packages, TEXT("Announced"));
+    if (TestNotNull(TEXT("Planned package"), Announced))
+    {
+        TestTrue(TEXT("Only planned versions make a planned package"), Announced->bPlanned);
+        TestEqual(TEXT("A planned package has no installable versions"), Announced->AvailableVersions.Num(), 0);
+        TestTrue(TEXT("All of its versions are listed, as planned"),
+            Announced->IndexVersions.Num() == 2 && Announced->IndexVersions[0].bPlanned && Announced->IndexVersions[1].bPlanned);
+        TestEqual(TEXT("Version of a planned package is the newest planned one"), Announced->Version, FString(TEXT("0.2.0")));
+        TestEqual(TEXT("Provides come from the newest planned version"), FString::Join(Announced->Provides, TEXT(",")), FString(TEXT("Second")));
+        TestTrue(TEXT("Requirements come from the newest planned version"), Announced->Requires.Num() == 1 && Announced->Requires[0].Name == TEXT("UBotCore"));
+        TestEqual(TEXT("A planned package needs no repository"), Announced->Repository, FString());
+    }
+
+    // Merging keeps the installed data but takes what the index knows about versions.
+    TArray<FUBotPackageInfo> Installed;
+    Installed.Add(MakePackage(TEXT("mixed"), TEXT("0.2.0"), EUBotPackageState::Enabled));
+    Installed.Add(MakePackage(TEXT("Announced"), TEXT("0.0.1"), EUBotPackageState::Disabled));
+    const TArray<FUBotPackageInfo> Merged = FUBotPackageIndex::MergeInstalledWithIndex(Installed, Packages);
+    if (TestEqual(TEXT("Nothing appended"), Merged.Num(), 2))
+    {
+        TestEqual(TEXT("Installed version is kept"), Merged[0].Version, FString(TEXT("0.2.0")));
+        TestEqual(TEXT("Available versions come from the index"), Merged[0].AvailableVersions.Num(), 4);
+        TestEqual(TEXT("Index versions come from the index"), Merged[0].IndexVersions.Num(), 5);
+        TestTrue(TEXT("A locally built planned package is marked planned"), Merged[1].bPlanned);
+    }
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotPackageIndexLocalizedTextTest, "UBotCore.Packages.IndexLocalizedDescription", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotPackageIndexLocalizedTextTest::RunTest(const FString& Parameters)
+{
+    using namespace UBotPackageTests;
+
+    const TSharedPtr<FJsonObject> Both = ParseJsonObject(TEXT(R"json({ "en": " Sensors ", "zh-CN": " 传感器 " })json"));
+    const TSharedPtr<FJsonObject> EnglishOnly = ParseJsonObject(TEXT(R"json({ "en": "Sensors", "zh-CN": "" })json"));
+    const TSharedPtr<FJsonObject> ChineseOnly = ParseJsonObject(TEXT(R"json({ "zh-CN": "传感器" })json"));
+    if (!TestTrue(TEXT("Test JSON parses"), Both.IsValid() && EnglishOnly.IsValid() && ChineseOnly.IsValid()))
+    {
+        return false;
+    }
+
+    struct FCase
+    {
+        const TCHAR* Culture;
+        const TCHAR* Expected;
+    };
+    const FCase Cases[] =
+    {
+        { TEXT("en"), TEXT("Sensors") },
+        { TEXT("en-US"), TEXT("Sensors") },
+        { TEXT("de"), TEXT("Sensors") },
+        { TEXT("zh"), TEXT("传感器") },
+        { TEXT("zh-Hans"), TEXT("传感器") },
+        { TEXT("zh-Hans-CN"), TEXT("传感器") },
+        { TEXT("zh-CN"), TEXT("传感器") },
+        { TEXT("ZH-TW"), TEXT("传感器") },
+        { TEXT("zu"), TEXT("Sensors") },
+        { TEXT(""), TEXT("Sensors") },
+    };
+    for (const FCase& Case : Cases)
+    {
+        TestEqual(FString::Printf(TEXT("Culture '%s'"), Case.Culture), FUBotPackageIndex::SelectLocalizedText(*Both, Case.Culture), FString(Case.Expected));
+    }
+    TestEqual(TEXT("Empty zh-CN text falls back to English"), FUBotPackageIndex::SelectLocalizedText(*EnglishOnly, TEXT("zh-Hans")), FString(TEXT("Sensors")));
+    TestEqual(TEXT("Missing English falls back to any text"), FUBotPackageIndex::SelectLocalizedText(*ChineseOnly, TEXT("en")), FString(TEXT("传感器")));
+
+    const FString Index = TEXT(R"json({ "formatVersion": 2, "packages": [ { "name": "UBotSensor", "repository": "https://example.com/s.git",
+        "description": { "en": "Sensors", "zh-CN": "传感器" }, "versions": [ { "version": "0.1.0", "ref": "v0.1.0" } ] } ] })json");
+    TArray<FUBotPackageInfo> Packages;
+    TestTrue(TEXT("Chinese editor parses"), FUBotPackageIndex::ParseIndexJson(Index, Packages, nullptr, nullptr, TEXT("zh-Hans")));
+    TestTrue(TEXT("Chinese editor gets the zh-CN description"), Packages.Num() == 1 && Packages[0].Description == TEXT("传感器"));
+    TestTrue(TEXT("English editor parses"), FUBotPackageIndex::ParseIndexJson(Index, Packages, nullptr, nullptr, TEXT("en")));
+    TestTrue(TEXT("English editor gets the en description"), Packages.Num() == 1 && Packages[0].Description == TEXT("Sensors"));
+
+    FString Error;
+    TestFalse(TEXT("A description without English is reported"), FUBotPackageIndex::ParseIndexJson(TEXT(R"json({ "formatVersion": 2, "packages": [
+        { "name": "X", "repository": "https://example.com/x.git", "description": { "zh-CN": "只有中文" }, "versions": [ { "version": "1.0.0", "ref": "v1" } ] } ] })json"),
+        Packages, &Error, nullptr, TEXT("en")));
+    TestTrue(TEXT("Missing en text is named"), Error.Contains(TEXT("\"en\"")));
+    TestTrue(TEXT("The entry is still used"), Packages.Num() == 1 && Packages[0].Description == TEXT("只有中文"));
     return true;
 }
 
@@ -1037,9 +1405,14 @@ bool FUBotPackageIndexMergeTest::RunTest(const FString& Parameters)
     FUBotPackageInfo& IndexCore = Index.AddDefaulted_GetRef();
     IndexCore.Name = TEXT("ubotcore");
     IndexCore.Version = TEXT("0.2.0");
+    IndexCore.AvailableVersions = { TEXT("0.2.0"), TEXT("0.1.0") };
     IndexCore.Description = TEXT("Index description");
     IndexCore.Repository = TEXT("https://index/core.git");
     IndexCore.DocsUrl = TEXT("https://index/docs");
+    IndexCore.InstallFolder = TEXT("uBotCore");
+    FUBotPackageIndexVersion& IndexCoreVersion = IndexCore.IndexVersions.AddDefaulted_GetRef();
+    IndexCoreVersion.Version = TEXT("0.2.0");
+    IndexCoreVersion.Ref = TEXT("v0.2.0");
     IndexCore.bFromIndex = true;
 
     FUBotPackageInfo& IndexSensor = Index.AddDefaulted_GetRef();
@@ -1047,6 +1420,7 @@ bool FUBotPackageIndexMergeTest::RunTest(const FString& Parameters)
     IndexSensor.Version = TEXT("0.1.0");
     IndexSensor.Repository = TEXT("https://index/sensor.git");
     IndexSensor.Problems.Add(TEXT("should not survive"));
+    IndexSensor.ProblemDetails.AddDefaulted();
     // Deliberately inconsistent flags: the merge must normalise index-only entries.
     IndexSensor.bInstalled = true;
     IndexSensor.State = EUBotPackageState::Enabled;
@@ -1062,6 +1436,9 @@ bool FUBotPackageIndexMergeTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Installed entries keep their position"), Core.Name, FString(TEXT("UBotCore")));
     TestTrue(TEXT("Installed entry found in the index is marked"), Core.bFromIndex);
     TestEqual(TEXT("Installed version wins"), Core.Version, FString(TEXT("0.1.0")));
+    TestEqual(TEXT("Index versions are attached"), FString::Join(Core.AvailableVersions, TEXT(",")), FString(TEXT("0.2.0,0.1.0")));
+    TestTrue(TEXT("The refs of the index versions are attached"), Core.IndexVersions.Num() == 1 && Core.IndexVersions[0].Ref == TEXT("v0.2.0"));
+    TestEqual(TEXT("Empty install folder is filled from the index"), Core.InstallFolder, FString(TEXT("uBotCore")));
     TestEqual(TEXT("Installed description wins"), Core.Description, FString(TEXT("Installed description")));
     TestEqual(TEXT("Empty repository is filled from the index"), Core.Repository, FString(TEXT("https://index/core.git")));
     TestEqual(TEXT("Existing docs URL is kept"), Core.DocsUrl, FString(TEXT("https://installed/docs")));
@@ -1071,6 +1448,7 @@ bool FUBotPackageIndexMergeTest::RunTest(const FString& Parameters)
     const FUBotPackageInfo& LocalMerged = Merged[1];
     TestEqual(TEXT("Installed-only entry stays"), LocalMerged.Name, FString(TEXT("MyLocalPackage")));
     TestFalse(TEXT("Installed-only entry is not from the index"), LocalMerged.bFromIndex);
+    TestEqual(TEXT("Installed-only entry has no index versions"), LocalMerged.AvailableVersions.Num(), 0);
 
     const FUBotPackageInfo& Sensor = Merged[2];
     TestEqual(TEXT("Index-only entry is appended"), Sensor.Name, FString(TEXT("UBotSensor")));
@@ -1080,6 +1458,7 @@ bool FUBotPackageIndexMergeTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Index-only entry is from the index"), Sensor.bFromIndex);
     TestEqual(TEXT("Index-only entry keeps its requirements"), Sensor.Requires.Num(), 1);
     TestEqual(TEXT("Index-only entry has no problems"), Sensor.Problems.Num(), 0);
+    TestEqual(TEXT("Index-only entry has no problem details"), Sensor.ProblemDetails.Num(), 0);
 
     TArray<FUBotPackageInfo> View = Merged;
     FUBotPackageRegistry::ValidatePackageSet(View);
@@ -1104,11 +1483,14 @@ bool FUBotPackageBuiltInIndexTest::RunTest(const FString& Parameters)
         return false;
     }
 
-    const FString IndexPath = FPaths::Combine(CorePlugin->GetBaseDir(), TEXT("Resources"), TEXT("PackageIndex.json"));
+    TestFalse(TEXT("The format 1 index is gone"), FPaths::FileExists(FPaths::Combine(CorePlugin->GetBaseDir(), TEXT("Resources"), TEXT("PackageIndex.json"))));
+
+    const FString IndexPath = FPaths::Combine(CorePlugin->GetBaseDir(), TEXT("Index"), TEXT("index.json"));
     TArray<FUBotPackageInfo> Index;
+    TArray<FUBotPackageReplacement> Replacements;
     FString Error;
-    const bool bLoaded = FUBotPackageIndex::LoadIndexFile(IndexPath, Index, &Error);
-    if (!TestTrue(FString::Printf(TEXT("Built-in index loads cleanly (%s)"), *Error), bLoaded))
+    const bool bLoaded = FUBotPackageIndex::LoadIndexFile(IndexPath, Index, &Error, &Replacements);
+    if (!TestTrue(FString::Printf(TEXT("UBotCore's Index/index.json loads cleanly (%s)"), *Error), bLoaded))
     {
         return false;
     }
@@ -1125,42 +1507,62 @@ bool FUBotPackageBuiltInIndexTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Sensor repository"), Sensor->Repository, FString(TEXT("https://github.com/AstreoX/uBotSensor.git")));
     TestEqual(TEXT("ROS repository"), Ros->Repository, FString(TEXT("https://github.com/AstreoX/uBotROS.git")));
     TestEqual(TEXT("Core layer"), Core->Layer, EUBotPackageLayer::Foundation);
-    TestEqual(TEXT("Core has no requirements"), Core->Requires.Num(), 0);
-
-    if (TestEqual(TEXT("Sensor has one requirement"), Sensor->Requires.Num(), 1))
+    for (const FUBotPackageInfo* Package : { Core, Sensor, Ros })
     {
-        TestEqual(TEXT("Sensor requires Core"), Sensor->Requires[0].Name, FString(TEXT("UBotCore")));
-        TestEqual(TEXT("Sensor requires Core ^0.1.0"), Sensor->Requires[0].Version, FString(TEXT("^0.1.0")));
+        TestFalse(FString::Printf(TEXT("%s is installable"), *Package->Name), Package->bPlanned || Package->AvailableVersions.IsEmpty());
+        TestFalse(FString::Printf(TEXT("%s has a description"), *Package->Name), Package->Description.IsEmpty());
     }
-    if (TestEqual(TEXT("ROS has two requirements"), Ros->Requires.Num(), 2))
+
+    for (const FUBotPackageInfo& Package : Index)
     {
-        TestEqual(TEXT("ROS requires Core"), Ros->Requires[0].Name, FString(TEXT("UBotCore")));
-        TestEqual(TEXT("ROS requires Core ^0.1.0"), Ros->Requires[0].Version, FString(TEXT("^0.1.0")));
-        TestEqual(TEXT("ROS requires Sensor"), Ros->Requires[1].Name, FString(TEXT("UBotSensor")));
-        TestEqual(TEXT("ROS requires Sensor ^0.1.0"), Ros->Requires[1].Version, FString(TEXT("^0.1.0")));
+        TestEqual(FString::Printf(TEXT("%s: planned exactly when no version is installable"), *Package.Name), Package.bPlanned, Package.AvailableVersions.IsEmpty());
+        TestFalse(FString::Printf(TEXT("%s has a version"), *Package.Name), Package.Version.IsEmpty());
+
+        // What the installer clones: every installable version has a safe ref, planned ones have none.
+        TestEqual(FString::Printf(TEXT("%s lists all its versions"), *Package.Name), Package.IndexVersions.Num(),
+            Package.AvailableVersions.Num() + Package.IndexVersions.FilterByPredicate([](const FUBotPackageIndexVersion& IndexVersion) { return IndexVersion.bPlanned; }).Num());
+        for (const FUBotPackageIndexVersion& IndexVersion : Package.IndexVersions)
+        {
+            TestEqual(FString::Printf(TEXT("%s %s has a ref exactly when it is installable"), *Package.Name, *IndexVersion.Version), !IndexVersion.Ref.IsEmpty(), !IndexVersion.bPlanned);
+            TestTrue(FString::Printf(TEXT("%s %s has a safe ref"), *Package.Name, *IndexVersion.Version), IndexVersion.Ref.IsEmpty() || FUBotPackageIndex::IsSafeGitRef(IndexVersion.Ref));
+        }
+        TestTrue(FString::Printf(TEXT("%s has a safe install folder"), *Package.Name), Package.InstallFolder.IsEmpty() || FUBotPackageIndex::IsSafeFolderName(Package.InstallFolder));
     }
-    TestEqual(TEXT("ROS has no external requirements"), Ros->ExternalRequires.Num(), 0);
 
-    // Capability keys of packages that are not installed come from this index only, so they have to
-    // match the "UBot" blocks in the packages' own descriptors (see the sensor and ROS contracts).
-    TestEqual(TEXT("Sensor provides"), FString::Join(Sensor->Provides, TEXT(",")),
-        FString(TEXT("Sensor.Pose,Sensor.Odometry,Sensor.IMU,Sensor.Lidar2D,Sensor.Lidar3D,Sensor.RGBCamera,Sensor.DepthCamera,Sensor.Medium")));
-    TestEqual(TEXT("Sensor tags"), FString::Join(Sensor->Tags, TEXT(",")), FString(TEXT("sensor")));
-    TestEqual(TEXT("ROS provides"), FString::Join(Ros->Provides, TEXT(",")),
-        FString(TEXT("ROS.SensorPublishing,ROS.TF,ROS.Clock,ROS.VelocityCommand")));
-    TestEqual(TEXT("ROS tags"), FString::Join(Ros->Tags, TEXT(",")), FString(TEXT("ros,ros2,adapter")));
-
-    // UBotCore is installed here, so its index entry can be compared with the descriptor it mirrors.
+    // Installed packages must agree with the index entry for their own version: the index is what
+    // uBot Manager plans with before anything is cloned.
     {
         FUBotPackageRegistry Registry;
         Registry.Refresh();
-        if (const FUBotPackageInfo* InstalledCore = Registry.FindPackage(TEXT("UBotCore")))
+        for (const FUBotPackageInfo& Installed : Registry.GetInstalledPackages())
         {
-            TestEqual(TEXT("Core index provides match the descriptor"),
-                FString::Join(Core->Provides, TEXT(",")), FString::Join(InstalledCore->Provides, TEXT(",")));
-            TestEqual(TEXT("Core index tags match the descriptor"),
-                FString::Join(Core->Tags, TEXT(",")), FString::Join(InstalledCore->Tags, TEXT(",")));
-            TestEqual(TEXT("Core index version matches the descriptor"), Core->Version, InstalledCore->Version);
+            const FUBotPackageInfo* Entry = FindByName(Index, *Installed.Name);
+            if (Entry == nullptr || !Installed.Name.StartsWith(TEXT("UBot")))
+            {
+                continue;
+            }
+            TestTrue(FString::Printf(TEXT("%s %s is listed in the index"), *Installed.Name, *Installed.Version), Entry->AvailableVersions.Contains(Installed.Version));
+            if (Entry->Version != Installed.Version)
+            {
+                continue;
+            }
+            TestEqual(FString::Printf(TEXT("%s provides match the descriptor"), *Installed.Name),
+                FString::Join(Entry->Provides, TEXT(",")), FString::Join(Installed.Provides, TEXT(",")));
+            TestEqual(FString::Printf(TEXT("%s tags match the descriptor"), *Installed.Name),
+                FString::Join(Entry->Tags, TEXT(",")), FString::Join(Installed.Tags, TEXT(",")));
+            TestEqual(FString::Printf(TEXT("%s layer matches the descriptor"), *Installed.Name), Entry->Layer, Installed.Layer);
+            TestEqual(FString::Printf(TEXT("%s engine plugins match the descriptor"), *Installed.Name),
+                FString::Join(Entry->ExternalRequires, TEXT(",")), FString::Join(Installed.ExternalRequires, TEXT(",")));
+            if (TestEqual(FString::Printf(TEXT("%s has the descriptor's requirements"), *Installed.Name), Entry->Requires.Num(), Installed.Requires.Num()))
+            {
+                for (int32 RequirementIndex = 0; RequirementIndex < Entry->Requires.Num(); ++RequirementIndex)
+                {
+                    const FUBotPackageDependency& FromIndex = Entry->Requires[RequirementIndex];
+                    const FUBotPackageDependency& FromDescriptor = Installed.Requires[RequirementIndex];
+                    TestTrue(FString::Printf(TEXT("%s requirement %d matches the descriptor"), *Installed.Name, RequirementIndex),
+                        FromIndex.Name == FromDescriptor.Name && FromIndex.Version == FromDescriptor.Version && FromIndex.bOptional == FromDescriptor.bOptional);
+                }
+            }
         }
     }
 
@@ -1179,9 +1581,22 @@ bool FUBotPackageBuiltInIndexTest::RunTest(const FString& Parameters)
         TestEqual(FString::Printf(TEXT("%s is consistent with the rest of the index"), *Package.Name), Package.Problems.Num(), 0);
     }
 
+    for (const FUBotPackageReplacement& Replacement : Replacements)
+    {
+        TestNotNull(FString::Printf(TEXT("Replacement %s of %s is in the index"), *Replacement.Replacement, *Replacement.Legacy), FindByName(Index, *Replacement.Replacement));
+    }
+
+    TArray<FString> ConfigErrors;
+    const TArray<FString> Files = FUBotPackageIndex::GetConfiguredIndexFiles(&ConfigErrors);
+    if (TestTrue(TEXT("At least one index file is configured"), Files.Num() > 0))
+    {
+        const FString MergedIndex = FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("uBot"), TEXT("index.json")));
+        const FString ExpectedFirst = FPaths::FileExists(MergedIndex) ? MergedIndex : FPaths::ConvertRelativePathToFull(IndexPath);
+        TestTrue(TEXT("The manager's merged index, else UBotCore's own index, comes first"), FPaths::IsSamePath(Files[0], ExpectedFirst));
+    }
     const TArray<FUBotPackageInfo> Configured = FUBotPackageIndex::LoadConfiguredIndex();
-    TestNotNull(TEXT("Configured index includes the built-in UBotCore entry"), FindByName(Configured, TEXT("UBotCore")));
-    TestNotNull(TEXT("Configured index includes the built-in UBotROS entry"), FindByName(Configured, TEXT("UBotROS")));
+    TestNotNull(TEXT("Configured index includes UBotCore"), FindByName(Configured, TEXT("UBotCore")));
+    TestNotNull(TEXT("Configured index includes UBotROS"), FindByName(Configured, TEXT("UBotROS")));
 
     return true;
 }
