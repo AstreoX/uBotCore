@@ -23,7 +23,7 @@ uBotCore 是 **Foundation** 层，只依赖 UE 引擎模块，不包含任何 RO
 | 模块 | 类型 | 加载阶段 | 说明 |
 | --- | --- | --- | --- |
 | `UBotCore` | Runtime | PreDefault | 运行时 API |
-| `UBotCoreEditor` | Editor | Default | uBot 面板、PIE 会话记录与 `UBotPackage` commandlet |
+| `UBotCoreEditor` | Editor | Default | uBot 面板、PIE 会话记录、`UBotPackage` 与 `UBotDocExport` commandlet |
 
 ## 安装
 
@@ -424,6 +424,37 @@ $Project = '<Project>\<Project>.uproject'
 
 git 的运行方式：不经过 shell，参数逐个加引号；只允许 `https`、`http`、`ssh`、`file` 协议、scp 形式（`user@host:path`）和绝对本地路径；`git://`（无认证、无加密）、相对路径和 `host:path` 形式会被拒绝，以 `-` 开头的地址和 `<transport>::` 形式的 remote helper 同样被拒绝；输出和日志中的 URL 凭据会被替换为 `***`；设置了 `GIT_TERMINAL_PROMPT=0`，所以私有仓库需要事先配置好 SSH key 或 credential helper，git 不会弹出交互式提示。
 
+#### 蓝图 API 导出（UBotDocExport）
+
+`UBotDocExport` commandlet 把一个插件的蓝图 API（或一份引擎节点清单）写成 uBot 文档站使用的 `api.json`（格式 1）。节点通过蓝图编辑器自己的节点生成器放进一个临时 Actor 蓝图再读回，所以节点标题、引脚名、引脚顺序和隐藏引脚都与蓝图编辑器画出来的一致。
+
+```powershell
+# 中文导出，再导出英文并合并中文字段（titleZh、subtitleZh、nameZh、displayNameZh，只在与英文不同时写入）
+& $Editor $Project -run=UBotDocExport -Plugin=UBotSensor -Out=Saved/Docs/UBotSensor.zh.json -culture=zh-Hans -NullRHI
+& $Editor $Project -run=UBotDocExport -Plugin=UBotSensor -Out=<uBotSensor>/docs/api.json -MergeZh=Saved/Docs/UBotSensor.zh.json -culture=en -NullRHI
+
+# 引擎节点清单（plugin 为 "Engine"）
+& $Editor $Project -run=UBotDocExport -Nodes=Docs/engine-nodes.txt -Out=Saved/Docs/engine.json -culture=en -NullRHI
+```
+
+| 参数 | 说明 |
+| --- | --- |
+| `-Plugin=<Name>` | 导出该插件所有模块（`/Script/<Module>`）中蓝图可见的类、结构体和枚举；`Tests` 目录中的类型不导出。子类改了插件父类中属性的默认值时（例如 IMU 的 `Update Rate Hz` 为 100），该属性在子类里再列一次，带子类的默认值 |
+| `-Nodes=<ListFile>` | 导出清单中的节点，与 `-Plugin` 二选一 |
+| `-Out=<File>` | 输出文件，UTF-8 无 BOM、LF 换行；同一份源码两次导出逐字节相同 |
+| `-MergeZh=<File>` | 同一插件或清单在 `-culture=zh-Hans` 下的导出，用来加入中文字段 |
+
+文字跟随进程的语言（引擎参数 `-culture=<name>`），所以中英双语需要运行两次。不带 `-culture`（也不带 `-language`）时固定导出英文，不会跟随系统或编辑器的语言，文件里的 `"culture"` 是 `"en"`；`-MergeZh` 要求本次运行是英文，并且被合并文件的 `culture` 与之不同（`zh-Hans`）。中文导出与中文编辑器显示的一致：编辑器偏好设置“使用本地化的图表编辑器节点和引脚名称”（`[Internationalization] ShouldUseLocalizedNodeAndPinNames`，默认关闭）关闭时，`Target` 等引脚名和 Make/Break 标题保持英文，只有“目标是 …”这类副标题和引擎函数名是中文。相对路径从工程目录算起。清单文件每行一项，`#` 之后是注释：
+
+```text
+/Script/Engine.KismetSystemLibrary:PrintString                              # 函数调用节点
+event /Script/Engine.Actor:ReceiveBeginPlay                                  # 可覆盖的事件节点
+node /Script/BlueprintGraph.K2Node_IfThenElse                                # 特殊 K2 节点
+macro /Engine/EditorBlueprintResources/StandardMacros.StandardMacros:ForLoop # 宏
+```
+
+退出码：成功为 `0`；参数有误、插件或清单项无法解析、节点无法生成、`-MergeZh` 无法读取、属于其他插件或不是英文导出的中文版本、输出无法写入时为 `1`。
+
 ### 扩展点
 
 扩展注册表（`UBotExtensionRegistry.h`）让一个 Package 不依赖另一个 Package 的模块就能扩展它：声明方定义一个继承 `IUBotExtension` 的接口并声明扩展点，扩展方实现该接口并注册。
@@ -483,7 +514,7 @@ C++ 使用 `FUBotPackageRegistry::Get()`：`GetInstalledPackages`、`FindPackage
 
 ## 测试
 
-测试名都以 `UBotCore.` 开头，分类为 `Clock`、`Conventions`、`Extensions`、`Identity`、`Interfaces`、`Medium`、`PackageManager`、`Packages`、`Panel`、`RuntimeStatus`、`Scheduler`。`PackageManager` 与 `Panel` 测试在 `UBotCoreEditor` 模块里。测试需要在启用了 UBotCore 的工程中，用带编辑器上下文的 `UnrealEditor` 运行（`Packages.RegistryFindsCore` 等会读取已安装的插件）。
+测试名都以 `UBotCore.` 开头，分类为 `Clock`、`Conventions`、`Editor.DocExport`、`Extensions`、`Identity`、`Interfaces`、`Medium`、`PackageManager`、`Packages`、`Panel`、`RuntimeStatus`、`Scheduler`。`Editor.DocExport`、`PackageManager` 与 `Panel` 测试在 `UBotCoreEditor` 模块里。测试需要在启用了 UBotCore 的工程中，用带编辑器上下文的 `UnrealEditor` 运行（`Packages.RegistryFindsCore` 等会读取已安装的插件）。
 
 编辑器中：打开 Session Frontend（`Tools` 菜单）的 Automation 标签页，过滤 `UBotCore`。
 

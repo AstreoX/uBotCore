@@ -1,0 +1,6109 @@
+{
+  "format": 1,
+  "plugin": "UBotCore",
+  "version": "0.1.1",
+  "engine": "5.5",
+  "repository": "https://github.com/AstreoX/uBotCore",
+  "generator": "UBotDocExport 1",
+  "culture": "en",
+  "modules": [
+    {
+      "name": "UBotCore",
+      "type": "Runtime"
+    },
+    {
+      "name": "UBotCoreEditor",
+      "type": "Editor"
+    }
+  ],
+  "classes": [
+    {
+      "id": "UUBotActuator",
+      "displayName": "UBot Actuator",
+      "kind": "interface",
+      "parent": "UInterface",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotActuatorInterface.h",
+      "category": "",
+      "tooltip": "",
+      "flags": {
+        "abstract": true,
+        "blueprintType": true,
+        "blueprintable": true,
+        "spawnable": false,
+        "deprecated": false
+      },
+      "properties": [],
+      "nodes": [
+        "UUBotActuator.GetActuatorId",
+        "UUBotActuator.GetActuatorType",
+        "UUBotActuator.IsActuatorReady"
+      ]
+    },
+    {
+      "id": "UUBotClockSubsystem",
+      "displayName": "UBot Clock Subsystem",
+      "kind": "subsystem",
+      "parent": "UTickableWorldSubsystem",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotClockSubsystem.h",
+      "category": "",
+      "tooltip": "Simulation clock control for one game or PIE world: sim time and frame queries, process-wide\nfixed time step, pause, resume and frame stepping.",
+      "flags": {
+        "abstract": false,
+        "blueprintType": false,
+        "blueprintable": false,
+        "spawnable": false,
+        "deprecated": false
+      },
+      "properties": [],
+      "nodes": [
+        "UUBotClockSubsystem.GetRemainingStepFrames",
+        "UUBotClockSubsystem.GetSimFrame",
+        "UUBotClockSubsystem.GetSimTimeSeconds",
+        "UUBotClockSubsystem.IsFixedTimeStepEnabled",
+        "UUBotClockSubsystem.IsSimulationPaused",
+        "UUBotClockSubsystem.PauseSimulation",
+        "UUBotClockSubsystem.ResumeSimulation",
+        "UUBotClockSubsystem.SetFixedTimeStep",
+        "UUBotClockSubsystem.StepSimulation"
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary",
+      "displayName": "UBot Conventions Library",
+      "kind": "library",
+      "parent": "UBlueprintFunctionLibrary",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotConventionsLibrary.h",
+      "category": "",
+      "tooltip": "Blueprint access to the UE <-> ROS (REP-103) conventions in UBot::Ros.",
+      "flags": {
+        "abstract": false,
+        "blueprintType": false,
+        "blueprintable": false,
+        "spawnable": false,
+        "deprecated": false
+      },
+      "properties": [],
+      "nodes": [
+        "UUBotConventionsLibrary.AngularVelocityROSToUE",
+        "UUBotConventionsLibrary.AngularVelocityUEToROS",
+        "UUBotConventionsLibrary.CameraLinkToOpticalRotation",
+        "UUBotConventionsLibrary.GetOpticalFrameSuffix",
+        "UUBotConventionsLibrary.PositionROSToUE",
+        "UUBotConventionsLibrary.PositionUEToROS",
+        "UUBotConventionsLibrary.RosTimeToSeconds",
+        "UUBotConventionsLibrary.RotationROSToUE",
+        "UUBotConventionsLibrary.RotationUEToROS",
+        "UUBotConventionsLibrary.SanitizeRosName",
+        "UUBotConventionsLibrary.SecondsToRosTime",
+        "UUBotConventionsLibrary.TransformROSToUE",
+        "UUBotConventionsLibrary.TransformUEToROS",
+        "UUBotConventionsLibrary.VectorROSToUE",
+        "UUBotConventionsLibrary.VectorUEToROS",
+        "UUBotConventionsLibrary.YawROSToUE",
+        "UUBotConventionsLibrary.YawUEToROS"
+      ]
+    },
+    {
+      "id": "UUBotCoreSettings",
+      "displayName": "uBot Core",
+      "kind": "settings",
+      "parent": "UDeveloperSettings",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotCoreSettings.h",
+      "category": "",
+      "tooltip": "Project settings for uBot Core (Project Settings > Plugins > uBot Core, stored in DefaultEngine.ini).",
+      "flags": {
+        "abstract": false,
+        "blueprintType": false,
+        "blueprintable": false,
+        "spawnable": false,
+        "deprecated": false
+      },
+      "properties": [
+        {
+          "id": "AdditionalPackageIndexFiles",
+          "displayName": "Additional Package Index Files",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "category": "Packages",
+          "access": "none",
+          "editable": "anywhere",
+          "tooltip": "Extra package index files (format 2, absolute or project-relative), loaded after the main\nindex: Saved/uBot/index.json written by uBot Manager, or else UBotCore's Index/index.json.",
+          "meta": {}
+        },
+        {
+          "id": "FixedTimeStepHz",
+          "displayName": "Fixed Time Step Hz",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "60.000000",
+          "category": "Clock",
+          "access": "none",
+          "editable": "anywhere",
+          "tooltip": "Fixed time step rate used when bUseFixedTimeStep is set.",
+          "meta": {
+            "ClampMin": "1.0",
+            "ClampMax": "1000.0",
+            "EditCondition": "bUseFixedTimeStep"
+          }
+        },
+        {
+          "id": "GitExecutable",
+          "displayName": "Git Executable",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "git",
+          "category": "Packages",
+          "access": "none",
+          "editable": "anywhere",
+          "tooltip": "Git executable used to install and update packages.",
+          "meta": {}
+        },
+        {
+          "id": "PackageInstallDirectory",
+          "displayName": "Package Install Directory",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "Plugins/uBot",
+          "category": "Packages",
+          "access": "none",
+          "editable": "anywhere",
+          "tooltip": "Where packages are installed, relative to the project directory.",
+          "meta": {}
+        },
+        {
+          "id": "bUseFixedTimeStep",
+          "displayName": "Use Fixed Time Step",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "False",
+          "category": "Clock",
+          "access": "none",
+          "editable": "anywhere",
+          "tooltip": "Switch the engine to a fixed time step when a game or PIE world begins play.",
+          "meta": {}
+        },
+        {
+          "id": "bValidatePackagesOnStartup",
+          "displayName": "Validate Packages on Startup",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "True",
+          "category": "Packages",
+          "access": "none",
+          "editable": "anywhere",
+          "tooltip": "Validate the installed uBot packages once all modules have loaded and log every problem.",
+          "meta": {}
+        }
+      ],
+      "nodes": []
+    },
+    {
+      "id": "UUBotEditorSettings",
+      "displayName": "uBot",
+      "kind": "settings",
+      "parent": "UDeveloperSettings",
+      "module": "UBotCoreEditor",
+      "header": "Source/UBotCoreEditor/Public/UBotEditorSettings.h",
+      "category": "",
+      "tooltip": "Per-user editor settings for uBot (Editor Preferences > Plugins > uBot).",
+      "flags": {
+        "abstract": false,
+        "blueprintType": false,
+        "blueprintable": false,
+        "spawnable": false,
+        "deprecated": false
+      },
+      "properties": [
+        {
+          "id": "ManagerExecutable",
+          "displayName": "Manager Executable",
+          "type": {
+            "category": "struct",
+            "subtype": "FFilePath",
+            "subtypeDisplay": "File Path",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "()",
+          "category": "uBot Manager",
+          "access": "none",
+          "editable": "anywhere",
+          "tooltip": "ubot-manager.exe to start from the uBot panel. When empty (or missing) the panel uses the path\nuBot Manager registered (HKCU\\Software\\AstreoX\\uBot Manager, value Executable), then\n%LOCALAPPDATA%\\uBot Manager\\ubot-manager.exe.",
+          "meta": {}
+        }
+      ],
+      "nodes": []
+    },
+    {
+      "id": "UUBotIdentityComponent",
+      "displayName": "uBot Identity",
+      "kind": "component",
+      "parent": "UActorComponent",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotIdentityComponent.h",
+      "category": "uBot",
+      "tooltip": "Names a robot for every uBot consumer (ROS bridge, MCP, tools). All fields are optional; the\nresolved getters apply the fallbacks. Names come from AActor::GetName(), never the editor\nlabel, so results are identical in packaged builds.",
+      "flags": {
+        "abstract": false,
+        "blueprintType": true,
+        "blueprintable": false,
+        "spawnable": true,
+        "deprecated": false
+      },
+      "properties": [
+        {
+          "id": "BaseComponent",
+          "displayName": "Base Component",
+          "type": {
+            "category": "struct",
+            "subtype": "FComponentReference",
+            "subtypeDisplay": "Component Reference",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "()",
+          "category": "uBot|Identity",
+          "access": "readOnly",
+          "editable": "anywhere",
+          "tooltip": "Empty, unresolved or not a scene component -> owner root component.",
+          "meta": {}
+        },
+        {
+          "id": "BaseFrameId",
+          "displayName": "Base Frame Id",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "base_link",
+          "category": "uBot|Identity",
+          "access": "readOnly",
+          "editable": "anywhere",
+          "tooltip": "Empty -> \"base_link\".",
+          "meta": {}
+        },
+        {
+          "id": "Namespace",
+          "displayName": "Namespace",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "category": "uBot|Identity",
+          "access": "readOnly",
+          "editable": "anywhere",
+          "tooltip": "Empty -> sanitized robot id. Surrounding whitespace and leading/trailing '/' are ignored.",
+          "meta": {}
+        },
+        {
+          "id": "RobotId",
+          "displayName": "Robot Id",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "category": "uBot|Identity",
+          "access": "readOnly",
+          "editable": "anywhere",
+          "tooltip": "Empty -> owner actor name. Surrounding whitespace is ignored.",
+          "meta": {}
+        }
+      ],
+      "nodes": [
+        "UUBotIdentityComponent.GetBaseComponent",
+        "UUBotIdentityComponent.GetBaseFrameId",
+        "UUBotIdentityComponent.GetResolvedNamespace",
+        "UUBotIdentityComponent.GetResolvedRobotId"
+      ]
+    },
+    {
+      "id": "UUBotPackageLibrary",
+      "displayName": "UBot Package Library",
+      "kind": "library",
+      "parent": "UBlueprintFunctionLibrary",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotPackageLibrary.h",
+      "category": "",
+      "tooltip": "Blueprint access to the installed uBot packages and the extension registry.",
+      "flags": {
+        "abstract": false,
+        "blueprintType": false,
+        "blueprintable": false,
+        "spawnable": false,
+        "deprecated": false
+      },
+      "properties": [],
+      "nodes": [
+        "UUBotPackageLibrary.FindUBotPackage",
+        "UUBotPackageLibrary.GetInstalledUBotPackages",
+        "UUBotPackageLibrary.GetUBotExtensionNames",
+        "UUBotPackageLibrary.GetUBotExtensionPointNames",
+        "UUBotPackageLibrary.GetUBotPackageVersion",
+        "UUBotPackageLibrary.IsUBotPackageEnabled",
+        "UUBotPackageLibrary.IsUBotPackageVersionSatisfied"
+      ]
+    },
+    {
+      "id": "UUBotPerceptionMedium",
+      "displayName": "UBot Perception Medium",
+      "kind": "interface",
+      "parent": "UInterface",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotPerceptionMedium.h",
+      "category": "",
+      "tooltip": "",
+      "flags": {
+        "abstract": true,
+        "blueprintType": true,
+        "blueprintable": true,
+        "spawnable": false,
+        "deprecated": false
+      },
+      "properties": [],
+      "nodes": [
+        "UUBotPerceptionMedium.GetMediumSnapshot"
+      ]
+    },
+    {
+      "id": "UUBotSensor",
+      "displayName": "UBot Sensor",
+      "kind": "interface",
+      "parent": "UInterface",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotSensorInterface.h",
+      "category": "",
+      "tooltip": "",
+      "flags": {
+        "abstract": true,
+        "blueprintType": true,
+        "blueprintable": true,
+        "spawnable": false,
+        "deprecated": false
+      },
+      "properties": [],
+      "nodes": [
+        "UUBotSensor.GetLatestSensorHeader",
+        "UUBotSensor.GetSensorFrameComponent",
+        "UUBotSensor.GetSensorFrameId",
+        "UUBotSensor.GetSensorId",
+        "UUBotSensor.GetSensorType",
+        "UUBotSensor.IsSensorRunning"
+      ]
+    },
+    {
+      "id": "UUBotVelocityCommandable",
+      "displayName": "UBot Velocity Commandable",
+      "kind": "interface",
+      "parent": "UInterface",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotActuatorInterface.h",
+      "category": "",
+      "tooltip": "",
+      "flags": {
+        "abstract": true,
+        "blueprintType": true,
+        "blueprintable": true,
+        "spawnable": false,
+        "deprecated": false
+      },
+      "properties": [],
+      "nodes": [
+        "UUBotVelocityCommandable.ApplyVelocityCommand",
+        "UUBotVelocityCommandable.StopMotion"
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "Break:FUBotFrameHeader",
+      "kind": "break",
+      "title": "Break UBot Frame Header",
+      "subtitle": "",
+      "owner": "",
+      "member": "",
+      "category": "Utilities|Struct",
+      "tooltip": "Adds a node that breaks a 'UBot Frame Header' into its member fields",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "UBotFrameHeader",
+          "name": "UBot Frame Header",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotFrameHeader",
+            "subtypeDisplay": "UBot Frame Header",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "SensorId",
+          "name": "Sensor Id",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "FrameId",
+          "name": "Frame Id",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "Sequence",
+          "name": "Sequence",
+          "type": {
+            "category": "int64",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": ""
+        },
+        {
+          "id": "TimestampSeconds",
+          "name": "Timestamp Seconds",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": "uBot simulation time (UBot::Clock::GetSimTimeSeconds) at which the sample was taken."
+        },
+        {
+          "id": "bValid",
+          "name": "Valid",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": ""
+        },
+        {
+          "id": "Status",
+          "name": "Status",
+          "type": {
+            "category": "enum",
+            "subtype": "EUBotSampleStatus",
+            "subtypeDisplay": "EUBot Sample Status",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "Break:FUBotMediumCell",
+      "kind": "break",
+      "title": "Break UBot Medium Cell",
+      "subtitle": "",
+      "owner": "",
+      "member": "",
+      "category": "Utilities|Struct",
+      "tooltip": "Adds a node that breaks a 'UBot Medium Cell' into its member fields",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "UBotMediumCell",
+          "name": "UBot Medium Cell",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotMediumCell",
+            "subtypeDisplay": "UBot Medium Cell",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "WorldPositionCentimeters",
+          "name": "World Position Centimeters",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "RadiusCentimeters",
+          "name": "Radius Centimeters",
+          "type": {
+            "category": "float",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "Values below 1 cm are treated as 1 cm by the intersection math."
+        },
+        {
+          "id": "Density",
+          "name": "Density",
+          "type": {
+            "category": "float",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "0..1"
+        },
+        {
+          "id": "EdgeFactor",
+          "name": "Edge Factor",
+          "type": {
+            "category": "float",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "0..1, attenuates Density towards the border of the medium."
+        }
+      ]
+    },
+    {
+      "id": "Break:FUBotMediumSnapshot",
+      "kind": "break",
+      "title": "Break UBot Medium Snapshot",
+      "subtitle": "",
+      "owner": "",
+      "member": "",
+      "category": "Utilities|Struct",
+      "tooltip": "Adds a node that breaks a 'UBot Medium Snapshot' into its member fields",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "UBotMediumSnapshot",
+          "name": "UBot Medium Snapshot",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotMediumSnapshot",
+            "subtypeDisplay": "UBot Medium Snapshot",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "MediumType",
+          "name": "Medium Type",
+          "type": {
+            "category": "name",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "bActive",
+          "name": "Active",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "Tint",
+          "name": "Tint",
+          "type": {
+            "category": "struct",
+            "subtype": "FLinearColor",
+            "subtypeDisplay": "Linear Color",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "Cells",
+          "name": "Cells",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotMediumCell",
+            "subtypeDisplay": "UBot Medium Cell",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "Break:FUBotPackageDependency",
+      "kind": "break",
+      "title": "Break UBot Package Dependency",
+      "subtitle": "",
+      "owner": "",
+      "member": "",
+      "category": "Utilities|Struct",
+      "tooltip": "Adds a node that breaks a 'UBot Package Dependency' into its member fields",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "UBotPackageDependency",
+          "name": "UBot Package Dependency",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotPackageDependency",
+            "subtypeDisplay": "UBot Package Dependency",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "Name",
+          "name": "Name",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "Plugin name of the required package, e.g. \"UBotCore\"."
+        },
+        {
+          "id": "Version",
+          "name": "Version",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "Version constraint (see FUBotVersionConstraint). Empty means any version."
+        },
+        {
+          "id": "bOptional",
+          "name": "Optional",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "Optional requirements are only checked when the package is present."
+        }
+      ]
+    },
+    {
+      "id": "Break:FUBotPackageIndexVersion",
+      "kind": "break",
+      "title": "Break UBot Package Index Version",
+      "subtitle": "",
+      "owner": "",
+      "member": "",
+      "category": "Utilities|Struct",
+      "tooltip": "Adds a node that breaks a 'UBot Package Index Version' into its member fields",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "UBotPackageIndexVersion",
+          "name": "UBot Package Index Version",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotPackageIndexVersion",
+            "subtypeDisplay": "UBot Package Index Version",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "Version",
+          "name": "Version",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "Semantic version as written in the index, e.g. \"0.1.0\"."
+        },
+        {
+          "id": "Ref",
+          "name": "Ref",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "Git tag, branch or commit id that is checked out to install this version. Empty for planned\nversions, and for an entry that (wrongly) lists none; such a version cannot be installed."
+        },
+        {
+          "id": "bPlanned",
+          "name": "Planned",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "True when the version is announced but not installable yet."
+        }
+      ]
+    },
+    {
+      "id": "Break:FUBotPackageInfo",
+      "kind": "break",
+      "title": "Break UBot Package Info",
+      "subtitle": "",
+      "owner": "",
+      "member": "",
+      "category": "Utilities|Struct",
+      "tooltip": "Adds a node that breaks a 'UBot Package Info' into its member fields",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "UBotPackageInfo",
+          "name": "UBot Package Info",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotPackageInfo",
+            "subtypeDisplay": "UBot Package Info",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "Name",
+          "name": "Name",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "Plugin name, e.g. \"UBotSensor\"."
+        },
+        {
+          "id": "FriendlyName",
+          "name": "Friendly Name",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "Description",
+          "name": "Description",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": ""
+        },
+        {
+          "id": "Version",
+          "name": "Version",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": "Semantic version: the descriptor's VersionName for installed packages. For index entries the\nlatest installable version, or the newest planned version when the package is planned."
+        },
+        {
+          "id": "AvailableVersions",
+          "name": "Available Versions",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": "Installable (non-planned) versions listed in the package index, newest first."
+        },
+        {
+          "id": "bPlanned",
+          "name": "Planned",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": "True when the package index lists only planned versions: announced, but not installable yet."
+        },
+        {
+          "id": "IndexVersions",
+          "name": "Index Versions",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotPackageIndexVersion",
+            "subtypeDisplay": "UBot Package Index Version",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": "Every version the package index lists (planned ones included), newest first, with the git ref\neach installable version is cloned at. Empty for packages that are not in an index."
+        },
+        {
+          "id": "InstallFolder",
+          "name": "Install Folder",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": "\"folder\" of the index entry: the name of the folder below the install directory the package is\ncloned into. Empty means the last segment of Repository without \".git\". Kept as written, so\nFUBotPackageService can refuse a value that is not one safe path segment."
+        },
+        {
+          "id": "Layer",
+          "name": "Layer",
+          "type": {
+            "category": "enum",
+            "subtype": "EUBotPackageLayer",
+            "subtypeDisplay": "EUBot Package Layer",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": ""
+        },
+        {
+          "id": "Repository",
+          "name": "Repository",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": "Git repository URL used to install the package."
+        },
+        {
+          "id": "DocsUrl",
+          "name": "Docs Url",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": ""
+        },
+        {
+          "id": "Tags",
+          "name": "Tags",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": ""
+        },
+        {
+          "id": "Provides",
+          "name": "Provides",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": "Capability keys offered by the package, e.g. \"Sensor.IMU\"."
+        },
+        {
+          "id": "Requires",
+          "name": "Requires",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotPackageDependency",
+            "subtypeDisplay": "UBot Package Dependency",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": ""
+        },
+        {
+          "id": "ExternalRequires",
+          "name": "External Requires",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": "Engine or other non-uBot plugins the package needs (\"EnginePlugins\" in descriptors and the\nindex; descriptors may still use the older key \"ExternalRequires\"). Never installed automatically."
+        },
+        {
+          "id": "State",
+          "name": "State",
+          "type": {
+            "category": "enum",
+            "subtype": "EUBotPackageState",
+            "subtypeDisplay": "EUBot Package State",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": ""
+        },
+        {
+          "id": "bInstalled",
+          "name": "Installed",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": ""
+        },
+        {
+          "id": "bEnabled",
+          "name": "Enabled",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": ""
+        },
+        {
+          "id": "bFromIndex",
+          "name": "From Index",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": "True when the package is listed in a package index."
+        },
+        {
+          "id": "BaseDir",
+          "name": "Base Dir",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": "Absolute plugin directory. Empty when not installed."
+        },
+        {
+          "id": "DescriptorPath",
+          "name": "Descriptor Path",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": "Absolute path of the .uplugin file. Empty when not installed."
+        },
+        {
+          "id": "Problems",
+          "name": "Problems",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": "Human readable problems, filled by FUBotPackageRegistry::ValidatePackageSet."
+        },
+        {
+          "id": "ProblemDetails",
+          "name": "Problem Details",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotPackageProblem",
+            "subtypeDisplay": "UBot Package Problem",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": "Structured form of Problems: same order and count."
+        }
+      ]
+    },
+    {
+      "id": "Break:FUBotPackageProblem",
+      "kind": "break",
+      "title": "Break UBot Package Problem",
+      "subtitle": "",
+      "owner": "",
+      "member": "",
+      "category": "Utilities|Struct",
+      "tooltip": "Adds a node that breaks a 'UBot Package Problem' into its member fields",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "UBotPackageProblem",
+          "name": "UBot Package Problem",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotPackageProblem",
+            "subtypeDisplay": "UBot Package Problem",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "Kind",
+          "name": "Kind",
+          "type": {
+            "category": "enum",
+            "subtype": "EUBotPackageProblemKind",
+            "subtypeDisplay": "EUBot Package Problem Kind",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "Dependency",
+          "name": "Dependency",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "The required package; empty for cycles and requirements without a name."
+        },
+        {
+          "id": "Constraint",
+          "name": "Constraint",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "The requirement's version constraint as written; empty when any version is accepted."
+        },
+        {
+          "id": "Message",
+          "name": "Message",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "The same text as the matching entry of FUBotPackageInfo::Problems."
+        }
+      ]
+    },
+    {
+      "id": "Break:FUBotVelocityCommand",
+      "kind": "break",
+      "title": "Break UBot Velocity Command",
+      "subtitle": "",
+      "owner": "",
+      "member": "",
+      "category": "Utilities|Struct",
+      "tooltip": "Adds a node that breaks a 'UBot Velocity Command' into its member fields",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "UBotVelocityCommand",
+          "name": "UBot Velocity Command",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotVelocityCommand",
+            "subtypeDisplay": "UBot Velocity Command",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "LinearVelocityMetersPerSecond",
+          "name": "Linear Velocity Meters Per Second",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "Body frame in UE axes (X forward, Y right, Z up). Linear in m/s."
+        },
+        {
+          "id": "AngularVelocityRadiansPerSecond",
+          "name": "Angular Velocity Radians Per Second",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "Body frame in UE axes and UE rotation sense (+Z = yaw to the right). rad/s."
+        },
+        {
+          "id": "TimestampSeconds",
+          "name": "Timestamp Seconds",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "uBot sim time at which the command was issued."
+        },
+        {
+          "id": "Source",
+          "name": "Source",
+          "type": {
+            "category": "name",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "Free-form origin tag, e.g. \"ROS\", \"MCP\", \"Blueprint\"."
+        }
+      ]
+    },
+    {
+      "id": "Make:FUBotFrameHeader",
+      "kind": "make",
+      "title": "Make UBot Frame Header",
+      "subtitle": "",
+      "owner": "",
+      "member": "",
+      "category": "Utilities|Struct",
+      "tooltip": "Adds a node that create a 'UBot Frame Header' from its members",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [],
+      "outputs": [
+        {
+          "id": "UBotFrameHeader",
+          "name": "UBot Frame Header",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotFrameHeader",
+            "subtypeDisplay": "UBot Frame Header",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "Make:FUBotMediumCell",
+      "kind": "make",
+      "title": "Make UBot Medium Cell",
+      "subtitle": "",
+      "owner": "",
+      "member": "",
+      "category": "Utilities|Struct",
+      "tooltip": "Adds a node that create a 'UBot Medium Cell' from its members",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "WorldPositionCentimeters",
+          "name": "World Position Centimeters",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "0.000000,0.000000,0.000000",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "RadiusCentimeters",
+          "name": "Radius Centimeters",
+          "type": {
+            "category": "float",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "150.000000",
+          "advanced": false,
+          "tooltip": "Values below 1 cm are treated as 1 cm by the intersection math."
+        },
+        {
+          "id": "Density",
+          "name": "Density",
+          "type": {
+            "category": "float",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "0.000000",
+          "advanced": false,
+          "tooltip": "0..1"
+        },
+        {
+          "id": "EdgeFactor",
+          "name": "Edge Factor",
+          "type": {
+            "category": "float",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "1.000000",
+          "advanced": false,
+          "tooltip": "0..1, attenuates Density towards the border of the medium."
+        }
+      ],
+      "outputs": [
+        {
+          "id": "UBotMediumCell",
+          "name": "UBot Medium Cell",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotMediumCell",
+            "subtypeDisplay": "UBot Medium Cell",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "Make:FUBotMediumSnapshot",
+      "kind": "make",
+      "title": "Make UBot Medium Snapshot",
+      "subtitle": "",
+      "owner": "",
+      "member": "",
+      "category": "Utilities|Struct",
+      "tooltip": "Adds a node that create a 'UBot Medium Snapshot' from its members",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "MediumType",
+          "name": "Medium Type",
+          "type": {
+            "category": "name",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "Smoke",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "bActive",
+          "name": "Active",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "True",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "Tint",
+          "name": "Tint",
+          "type": {
+            "category": "struct",
+            "subtype": "FLinearColor",
+            "subtypeDisplay": "Linear Color",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "(R=0.550000,G=0.550000,B=0.550000,A=1.000000)",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "Cells",
+          "name": "Cells",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotMediumCell",
+            "subtypeDisplay": "UBot Medium Cell",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "UBotMediumSnapshot",
+          "name": "UBot Medium Snapshot",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotMediumSnapshot",
+            "subtypeDisplay": "UBot Medium Snapshot",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "Make:FUBotPackageDependency",
+      "kind": "make",
+      "title": "Make UBot Package Dependency",
+      "subtitle": "",
+      "owner": "",
+      "member": "",
+      "category": "Utilities|Struct",
+      "tooltip": "Adds a node that create a 'UBot Package Dependency' from its members",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [],
+      "outputs": [
+        {
+          "id": "UBotPackageDependency",
+          "name": "UBot Package Dependency",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotPackageDependency",
+            "subtypeDisplay": "UBot Package Dependency",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "Make:FUBotPackageIndexVersion",
+      "kind": "make",
+      "title": "Make UBot Package Index Version",
+      "subtitle": "",
+      "owner": "",
+      "member": "",
+      "category": "Utilities|Struct",
+      "tooltip": "Adds a node that create a 'UBot Package Index Version' from its members",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [],
+      "outputs": [
+        {
+          "id": "UBotPackageIndexVersion",
+          "name": "UBot Package Index Version",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotPackageIndexVersion",
+            "subtypeDisplay": "UBot Package Index Version",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "Make:FUBotPackageInfo",
+      "kind": "make",
+      "title": "Make UBot Package Info",
+      "subtitle": "",
+      "owner": "",
+      "member": "",
+      "category": "Utilities|Struct",
+      "tooltip": "Adds a node that create a 'UBot Package Info' from its members",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [],
+      "outputs": [
+        {
+          "id": "UBotPackageInfo",
+          "name": "UBot Package Info",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotPackageInfo",
+            "subtypeDisplay": "UBot Package Info",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "Make:FUBotPackageProblem",
+      "kind": "make",
+      "title": "Make UBot Package Problem",
+      "subtitle": "",
+      "owner": "",
+      "member": "",
+      "category": "Utilities|Struct",
+      "tooltip": "Adds a node that create a 'UBot Package Problem' from its members",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [],
+      "outputs": [
+        {
+          "id": "UBotPackageProblem",
+          "name": "UBot Package Problem",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotPackageProblem",
+            "subtypeDisplay": "UBot Package Problem",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "Make:FUBotVelocityCommand",
+      "kind": "make",
+      "title": "Make UBot Velocity Command",
+      "subtitle": "",
+      "owner": "",
+      "member": "",
+      "category": "Utilities|Struct",
+      "tooltip": "Adds a node that create a 'UBot Velocity Command' from its members",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "LinearVelocityMetersPerSecond",
+          "name": "Linear Velocity Meters Per Second",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "0.000000,0.000000,0.000000",
+          "advanced": false,
+          "tooltip": "Body frame in UE axes (X forward, Y right, Z up). Linear in m/s."
+        },
+        {
+          "id": "AngularVelocityRadiansPerSecond",
+          "name": "Angular Velocity Radians Per Second",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "0.000000,0.000000,0.000000",
+          "advanced": false,
+          "tooltip": "Body frame in UE axes and UE rotation sense (+Z = yaw to the right). rad/s."
+        },
+        {
+          "id": "TimestampSeconds",
+          "name": "Timestamp Seconds",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "0.000000",
+          "advanced": false,
+          "tooltip": "uBot sim time at which the command was issued."
+        },
+        {
+          "id": "Source",
+          "name": "Source",
+          "type": {
+            "category": "name",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "None",
+          "advanced": false,
+          "tooltip": "Free-form origin tag, e.g. \"ROS\", \"MCP\", \"Blueprint\"."
+        }
+      ],
+      "outputs": [
+        {
+          "id": "UBotVelocityCommand",
+          "name": "UBot Velocity Command",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotVelocityCommand",
+            "subtypeDisplay": "UBot Velocity Command",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotActuator.GetActuatorId",
+      "kind": "pure",
+      "title": "Get Actuator Id",
+      "subtitle": "Target is UBot Actuator",
+      "subtitleZh": "目标是UBot Actuator",
+      "owner": "UUBotActuator",
+      "member": "GetActuatorId",
+      "category": "uBot|Actuation",
+      "tooltip": "",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "interface",
+            "subtype": "UUBotActuator",
+            "subtypeDisplay": "UBot Actuator",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotActuator.GetActuatorType",
+      "kind": "pure",
+      "title": "Get Actuator Type",
+      "subtitle": "Target is UBot Actuator",
+      "subtitleZh": "目标是UBot Actuator",
+      "owner": "UUBotActuator",
+      "member": "GetActuatorType",
+      "category": "uBot|Actuation",
+      "tooltip": "",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "interface",
+            "subtype": "UUBotActuator",
+            "subtypeDisplay": "UBot Actuator",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "name",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotActuator.IsActuatorReady",
+      "kind": "pure",
+      "title": "Is Actuator Ready",
+      "subtitle": "Target is UBot Actuator",
+      "subtitleZh": "目标是UBot Actuator",
+      "owner": "UUBotActuator",
+      "member": "IsActuatorReady",
+      "category": "uBot|Actuation",
+      "tooltip": "",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "interface",
+            "subtype": "UUBotActuator",
+            "subtypeDisplay": "UBot Actuator",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotClockSubsystem.GetRemainingStepFrames",
+      "kind": "pure",
+      "title": "Get Remaining Step Frames",
+      "subtitle": "Target is UBot Clock Subsystem",
+      "subtitleZh": "目标是UBot Clock Subsystem",
+      "owner": "UUBotClockSubsystem",
+      "member": "GetRemainingStepFrames",
+      "category": "uBot|Clock",
+      "tooltip": "",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "object",
+            "subtype": "UUBotClockSubsystem",
+            "subtypeDisplay": "UBot Clock Subsystem",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "int",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotClockSubsystem.GetSimFrame",
+      "kind": "pure",
+      "title": "Get Sim Frame",
+      "subtitle": "Target is UBot Clock Subsystem",
+      "subtitleZh": "目标是UBot Clock Subsystem",
+      "owner": "UUBotClockSubsystem",
+      "member": "GetSimFrame",
+      "category": "uBot|Clock",
+      "tooltip": "Number of world ticks seen by this subsystem in which game time advanced (paused ticks are not counted).",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "object",
+            "subtype": "UUBotClockSubsystem",
+            "subtypeDisplay": "UBot Clock Subsystem",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "int64",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotClockSubsystem.GetSimTimeSeconds",
+      "kind": "pure",
+      "title": "Get Sim Time Seconds",
+      "subtitle": "Target is UBot Clock Subsystem",
+      "subtitleZh": "目标是UBot Clock Subsystem",
+      "owner": "UUBotClockSubsystem",
+      "member": "GetSimTimeSeconds",
+      "category": "uBot|Clock",
+      "tooltip": "Same value as UBot::Clock::GetSimTimeSeconds for this world.",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "object",
+            "subtype": "UUBotClockSubsystem",
+            "subtypeDisplay": "UBot Clock Subsystem",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotClockSubsystem.IsFixedTimeStepEnabled",
+      "kind": "pure",
+      "title": "Is Fixed Time Step Enabled",
+      "subtitle": "Target is UBot Clock Subsystem",
+      "subtitleZh": "目标是UBot Clock Subsystem",
+      "owner": "UUBotClockSubsystem",
+      "member": "IsFixedTimeStepEnabled",
+      "category": "uBot|Clock",
+      "tooltip": "",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "object",
+            "subtype": "UUBotClockSubsystem",
+            "subtypeDisplay": "UBot Clock Subsystem",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotClockSubsystem.IsSimulationPaused",
+      "kind": "pure",
+      "title": "Is Simulation Paused",
+      "subtitle": "Target is UBot Clock Subsystem",
+      "subtitleZh": "目标是UBot Clock Subsystem",
+      "owner": "UUBotClockSubsystem",
+      "member": "IsSimulationPaused",
+      "category": "uBot|Clock",
+      "tooltip": "",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "object",
+            "subtype": "UUBotClockSubsystem",
+            "subtypeDisplay": "UBot Clock Subsystem",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotClockSubsystem.PauseSimulation",
+      "kind": "call",
+      "title": "Pause Simulation",
+      "subtitle": "Target is UBot Clock Subsystem",
+      "subtitleZh": "目标是UBot Clock Subsystem",
+      "owner": "UUBotClockSubsystem",
+      "member": "PauseSimulation",
+      "category": "uBot|Clock",
+      "tooltip": "Pauses the game (UGameplayStatics::SetGamePaused) and cancels any pending step.",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "execute",
+          "name": "",
+          "type": {
+            "category": "exec",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "object",
+            "subtype": "UUBotClockSubsystem",
+            "subtypeDisplay": "UBot Clock Subsystem",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "then",
+          "name": "",
+          "type": {
+            "category": "exec",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotClockSubsystem.ResumeSimulation",
+      "kind": "call",
+      "title": "Resume Simulation",
+      "subtitle": "Target is UBot Clock Subsystem",
+      "subtitleZh": "目标是UBot Clock Subsystem",
+      "owner": "UUBotClockSubsystem",
+      "member": "ResumeSimulation",
+      "category": "uBot|Clock",
+      "tooltip": "Unpauses the game and cancels any pending step, so the world runs freely.",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "execute",
+          "name": "",
+          "type": {
+            "category": "exec",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "object",
+            "subtype": "UUBotClockSubsystem",
+            "subtypeDisplay": "UBot Clock Subsystem",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "then",
+          "name": "",
+          "type": {
+            "category": "exec",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotClockSubsystem.SetFixedTimeStep",
+      "kind": "call",
+      "title": "Set Fixed Time Step",
+      "subtitle": "Target is UBot Clock Subsystem",
+      "subtitleZh": "目标是UBot Clock Subsystem",
+      "owner": "UUBotClockSubsystem",
+      "member": "SetFixedTimeStep",
+      "category": "uBot|Clock",
+      "tooltip": "Enables or disables the engine fixed time step (FApp, process global). StepHz is clamped to\n[1, 1000]. The previous FApp values are restored when the last clock subsystem that changed\nthem deinitializes.",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "execute",
+          "name": "",
+          "type": {
+            "category": "exec",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "object",
+            "subtype": "UUBotClockSubsystem",
+            "subtypeDisplay": "UBot Clock Subsystem",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "bEnabled",
+          "name": "Enabled",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "false",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "StepHz",
+          "name": "Step Hz",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "60.000000",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "then",
+          "name": "",
+          "type": {
+            "category": "exec",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotClockSubsystem.StepSimulation",
+      "kind": "call",
+      "title": "Step Simulation",
+      "subtitle": "Target is UBot Clock Subsystem",
+      "subtitleZh": "目标是UBot Clock Subsystem",
+      "owner": "UUBotClockSubsystem",
+      "member": "StepSimulation",
+      "category": "uBot|Clock",
+      "tooltip": "Unpauses for exactly NumFrames world ticks, then pauses again. Only ticks that start after the\ncall count. Ignored (returns false) if NumFrames < 1 or the world cannot be unpaused. Calling\nwhile a step is running adds to the remaining frames.",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "execute",
+          "name": "",
+          "type": {
+            "category": "exec",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "object",
+            "subtype": "UUBotClockSubsystem",
+            "subtypeDisplay": "UBot Clock Subsystem",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "NumFrames",
+          "name": "Num Frames",
+          "type": {
+            "category": "int",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "1",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "then",
+          "name": "",
+          "type": {
+            "category": "exec",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary.AngularVelocityROSToUE",
+      "kind": "pure",
+      "title": "ROS To UE Angular Velocity",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "AngularVelocityROSToUE",
+      "category": "uBot|Conventions",
+      "tooltip": "Axial vector (angular velocity, torque) in rad/s: (-x, y, -z).",
+      "keywords": "ROS REP103 convert torque",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "ROSRadiansPerSecond",
+          "name": "ROSRadians Per Second",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary.AngularVelocityUEToROS",
+      "kind": "pure",
+      "title": "UE To ROS Angular Velocity",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "AngularVelocityUEToROS",
+      "category": "uBot|Conventions",
+      "tooltip": "Axial vector (angular velocity, torque) in rad/s: (-x, y, -z).",
+      "keywords": "ROS REP103 convert torque",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "UERadiansPerSecond",
+          "name": "UERadians Per Second",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary.CameraLinkToOpticalRotation",
+      "kind": "pure",
+      "title": "Camera Link To Optical Rotation",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "CameraLinkToOpticalRotation",
+      "category": "uBot|Conventions",
+      "tooltip": "Rotation of the camera optical frame (z forward, x right, y down) relative to the camera link frame, in ROS conventions.",
+      "keywords": "ROS camera optical frame",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "struct",
+            "subtype": "FQuat",
+            "subtypeDisplay": "Quat",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary.GetOpticalFrameSuffix",
+      "kind": "pure",
+      "title": "Get Optical Frame Suffix",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "GetOpticalFrameSuffix",
+      "category": "uBot|Conventions",
+      "tooltip": "Suffix appended to a camera frame id to name its optical frame (\"_optical\").",
+      "keywords": "ROS camera optical frame",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary.PositionROSToUE",
+      "kind": "pure",
+      "title": "ROS To UE Position",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "PositionROSToUE",
+      "category": "uBot|Conventions",
+      "tooltip": "ROS position in meters -> UE position in centimeters: (x, -y, z) * 100.",
+      "keywords": "ROS REP103 convert location",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "ROSMeters",
+          "name": "ROSMeters",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary.PositionUEToROS",
+      "kind": "pure",
+      "title": "UE To ROS Position",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "PositionUEToROS",
+      "category": "uBot|Conventions",
+      "tooltip": "UE position in centimeters -> ROS position in meters: (x, -y, z) / 100.",
+      "keywords": "ROS REP103 convert location",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "UECentimeters",
+          "name": "UECentimeters",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary.RosTimeToSeconds",
+      "kind": "pure",
+      "title": "ROS Time To Seconds",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "RosTimeToSeconds",
+      "category": "uBot|Conventions",
+      "tooltip": "builtin_interfaces/Time fields -> seconds. Negative nanoseconds are treated as 0.",
+      "keywords": "ROS stamp nanoseconds",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "Sec",
+          "name": "Sec",
+          "type": {
+            "category": "int",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "0",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "Nanosec",
+          "name": "Nanosec",
+          "type": {
+            "category": "int",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "0",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary.RotationROSToUE",
+      "kind": "pure",
+      "title": "ROS To UE Rotation",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "RotationROSToUE",
+      "category": "uBot|Conventions",
+      "tooltip": "Rotation: (x, y, z, w) -> normalized (-x, y, -z, w).",
+      "keywords": "ROS REP103 convert quaternion orientation",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "ROSRotation",
+          "name": "ROSRotation",
+          "type": {
+            "category": "struct",
+            "subtype": "FQuat",
+            "subtypeDisplay": "Quat",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "struct",
+            "subtype": "FQuat",
+            "subtypeDisplay": "Quat",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary.RotationUEToROS",
+      "kind": "pure",
+      "title": "UE To ROS Rotation",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "RotationUEToROS",
+      "category": "uBot|Conventions",
+      "tooltip": "Rotation: (x, y, z, w) -> normalized (-x, y, -z, w).",
+      "keywords": "ROS REP103 convert quaternion orientation",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "UERotation",
+          "name": "UERotation",
+          "type": {
+            "category": "struct",
+            "subtype": "FQuat",
+            "subtypeDisplay": "Quat",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "struct",
+            "subtype": "FQuat",
+            "subtypeDisplay": "Quat",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary.SanitizeRosName",
+      "kind": "pure",
+      "title": "Sanitize ROS Name",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "SanitizeRosName",
+      "category": "uBot|Conventions",
+      "tooltip": "Makes a valid ROS name token: [A-Za-z0-9_] only, no repeated underscores, no leading digit, never empty.",
+      "keywords": "ROS topic namespace frame",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "Name",
+          "name": "Name",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary.SecondsToRosTime",
+      "kind": "pure",
+      "title": "Seconds To ROS Time",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "SecondsToRosTime",
+      "category": "uBot|Conventions",
+      "tooltip": "Seconds -> builtin_interfaces/Time fields. Negative or non-finite input yields (0, 0).",
+      "keywords": "ROS stamp nanoseconds",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "Seconds",
+          "name": "Seconds",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "0.0",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "Sec",
+          "name": "Sec",
+          "type": {
+            "category": "int",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "Nanosec",
+          "name": "Nanosec",
+          "type": {
+            "category": "int",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary.TransformROSToUE",
+      "kind": "pure",
+      "title": "ROS To UE Transform",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "TransformROSToUE",
+      "category": "uBot|Conventions",
+      "tooltip": "Rigid transform: rotation mirrored, translation meters -> centimeters, scale dropped.",
+      "keywords": "ROS REP103 convert pose tf",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "ROSTransform",
+          "name": "ROSTransform",
+          "type": {
+            "category": "transform",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "transform",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary.TransformUEToROS",
+      "kind": "pure",
+      "title": "UE To ROS Transform",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "TransformUEToROS",
+      "category": "uBot|Conventions",
+      "tooltip": "Rigid transform: rotation mirrored, translation centimeters -> meters, scale dropped.",
+      "keywords": "ROS REP103 convert pose tf",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "UETransform",
+          "name": "UETransform",
+          "type": {
+            "category": "transform",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "transform",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary.VectorROSToUE",
+      "kind": "pure",
+      "title": "ROS To UE Vector",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "VectorROSToUE",
+      "category": "uBot|Conventions",
+      "tooltip": "Polar vector in SI units: (x, -y, z).",
+      "keywords": "ROS REP103 convert velocity acceleration",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "Value",
+          "name": "Value",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary.VectorUEToROS",
+      "kind": "pure",
+      "title": "UE To ROS Vector",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "VectorUEToROS",
+      "category": "uBot|Conventions",
+      "tooltip": "Polar vector in SI units (linear velocity, acceleration, point in meters): (x, -y, z).",
+      "keywords": "ROS REP103 convert velocity acceleration",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "Value",
+          "name": "Value",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary.YawROSToUE",
+      "kind": "pure",
+      "title": "ROS To UE Yaw",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "YawROSToUE",
+      "category": "uBot|Conventions",
+      "tooltip": "Planar heading, scan angle or yaw rate in radians: UE = -ROS.",
+      "keywords": "ROS REP103 convert heading angle",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "ROSRadians",
+          "name": "ROSRadians",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "0.0",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary.YawUEToROS",
+      "kind": "pure",
+      "title": "UE To ROS Yaw",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "YawUEToROS",
+      "category": "uBot|Conventions",
+      "tooltip": "Planar heading, scan angle or yaw rate in radians: ROS = -UE.",
+      "keywords": "ROS REP103 convert heading angle",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "UERadians",
+          "name": "UERadians",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "0.0",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotIdentityComponent.GetBaseComponent",
+      "kind": "pure",
+      "title": "Get Base Component",
+      "subtitle": "Target is uBot Identity",
+      "subtitleZh": "目标是uBot Identity",
+      "owner": "UUBotIdentityComponent",
+      "member": "GetBaseComponent",
+      "category": "uBot|Identity",
+      "tooltip": "The referenced scene component, or the owner root component. May be nullptr.",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "object",
+            "subtype": "UUBotIdentityComponent",
+            "subtypeDisplay": "uBot Identity",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "object",
+            "subtype": "USceneComponent",
+            "subtypeDisplay": "Scene Component",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotIdentityComponent.GetBaseFrameId",
+      "kind": "pure",
+      "title": "Get Base Frame Id",
+      "subtitle": "Target is uBot Identity",
+      "subtitleZh": "目标是uBot Identity",
+      "owner": "UUBotIdentityComponent",
+      "member": "GetBaseFrameId",
+      "category": "uBot|Identity",
+      "tooltip": "BaseFrameId, or \"base_link\" when empty.",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "object",
+            "subtype": "UUBotIdentityComponent",
+            "subtypeDisplay": "uBot Identity",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotIdentityComponent.GetResolvedNamespace",
+      "kind": "pure",
+      "title": "Get Resolved Namespace",
+      "subtitle": "Target is uBot Identity",
+      "subtitleZh": "目标是uBot Identity",
+      "owner": "UUBotIdentityComponent",
+      "member": "GetResolvedNamespace",
+      "category": "uBot|Identity",
+      "tooltip": "Namespace, or UBot::Ros::SanitizeRosName(GetResolvedRobotId()) when empty.",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "object",
+            "subtype": "UUBotIdentityComponent",
+            "subtypeDisplay": "uBot Identity",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotIdentityComponent.GetResolvedRobotId",
+      "kind": "pure",
+      "title": "Get Resolved Robot Id",
+      "subtitle": "Target is uBot Identity",
+      "subtitleZh": "目标是uBot Identity",
+      "owner": "UUBotIdentityComponent",
+      "member": "GetResolvedRobotId",
+      "category": "uBot|Identity",
+      "tooltip": "RobotId, or the owner actor name when empty (empty if there is no owner).",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "object",
+            "subtype": "UUBotIdentityComponent",
+            "subtypeDisplay": "uBot Identity",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotPackageLibrary.FindUBotPackage",
+      "kind": "pure",
+      "title": "Find uBot Package",
+      "subtitle": "",
+      "owner": "UUBotPackageLibrary",
+      "member": "FindUBotPackage",
+      "category": "uBot|Packages",
+      "tooltip": "Case-insensitive lookup among installed packages.",
+      "keywords": "",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "Name",
+          "name": "Name",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "OutInfo",
+          "name": "Out Info",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotPackageInfo",
+            "subtypeDisplay": "UBot Package Info",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotPackageLibrary.GetInstalledUBotPackages",
+      "kind": "pure",
+      "title": "Get Installed uBot Packages",
+      "subtitle": "",
+      "owner": "UUBotPackageLibrary",
+      "member": "GetInstalledUBotPackages",
+      "category": "uBot|Packages",
+      "tooltip": "Every installed uBot package (enabled or not), sorted by name.",
+      "keywords": "",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotPackageInfo",
+            "subtypeDisplay": "UBot Package Info",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotPackageLibrary.GetUBotExtensionNames",
+      "kind": "pure",
+      "title": "Get uBot Extension Names",
+      "subtitle": "",
+      "owner": "UUBotPackageLibrary",
+      "member": "GetUBotExtensionNames",
+      "category": "uBot|Packages",
+      "tooltip": "Extensions available at PointName in registration order; empty while the point is not declared.",
+      "keywords": "",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "PointName",
+          "name": "Point Name",
+          "type": {
+            "category": "name",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "None",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "name",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotPackageLibrary.GetUBotExtensionPointNames",
+      "kind": "pure",
+      "title": "Get uBot Extension Point Names",
+      "subtitle": "",
+      "owner": "UUBotPackageLibrary",
+      "member": "GetUBotExtensionPointNames",
+      "category": "uBot|Packages",
+      "tooltip": "Declared extension points in declaration order.",
+      "keywords": "",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "name",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotPackageLibrary.GetUBotPackageVersion",
+      "kind": "pure",
+      "title": "Get uBot Package Version",
+      "subtitle": "",
+      "owner": "UUBotPackageLibrary",
+      "member": "GetUBotPackageVersion",
+      "category": "uBot|Packages",
+      "tooltip": "Installed version, or an empty string when the package is not installed.",
+      "keywords": "",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "Name",
+          "name": "Name",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotPackageLibrary.IsUBotPackageEnabled",
+      "kind": "pure",
+      "title": "Is uBot Package Enabled",
+      "subtitle": "",
+      "owner": "UUBotPackageLibrary",
+      "member": "IsUBotPackageEnabled",
+      "category": "uBot|Packages",
+      "tooltip": "",
+      "keywords": "",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "Name",
+          "name": "Name",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotPackageLibrary.IsUBotPackageVersionSatisfied",
+      "kind": "pure",
+      "title": "Is uBot Package Version Satisfied",
+      "subtitle": "",
+      "owner": "UUBotPackageLibrary",
+      "member": "IsUBotPackageVersionSatisfied",
+      "category": "uBot|Packages",
+      "tooltip": "True when the package is installed and its version satisfies Constraint (e.g. \"^0.1.0\").\nFalse when it is not installed or either version string cannot be parsed.",
+      "keywords": "",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "Name",
+          "name": "Name",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "Constraint",
+          "name": "Constraint",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotPerceptionMedium.GetMediumSnapshot",
+      "kind": "pure",
+      "title": "Get Medium Snapshot",
+      "subtitle": "Target is UBot Perception Medium",
+      "subtitleZh": "目标是UBot Perception Medium",
+      "owner": "UUBotPerceptionMedium",
+      "member": "GetMediumSnapshot",
+      "category": "uBot|Medium",
+      "tooltip": "Fills OutSnapshot and returns true when the medium has a snapshot to offer.",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "interface",
+            "subtype": "UUBotPerceptionMedium",
+            "subtypeDisplay": "UBot Perception Medium",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "OutSnapshot",
+          "name": "Out Snapshot",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotMediumSnapshot",
+            "subtypeDisplay": "UBot Medium Snapshot",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotSensor.GetLatestSensorHeader",
+      "kind": "pure",
+      "title": "Get Latest Sensor Header",
+      "subtitle": "Target is UBot Sensor",
+      "subtitleZh": "目标是UBot Sensor",
+      "owner": "UUBotSensor",
+      "member": "GetLatestSensorHeader",
+      "category": "uBot|Sensor",
+      "tooltip": "",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "interface",
+            "subtype": "UUBotSensor",
+            "subtypeDisplay": "UBot Sensor",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotFrameHeader",
+            "subtypeDisplay": "UBot Frame Header",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotSensor.GetSensorFrameComponent",
+      "kind": "pure",
+      "title": "Get Sensor Frame Component",
+      "subtitle": "Target is UBot Sensor",
+      "subtitleZh": "目标是UBot Sensor",
+      "owner": "UUBotSensor",
+      "member": "GetSensorFrameComponent",
+      "category": "uBot|Sensor",
+      "tooltip": "Scene component whose transform is the sensor frame (for TF). May be nullptr.",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "interface",
+            "subtype": "UUBotSensor",
+            "subtypeDisplay": "UBot Sensor",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "object",
+            "subtype": "USceneComponent",
+            "subtypeDisplay": "Scene Component",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotSensor.GetSensorFrameId",
+      "kind": "pure",
+      "title": "Get Sensor Frame Id",
+      "subtitle": "Target is UBot Sensor",
+      "subtitleZh": "目标是UBot Sensor",
+      "owner": "UUBotSensor",
+      "member": "GetSensorFrameId",
+      "category": "uBot|Sensor",
+      "tooltip": "",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "interface",
+            "subtype": "UUBotSensor",
+            "subtypeDisplay": "UBot Sensor",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotSensor.GetSensorId",
+      "kind": "pure",
+      "title": "Get Sensor Id",
+      "subtitle": "Target is UBot Sensor",
+      "subtitleZh": "目标是UBot Sensor",
+      "owner": "UUBotSensor",
+      "member": "GetSensorId",
+      "category": "uBot|Sensor",
+      "tooltip": "",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "interface",
+            "subtype": "UUBotSensor",
+            "subtypeDisplay": "UBot Sensor",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotSensor.GetSensorType",
+      "kind": "pure",
+      "title": "Get Sensor Type",
+      "subtitle": "Target is UBot Sensor",
+      "subtitleZh": "目标是UBot Sensor",
+      "owner": "UUBotSensor",
+      "member": "GetSensorType",
+      "category": "uBot|Sensor",
+      "tooltip": "Short stable type key, e.g. \"Pose\", \"Odometry\", \"IMU\", \"Lidar2D\", \"Lidar3D\", \"RGBCamera\", \"DepthCamera\".",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "interface",
+            "subtype": "UUBotSensor",
+            "subtypeDisplay": "UBot Sensor",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "name",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotSensor.IsSensorRunning",
+      "kind": "pure",
+      "title": "Is Sensor Running",
+      "subtitle": "Target is UBot Sensor",
+      "subtitleZh": "目标是UBot Sensor",
+      "owner": "UUBotSensor",
+      "member": "IsSensorRunning",
+      "category": "uBot|Sensor",
+      "tooltip": "",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "interface",
+            "subtype": "UUBotSensor",
+            "subtypeDisplay": "UBot Sensor",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotVelocityCommandable.ApplyVelocityCommand",
+      "kind": "call",
+      "title": "Apply Velocity Command",
+      "subtitle": "Target is UBot Velocity Commandable",
+      "subtitleZh": "目标是UBot Velocity Commandable",
+      "owner": "UUBotVelocityCommandable",
+      "member": "ApplyVelocityCommand",
+      "category": "uBot|Actuation",
+      "tooltip": "Returns false when the command was rejected (not ready, invalid values, ...).",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "execute",
+          "name": "",
+          "type": {
+            "category": "exec",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "interface",
+            "subtype": "UUBotVelocityCommandable",
+            "subtypeDisplay": "UBot Velocity Commandable",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "Command",
+          "name": "Command",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotVelocityCommand",
+            "subtypeDisplay": "UBot Velocity Command",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "then",
+          "name": "",
+          "type": {
+            "category": "exec",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotVelocityCommandable.StopMotion",
+      "kind": "call",
+      "title": "Stop Motion",
+      "subtitle": "Target is UBot Velocity Commandable",
+      "subtitleZh": "目标是UBot Velocity Commandable",
+      "owner": "UUBotVelocityCommandable",
+      "member": "StopMotion",
+      "category": "uBot|Actuation",
+      "tooltip": "",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "execute",
+          "name": "",
+          "type": {
+            "category": "exec",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "interface",
+            "subtype": "UUBotVelocityCommandable",
+            "subtypeDisplay": "UBot Velocity Commandable",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "then",
+          "name": "",
+          "type": {
+            "category": "exec",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    }
+  ],
+  "structs": [
+    {
+      "id": "FUBotFrameHeader",
+      "displayName": "UBot Frame Header",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotTypes.h",
+      "tooltip": "Common header carried by every uBot sensor frame.",
+      "fields": [
+        {
+          "id": "FrameId",
+          "displayName": "Frame Id",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "",
+          "access": "readOnly"
+        },
+        {
+          "id": "SensorId",
+          "displayName": "Sensor Id",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "",
+          "access": "readOnly"
+        },
+        {
+          "id": "Sequence",
+          "displayName": "Sequence",
+          "type": {
+            "category": "int64",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "",
+          "access": "readOnly"
+        },
+        {
+          "id": "Status",
+          "displayName": "Status",
+          "type": {
+            "category": "enum",
+            "subtype": "EUBotSampleStatus",
+            "subtypeDisplay": "EUBot Sample Status",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "",
+          "access": "readOnly"
+        },
+        {
+          "id": "TimestampSeconds",
+          "displayName": "Timestamp Seconds",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "uBot simulation time (UBot::Clock::GetSimTimeSeconds) at which the sample was taken.",
+          "access": "readOnly"
+        },
+        {
+          "id": "bValid",
+          "displayName": "Valid",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "",
+          "access": "readOnly"
+        }
+      ],
+      "make": "Make:FUBotFrameHeader",
+      "break": "Break:FUBotFrameHeader"
+    },
+    {
+      "id": "FUBotMediumCell",
+      "displayName": "UBot Medium Cell",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotPerceptionMedium.h",
+      "tooltip": "One spherical cell of a perception medium. Positions come straight from UE, so centimeters.",
+      "fields": [
+        {
+          "id": "Density",
+          "displayName": "Density",
+          "type": {
+            "category": "float",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "0..1",
+          "access": "readWrite"
+        },
+        {
+          "id": "EdgeFactor",
+          "displayName": "Edge Factor",
+          "type": {
+            "category": "float",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "0..1, attenuates Density towards the border of the medium.",
+          "access": "readWrite"
+        },
+        {
+          "id": "RadiusCentimeters",
+          "displayName": "Radius Centimeters",
+          "type": {
+            "category": "float",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Values below 1 cm are treated as 1 cm by the intersection math.",
+          "access": "readWrite"
+        },
+        {
+          "id": "WorldPositionCentimeters",
+          "displayName": "World Position Centimeters",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "",
+          "access": "readWrite"
+        }
+      ],
+      "make": "Make:FUBotMediumCell",
+      "break": "Break:FUBotMediumCell"
+    },
+    {
+      "id": "FUBotMediumSnapshot",
+      "displayName": "UBot Medium Snapshot",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotPerceptionMedium.h",
+      "tooltip": "State of one medium (smoke, fog, ...) at the moment it was sampled.",
+      "fields": [
+        {
+          "id": "Cells",
+          "displayName": "Cells",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotMediumCell",
+            "subtypeDisplay": "UBot Medium Cell",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "",
+          "access": "readWrite"
+        },
+        {
+          "id": "MediumType",
+          "displayName": "Medium Type",
+          "type": {
+            "category": "name",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "",
+          "access": "readWrite"
+        },
+        {
+          "id": "Tint",
+          "displayName": "Tint",
+          "type": {
+            "category": "struct",
+            "subtype": "FLinearColor",
+            "subtypeDisplay": "Linear Color",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "",
+          "access": "readWrite"
+        },
+        {
+          "id": "bActive",
+          "displayName": "Active",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "",
+          "access": "readWrite"
+        }
+      ],
+      "make": "Make:FUBotMediumSnapshot",
+      "break": "Break:FUBotMediumSnapshot"
+    },
+    {
+      "id": "FUBotPackageDependency",
+      "displayName": "UBot Package Dependency",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotPackageTypes.h",
+      "tooltip": "One entry of a package's \"Requires\" list.",
+      "fields": [
+        {
+          "id": "Name",
+          "displayName": "Name",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Plugin name of the required package, e.g. \"UBotCore\".",
+          "access": "readOnly"
+        },
+        {
+          "id": "Version",
+          "displayName": "Version",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Version constraint (see FUBotVersionConstraint). Empty means any version.",
+          "access": "readOnly"
+        },
+        {
+          "id": "bOptional",
+          "displayName": "Optional",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Optional requirements are only checked when the package is present.",
+          "access": "readOnly"
+        }
+      ],
+      "make": "Make:FUBotPackageDependency",
+      "break": "Break:FUBotPackageDependency"
+    },
+    {
+      "id": "FUBotPackageIndexVersion",
+      "displayName": "UBot Package Index Version",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotPackageTypes.h",
+      "tooltip": "One entry of a package's \"versions\" list in the package index (format 2).",
+      "fields": [
+        {
+          "id": "Ref",
+          "displayName": "Ref",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Git tag, branch or commit id that is checked out to install this version. Empty for planned\nversions, and for an entry that (wrongly) lists none; such a version cannot be installed.",
+          "access": "readOnly"
+        },
+        {
+          "id": "Version",
+          "displayName": "Version",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Semantic version as written in the index, e.g. \"0.1.0\".",
+          "access": "readOnly"
+        },
+        {
+          "id": "bPlanned",
+          "displayName": "Planned",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "True when the version is announced but not installable yet.",
+          "access": "readOnly"
+        }
+      ],
+      "make": "Make:FUBotPackageIndexVersion",
+      "break": "Break:FUBotPackageIndexVersion"
+    },
+    {
+      "id": "FUBotPackageInfo",
+      "displayName": "UBot Package Info",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotPackageTypes.h",
+      "tooltip": "Everything known about a uBot package, merged from its descriptor and the package index.",
+      "fields": [
+        {
+          "id": "AvailableVersions",
+          "displayName": "Available Versions",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Installable (non-planned) versions listed in the package index, newest first.",
+          "access": "readOnly"
+        },
+        {
+          "id": "BaseDir",
+          "displayName": "Base Dir",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Absolute plugin directory. Empty when not installed.",
+          "access": "readOnly"
+        },
+        {
+          "id": "Description",
+          "displayName": "Description",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "",
+          "access": "readOnly"
+        },
+        {
+          "id": "DescriptorPath",
+          "displayName": "Descriptor Path",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Absolute path of the .uplugin file. Empty when not installed.",
+          "access": "readOnly"
+        },
+        {
+          "id": "DocsUrl",
+          "displayName": "Docs Url",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "",
+          "access": "readOnly"
+        },
+        {
+          "id": "ExternalRequires",
+          "displayName": "External Requires",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Engine or other non-uBot plugins the package needs (\"EnginePlugins\" in descriptors and the\nindex; descriptors may still use the older key \"ExternalRequires\"). Never installed automatically.",
+          "access": "readOnly"
+        },
+        {
+          "id": "FriendlyName",
+          "displayName": "Friendly Name",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "",
+          "access": "readOnly"
+        },
+        {
+          "id": "IndexVersions",
+          "displayName": "Index Versions",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotPackageIndexVersion",
+            "subtypeDisplay": "UBot Package Index Version",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Every version the package index lists (planned ones included), newest first, with the git ref\neach installable version is cloned at. Empty for packages that are not in an index.",
+          "access": "readOnly"
+        },
+        {
+          "id": "InstallFolder",
+          "displayName": "Install Folder",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "\"folder\" of the index entry: the name of the folder below the install directory the package is\ncloned into. Empty means the last segment of Repository without \".git\". Kept as written, so\nFUBotPackageService can refuse a value that is not one safe path segment.",
+          "access": "readOnly"
+        },
+        {
+          "id": "Layer",
+          "displayName": "Layer",
+          "type": {
+            "category": "enum",
+            "subtype": "EUBotPackageLayer",
+            "subtypeDisplay": "EUBot Package Layer",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "",
+          "access": "readOnly"
+        },
+        {
+          "id": "Name",
+          "displayName": "Name",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Plugin name, e.g. \"UBotSensor\".",
+          "access": "readOnly"
+        },
+        {
+          "id": "ProblemDetails",
+          "displayName": "Problem Details",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotPackageProblem",
+            "subtypeDisplay": "UBot Package Problem",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Structured form of Problems: same order and count.",
+          "access": "readOnly"
+        },
+        {
+          "id": "Problems",
+          "displayName": "Problems",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Human readable problems, filled by FUBotPackageRegistry::ValidatePackageSet.",
+          "access": "readOnly"
+        },
+        {
+          "id": "Provides",
+          "displayName": "Provides",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Capability keys offered by the package, e.g. \"Sensor.IMU\".",
+          "access": "readOnly"
+        },
+        {
+          "id": "Repository",
+          "displayName": "Repository",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Git repository URL used to install the package.",
+          "access": "readOnly"
+        },
+        {
+          "id": "Requires",
+          "displayName": "Requires",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotPackageDependency",
+            "subtypeDisplay": "UBot Package Dependency",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "",
+          "access": "readOnly"
+        },
+        {
+          "id": "State",
+          "displayName": "State",
+          "type": {
+            "category": "enum",
+            "subtype": "EUBotPackageState",
+            "subtypeDisplay": "EUBot Package State",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "",
+          "access": "readOnly"
+        },
+        {
+          "id": "Tags",
+          "displayName": "Tags",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "",
+          "access": "readOnly"
+        },
+        {
+          "id": "Version",
+          "displayName": "Version",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Semantic version: the descriptor's VersionName for installed packages. For index entries the\nlatest installable version, or the newest planned version when the package is planned.",
+          "access": "readOnly"
+        },
+        {
+          "id": "bEnabled",
+          "displayName": "Enabled",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "",
+          "access": "readOnly"
+        },
+        {
+          "id": "bFromIndex",
+          "displayName": "From Index",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "True when the package is listed in a package index.",
+          "access": "readOnly"
+        },
+        {
+          "id": "bInstalled",
+          "displayName": "Installed",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "",
+          "access": "readOnly"
+        },
+        {
+          "id": "bPlanned",
+          "displayName": "Planned",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "True when the package index lists only planned versions: announced, but not installable yet.",
+          "access": "readOnly"
+        }
+      ],
+      "make": "Make:FUBotPackageInfo",
+      "break": "Break:FUBotPackageInfo"
+    },
+    {
+      "id": "FUBotPackageProblem",
+      "displayName": "UBot Package Problem",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotPackageTypes.h",
+      "tooltip": "Structured form of one entry of FUBotPackageInfo::Problems.",
+      "fields": [
+        {
+          "id": "Constraint",
+          "displayName": "Constraint",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "The requirement's version constraint as written; empty when any version is accepted.",
+          "access": "readOnly"
+        },
+        {
+          "id": "Dependency",
+          "displayName": "Dependency",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "The required package; empty for cycles and requirements without a name.",
+          "access": "readOnly"
+        },
+        {
+          "id": "Kind",
+          "displayName": "Kind",
+          "type": {
+            "category": "enum",
+            "subtype": "EUBotPackageProblemKind",
+            "subtypeDisplay": "EUBot Package Problem Kind",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "",
+          "access": "readOnly"
+        },
+        {
+          "id": "Message",
+          "displayName": "Message",
+          "type": {
+            "category": "string",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "The same text as the matching entry of FUBotPackageInfo::Problems.",
+          "access": "readOnly"
+        }
+      ],
+      "make": "Make:FUBotPackageProblem",
+      "break": "Break:FUBotPackageProblem"
+    },
+    {
+      "id": "FUBotVelocityCommand",
+      "displayName": "UBot Velocity Command",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotActuatorInterface.h",
+      "tooltip": "Body-frame velocity request. Producers convert from their own conventions before filling it.",
+      "fields": [
+        {
+          "id": "AngularVelocityRadiansPerSecond",
+          "displayName": "Angular Velocity Radians Per Second",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Body frame in UE axes and UE rotation sense (+Z = yaw to the right). rad/s.",
+          "access": "readWrite"
+        },
+        {
+          "id": "LinearVelocityMetersPerSecond",
+          "displayName": "Linear Velocity Meters Per Second",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Body frame in UE axes (X forward, Y right, Z up). Linear in m/s.",
+          "access": "readWrite"
+        },
+        {
+          "id": "Source",
+          "displayName": "Source",
+          "type": {
+            "category": "name",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Free-form origin tag, e.g. \"ROS\", \"MCP\", \"Blueprint\".",
+          "access": "readWrite"
+        },
+        {
+          "id": "TimestampSeconds",
+          "displayName": "Timestamp Seconds",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "uBot sim time at which the command was issued.",
+          "access": "readWrite"
+        }
+      ],
+      "make": "Make:FUBotVelocityCommand",
+      "break": "Break:FUBotVelocityCommand"
+    }
+  ],
+  "enums": [
+    {
+      "id": "EUBotPackageLayer",
+      "displayName": "EUBot Package Layer",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotPackageTypes.h",
+      "tooltip": "Architectural layer of a uBot package, from the \"UBot\" block of its descriptor.",
+      "values": [
+        {
+          "id": "Adapter",
+          "displayName": "Adapter",
+          "value": 3,
+          "tooltip": ""
+        },
+        {
+          "id": "Capability",
+          "displayName": "Capability",
+          "value": 2,
+          "tooltip": ""
+        },
+        {
+          "id": "Content",
+          "displayName": "Content",
+          "value": 4,
+          "tooltip": ""
+        },
+        {
+          "id": "Foundation",
+          "displayName": "Foundation",
+          "value": 1,
+          "tooltip": ""
+        },
+        {
+          "id": "Unknown",
+          "displayName": "Unknown",
+          "value": 0,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "EUBotPackageProblemKind",
+      "displayName": "EUBot Package Problem Kind",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotPackageTypes.h",
+      "tooltip": "What a package problem is about; see FUBotPackageRegistry::ValidatePackageSet.",
+      "values": [
+        {
+          "id": "DependencyCycle",
+          "displayName": "Dependency Cycle",
+          "value": 4,
+          "tooltip": "The package is on a dependency cycle."
+        },
+        {
+          "id": "InvalidRequirement",
+          "displayName": "Invalid Requirement",
+          "value": 3,
+          "tooltip": "A requirement without a package name or with an unparsable constraint."
+        },
+        {
+          "id": "RequiresDisabled",
+          "displayName": "Requires Disabled",
+          "value": 2,
+          "tooltip": "An enabled package requires a disabled one."
+        },
+        {
+          "id": "RequiresMissing",
+          "displayName": "Requires Missing",
+          "value": 0,
+          "tooltip": "A required package is not installed."
+        },
+        {
+          "id": "RequiresVersion",
+          "displayName": "Requires Version",
+          "value": 1,
+          "tooltip": "An installed package does not satisfy a version constraint, or its version is not a semantic version."
+        }
+      ]
+    },
+    {
+      "id": "EUBotPackageState",
+      "displayName": "EUBot Package State",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotPackageTypes.h",
+      "tooltip": "",
+      "values": [
+        {
+          "id": "Disabled",
+          "displayName": "Disabled",
+          "value": 1,
+          "tooltip": ""
+        },
+        {
+          "id": "Enabled",
+          "displayName": "Enabled",
+          "value": 2,
+          "tooltip": ""
+        },
+        {
+          "id": "NotInstalled",
+          "displayName": "Not Installed",
+          "value": 0,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "EUBotSampleStatus",
+      "displayName": "EUBot Sample Status",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotTypes.h",
+      "tooltip": "Outcome of a single sensor sample. Values match the legacy EAgentSensorSampleStatus one to one.",
+      "values": [
+        {
+          "id": "Disabled",
+          "displayName": "Disabled",
+          "value": 4,
+          "tooltip": ""
+        },
+        {
+          "id": "Error",
+          "displayName": "Error",
+          "value": 5,
+          "tooltip": ""
+        },
+        {
+          "id": "InvalidDeltaTime",
+          "displayName": "Invalid Delta Time",
+          "value": 2,
+          "tooltip": ""
+        },
+        {
+          "id": "TeleportDetected",
+          "displayName": "Teleport Detected",
+          "value": 3,
+          "tooltip": ""
+        },
+        {
+          "id": "Valid",
+          "displayName": "Valid",
+          "value": 0,
+          "tooltip": ""
+        },
+        {
+          "id": "WarmingUp",
+          "displayName": "Warming Up",
+          "value": 1,
+          "tooltip": ""
+        }
+      ]
+    }
+  ]
+}

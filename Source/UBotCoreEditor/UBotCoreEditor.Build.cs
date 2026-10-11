@@ -20,6 +20,8 @@ public class UBotCoreEditor : ModuleRules
         PrivateDependencyModuleNames.AddRange(new[]
         {
             "UnrealEd",
+            // K2 nodes, node spawners and the K2 schema for the UBotDocExport commandlet.
+            "BlueprintGraph",
             // The Level Editor layout extension that docks the uBot tab next to Details.
             "LevelEditor",
             "Slate",

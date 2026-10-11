@@ -2,3 +2,4 @@
 *.uasset binary
 *.umap binary
 *.png binary
+docs/api.json text eol=lf

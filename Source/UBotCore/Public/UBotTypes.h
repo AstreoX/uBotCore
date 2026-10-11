@@ -19,10 +19,10 @@ enum class EUBotSampleStatus : uint8
 USTRUCT(BlueprintType)
 struct UBOTCORE_API FUBotFrameHeader
 {
-    GENERATED_BODY()
-
     // Field names are intentionally identical to the legacy FAgentSensorFrameHeader so that a
-    // struct CoreRedirect needs no property redirects.
+    // struct CoreRedirect needs no property redirects. (A plain comment stays above GENERATED_BODY:
+    // UHT would turn one below it into the tooltip of the next property, which the docs export.)
+    GENERATED_BODY()
 
     UPROPERTY(BlueprintReadOnly, Category = "uBot|Frame")
     FString SensorId;
