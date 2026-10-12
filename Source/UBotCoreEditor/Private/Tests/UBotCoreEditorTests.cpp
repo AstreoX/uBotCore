@@ -1420,11 +1420,23 @@ bool FUBotPackagedReadmeImagesTest::RunTest(const FString& Parameters)
     // UAT's BuildPlugin (the Plugins browser's Package action, or RunUAT BuildPlugin for a distribution) stages
     // Resources/ and Source/, but docs/ only when Config/FilterPlugin.ini lists it. The README.md links its
     // logo relative to the plugin root, so the packaged README shows a broken image unless the logo is staged.
+    // Every installed uBot package, so a new plugin is checked as soon as the project loads it.
     int32 PluginsChecked = 0;
-    const TCHAR* const PluginNames[] = { TEXT("UBotCore"), TEXT("UBotSensor"), TEXT("UBotROS") };
-    for (const TCHAR* PluginName : PluginNames)
+    FUBotPackageRegistry Registry;
+    Registry.Refresh();
+    TArray<FString> PackageNames;
+    for (const FUBotPackageInfo& Installed : Registry.GetInstalledPackages())
     {
-        const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(PluginName);
+        if (Installed.Name.StartsWith(TEXT("UBot")))
+        {
+            PackageNames.Add(Installed.Name);
+        }
+    }
+    TestTrue(TEXT("UBotCore is among the installed uBot packages"), PackageNames.Contains(TEXT("UBotCore")));
+    for (const FString& PackageName : PackageNames)
+    {
+        const TCHAR* PluginName = *PackageName;
+        const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(PackageName);
         if (!Plugin.IsValid())
         {
             AddInfo(FString::Printf(TEXT("%s is not part of this project, so its README is not checked."), PluginName));
