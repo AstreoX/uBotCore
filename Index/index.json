@@ -196,8 +196,8 @@
             "name": "UBotAerial",
             "friendlyName": "uBot Aerial",
             "description": {
-                "en": "Multirotors with velocity and attitude control.",
-                "zh-CN": "多旋翼，速度与姿态控制。"
+                "en": "Multirotor drones: simplified flight for navigation, rigid-body dynamics with velocity, attitude, body-rate and motor control, and wind.",
+                "zh-CN": "多旋翼无人机：面向导航的简化飞控，带速度、姿态、角速度和电机控制的刚体动力学，以及风。"
             },
             "layer": "Capability",
             "repository": "https://github.com/AstreoX/uBotAerial.git",
@@ -209,8 +209,8 @@
                     "requires": [
                         { "name": "UBotCore", "version": "^0.1.0" }
                     ],
-                    "enginePlugins": [],
-                    "provides": [ "Actuation.Velocity", "Body.Multirotor" ]
+                    "enginePlugins": [ "EnhancedInput" ],
+                    "provides": [ "Actuation.Velocity", "Actuation.Attitude", "Actuation.Motor", "Body.Multirotor", "Aerial.Wind" ]
                 }
             ]
         },
