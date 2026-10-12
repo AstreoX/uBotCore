@@ -1685,7 +1685,17 @@ bool FUBotPackageBuiltInIndexTest::RunTest(const FString& Parameters)
             {
                 continue;
             }
-            TestTrue(FString::Printf(TEXT("%s %s is listed in the index"), *Installed.Name, *Installed.Version), Entry->AvailableVersions.Contains(Installed.Version));
+            // A package in development (installed from its repository before its first release, or ahead of the
+            // next one) may carry a version the index still lists as planned.
+            const bool bInstallable = Entry->AvailableVersions.Contains(Installed.Version);
+            const bool bInDevelopment = !bInstallable && Entry->IndexVersions.ContainsByPredicate(
+                [&Installed](const FUBotPackageIndexVersion& IndexVersion) { return IndexVersion.bPlanned && IndexVersion.Version == Installed.Version; });
+            TestTrue(FString::Printf(TEXT("%s %s is listed in the index (installable, or planned while in development)"), *Installed.Name, *Installed.Version),
+                bInstallable || bInDevelopment);
+            if (bInDevelopment)
+            {
+                AddInfo(FString::Printf(TEXT("%s %s is in development: the index lists this version as planned."), *Installed.Name, *Installed.Version));
+            }
             if (Entry->Version != Installed.Version)
             {
                 continue;

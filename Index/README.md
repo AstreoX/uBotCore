@@ -281,7 +281,7 @@ Recipe 是一组常用的 Package，用来一次装好一个场景。
 **新版本**
 
 1. 修改 `.uplugin` 的 `VersionName`（以及 `UBot` 块），提交，打标签 `v<VersionName>` 并推送。
-2. 在该 Package 的 `versions` 里**追加**一项，保留旧版本：用户需要降级或固定版本，UE 的测试也要求已安装的版本仍在索引里。新版本的 `requires`、`provides`、`enginePlugins` 取自这个标签处的 `.uplugin`。
+2. 在该 Package 的 `versions` 里**追加**一项，保留旧版本：用户需要降级或固定版本，UE 的测试也要求已安装的版本仍在索引里（开发中的 Package 可以是索引里的规划版本，这时测试照样拿 `.uplugin` 和这个规划版本比对）。新版本的 `requires`、`provides`、`enginePlugins` 取自这个标签处的 `.uplugin`。
 3. 最新版本就是最高的非规划版本；已安装更低版本的工程，在 uBot Manager 里会看到“有更新”，UE 面板的 Loaded Packages 里也会显示可更新到的版本。uBot Manager 拿安装后的 `VersionName` 和索引里的最新版本比较，所以标签处 `.uplugin` 的 `VersionName` 必须等于 `version`；低于它的话，安装之后会一直显示有更新。
 4. 新版本超出下游 Package 的依赖范围时（例如 UBotCore 发布 `0.2.0`，而 UBotSensor 要求 `^0.1.0`），uBot Manager 会拒绝单独更新 UBotCore。要同时发布放宽了约束的下游新版本，用户把它们放进同一个计划里一起更新。
 5. 把规划版本变成正式版本：去掉 `"planned": true`，加上 `ref`。
