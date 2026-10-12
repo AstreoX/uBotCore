@@ -140,19 +140,21 @@ if (Scheduler.ConsumeDue(UBot::Clock::GetSimTimeSeconds(this)))
 
 ### 接口
 
-四个接口都是 `UINTERFACE(BlueprintType)`，函数为 `BlueprintNativeEvent`，C++ 组件和蓝图 Actor 都可以实现。调用方先 `Object->Implements<UUBotX>()`，再用 `IUBotX::Execute_Fn(Object, ...)`，这样原生与蓝图实现都能走到。
+六个接口都是 `UINTERFACE(BlueprintType)`，函数为 `BlueprintNativeEvent`，C++ 组件和蓝图 Actor 都可以实现。调用方先 `Object->Implements<UUBotX>()`，再用 `IUBotX::Execute_Fn(Object, ...)`，这样原生与蓝图实现都能走到。
 
 | 接口 | 头文件 | 函数 |
 | --- | --- | --- |
 | `IUBotSensor` | `UBotSensorInterface.h` | `GetSensorId`、`GetSensorFrameId`、`GetSensorType`（短而稳定的类型键，如 `Pose`、`IMU`、`Lidar2D`）、`IsSensorRunning`、`GetLatestSensorHeader`（`FUBotFrameHeader`）、`GetSensorFrameComponent`（作为 TF frame 的场景组件，可为空） |
 | `IUBotActuator` | `UBotActuatorInterface.h` | `GetActuatorId`、`GetActuatorType`、`IsActuatorReady` |
 | `IUBotVelocityCommandable` | `UBotActuatorInterface.h` | `ApplyVelocityCommand(const FUBotVelocityCommand&)`（被拒绝时返回 `false`）、`StopMotion`。独立的能力接口，不要求同时实现 `IUBotActuator` |
+| `IUBotAttitudeCommandable` | `UBotActuatorInterface.h` | `ApplyAttitudeCommand(const FUBotAttitudeCommand&)`、`ApplyBodyRateCommand(const FUBotBodyRateCommand&)`（被拒绝时返回 `false`）、`ReleaseAttitudeCommand`（发送方停了，由飞行器自己兜底，比如悬停）。给飞行器用 |
+| `IUBotMotorCommandable` | `UBotActuatorInterface.h` | `ApplyMotorCommand(const FUBotMotorCommand&)`（值的个数与电机数不符等情况下返回 `false`）、`GetMotorCount`、`ReleaseMotorCommand` |
 | `IUBotPerceptionMedium` | `UBotPerceptionMedium.h` | `GetMediumSnapshot(FUBotMediumSnapshot&)` |
 
 查找辅助函数：
 
 - `UBot::Sensors::FindSensors(Actor, OutSensors)`：返回 Actor 自身（若实现接口）加上所有实现 `IUBotSensor` 的组件，按组件顺序。
-- `UBot::Actuation::FindVelocityCommandable(Actor)`：先 Actor 本身，再其组件，没有则 `nullptr`。
+- `UBot::Actuation::FindVelocityCommandable(Actor)`、`FindAttitudeCommandable(Actor)`、`FindMotorCommandable(Actor)`：先 Actor 本身，再其组件，没有则 `nullptr`。
 - `UBot::Interfaces::FindImplementers` / `FindFirstImplementer`：以上两者使用的通用版本，接受任意接口的 `UClass`。不搜索子 Actor 组件。
 
 ```cpp
@@ -173,7 +175,17 @@ if (UObject* Drive = UBot::Actuation::FindVelocityCommandable(Robot))
 }
 ```
 
-`FUBotVelocityCommand` 在机体系下、使用 UE 坐标轴（X 前、Y 右、Z 上）：线速度单位 m/s，角速度单位 rad/s 且采用 UE 旋转方向（+Z 为向右偏航）。`Source` 是自由格式的来源标签，如 `ROS`、`MCP`、`Blueprint`。其他坐标系的生产者（例如 ROS 适配器）负责先转换再填充。
+`FUBotVelocityCommand` 在机体系下、使用 UE 坐标轴（X 前、Y 右、Z 上）：线速度单位 m/s，角速度单位 rad/s 且采用 UE 旋转方向（+Z 为向右偏航）。`Source` 是自由格式的来源标签，如 `ROS`、`MCP`、`Blueprint`。其他坐标系的生产者（例如 ROS 适配器）负责先转换再填充。机体会倾斜的接收者（多旋翼）按航向坐标系理解它：X、Y 沿当前航向，Z 朝上。
+
+飞行器的姿态与电机指令也用 UE 坐标轴和 SI 单位：
+
+| 结构体 | 字段 |
+| --- | --- |
+| `FUBotAttitudeCommand` | `Orientation`（机体到世界的四元数）；`bUseYawRate` 和 `YawRateRadiansPerSecond`（按角速度转航向，不跟随 `Orientation` 的偏航）；`bUseThrust` 和 `NormalizedThrust`（总推力占最大值的比例，0..1）；不给推力时由接收者按 `VerticalVelocityMetersPerSecond` 控制升降（0 为保持高度） |
+| `FUBotBodyRateCommand` | `BodyRateRadiansPerSecond`（机体系角速度，UE 旋转方向）；推力字段同上 |
+| `FUBotMotorCommand` | `Type`（`Normalized`：0..1；`AngularVelocity`：rad/s）；`Values`（每个电机一个值，按接收者的电机顺序） |
+
+三者都带 `TimestampSeconds`（仿真时间）和 `Source`。
 
 感知介质（烟、雾等）由球形单元组成：
 

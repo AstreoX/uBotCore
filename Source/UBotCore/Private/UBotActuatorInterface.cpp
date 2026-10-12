@@ -8,4 +8,14 @@ namespace UBot::Actuation
     {
         return UBot::Interfaces::FindFirstImplementer(Actor, UUBotVelocityCommandable::StaticClass());
     }
+
+    UObject* FindAttitudeCommandable(const AActor* Actor)
+    {
+        return UBot::Interfaces::FindFirstImplementer(Actor, UUBotAttitudeCommandable::StaticClass());
+    }
+
+    UObject* FindMotorCommandable(const AActor* Actor)
+    {
+        return UBot::Interfaces::FindFirstImplementer(Actor, UUBotMotorCommandable::StaticClass());
+    }
 }

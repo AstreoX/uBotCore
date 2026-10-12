@@ -25,7 +25,7 @@ UBotCore is the base Unreal Engine 5.5 plugin of the uBot family. It provides th
 - `UBot::Clock`, `UUBotClockSubsystem` (pause, step, fixed time step): `UBotClock.h`, `UBotClockSubsystem.h` in `Source/UBotCore/Public/`.
 - `UBot::Ros` (UE/ROS math) and its Blueprint wrapper `UUBotConventionsLibrary`: `UBotRosConventions.h`, `UBotConventionsLibrary.h`. Keep the pair in sync. `UBot::Units`: `UBotUnits.h`.
 - `FUBotSampleScheduler`: `Source/UBotCore/Public/UBotSampleScheduler.h`.
-- `IUBotSensor`: `Source/UBotCore/Public/UBotSensorInterface.h`. `IUBotActuator`, `IUBotVelocityCommandable`, `FUBotVelocityCommand`: `UBotActuatorInterface.h`. `IUBotPerceptionMedium`, `UBot::Medium`: `UBotPerceptionMedium.h`.
+- `IUBotSensor`: `Source/UBotCore/Public/UBotSensorInterface.h`. `IUBotActuator`, `IUBotVelocityCommandable`, `IUBotAttitudeCommandable`, `IUBotMotorCommandable` and their commands (`FUBotVelocityCommand`, `FUBotAttitudeCommand`, `FUBotBodyRateCommand`, `FUBotMotorCommand`): `UBotActuatorInterface.h`. `IUBotPerceptionMedium`, `UBot::Medium`: `UBotPerceptionMedium.h`.
 - `UUBotIdentityComponent`, `UBot::Identity`: `Source/UBotCore/Public/UBotIdentityComponent.h`.
 - `FUBotExtensionRegistry`, `IUBotExtension` (extension points other packages declare and implement): `Source/UBotCore/Public/UBotExtensionRegistry.h`.
 - `FUBotPackageRegistry`: `UBotPackageRegistry.h`. `FUBotPackageInfo` and enums: `UBotPackageTypes.h`. `FUBotSemVer`, `FUBotVersionConstraint`: `UBotSemVer.h`. `UUBotPackageLibrary`: `UBotPackageLibrary.h` (all in `Source/UBotCore/Public/`).

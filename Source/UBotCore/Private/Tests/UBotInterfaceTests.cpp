@@ -477,6 +477,10 @@ bool FUBotFindSensorsOrderingTest::RunTest(const FString& Parameters)
 
     TestNull(TEXT("No velocity commandable"), UBot::Actuation::FindVelocityCommandable(Actor));
     TestNull(TEXT("FindVelocityCommandable(nullptr)"), UBot::Actuation::FindVelocityCommandable(nullptr));
+    TestNull(TEXT("No attitude commandable"), UBot::Actuation::FindAttitudeCommandable(Actor));
+    TestNull(TEXT("FindAttitudeCommandable(nullptr)"), UBot::Actuation::FindAttitudeCommandable(nullptr));
+    TestNull(TEXT("No motor commandable"), UBot::Actuation::FindMotorCommandable(Actor));
+    TestNull(TEXT("FindMotorCommandable(nullptr)"), UBot::Actuation::FindMotorCommandable(nullptr));
 
     TArray<FUBotMediumSnapshot> Snapshots;
     Snapshots.AddDefaulted();

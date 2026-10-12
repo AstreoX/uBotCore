@@ -41,6 +41,29 @@
       ]
     },
     {
+      "id": "UUBotAttitudeCommandable",
+      "displayName": "UBot Attitude Commandable",
+      "kind": "interface",
+      "parent": "UInterface",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotActuatorInterface.h",
+      "category": "",
+      "tooltip": "",
+      "flags": {
+        "abstract": true,
+        "blueprintType": true,
+        "blueprintable": true,
+        "spawnable": false,
+        "deprecated": false
+      },
+      "properties": [],
+      "nodes": [
+        "UUBotAttitudeCommandable.ApplyAttitudeCommand",
+        "UUBotAttitudeCommandable.ApplyBodyRateCommand",
+        "UUBotAttitudeCommandable.ReleaseAttitudeCommand"
+      ]
+    },
+    {
       "id": "UUBotClockSubsystem",
       "displayName": "UBot Clock Subsystem",
       "kind": "subsystem",
@@ -385,6 +408,29 @@
       ]
     },
     {
+      "id": "UUBotMotorCommandable",
+      "displayName": "UBot Motor Commandable",
+      "kind": "interface",
+      "parent": "UInterface",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotActuatorInterface.h",
+      "category": "",
+      "tooltip": "",
+      "flags": {
+        "abstract": true,
+        "blueprintType": true,
+        "blueprintable": true,
+        "spawnable": false,
+        "deprecated": false
+      },
+      "properties": [],
+      "nodes": [
+        "UUBotMotorCommandable.ApplyMotorCommand",
+        "UUBotMotorCommandable.GetMotorCount",
+        "UUBotMotorCommandable.ReleaseMotorCommand"
+      ]
+    },
+    {
       "id": "UUBotPackageLibrary",
       "displayName": "UBot Package Library",
       "kind": "library",
@@ -482,6 +528,310 @@
     }
   ],
   "nodes": [
+    {
+      "id": "Break:FUBotAttitudeCommand",
+      "kind": "break",
+      "title": "Break UBot Attitude Command",
+      "subtitle": "",
+      "owner": "",
+      "member": "",
+      "category": "Utilities|Struct",
+      "tooltip": "Adds a node that breaks a 'UBot Attitude Command' into its member fields",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "UBotAttitudeCommand",
+          "name": "UBot Attitude Command",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotAttitudeCommand",
+            "subtypeDisplay": "UBot Attitude Command",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "Orientation",
+          "name": "Orientation",
+          "type": {
+            "category": "struct",
+            "subtype": "FQuat",
+            "subtypeDisplay": "Quat",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "Desired attitude, body to world, UE axes."
+        },
+        {
+          "id": "bUseYawRate",
+          "name": "Use Yaw Rate",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "Turn the heading at Yaw Rate instead of following the yaw of Orientation."
+        },
+        {
+          "id": "YawRateRadiansPerSecond",
+          "name": "Yaw Rate Radians Per Second",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": "Yaw rate when Use Yaw Rate is set, rad/s, UE rotation sense (+ turns right)."
+        },
+        {
+          "id": "bUseThrust",
+          "name": "Use Thrust",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": "Use Normalized Thrust. Otherwise the receiver sets the thrust itself to fly Vertical Velocity."
+        },
+        {
+          "id": "NormalizedThrust",
+          "name": "Normalized Thrust",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": "Collective thrust as a share of the vehicle's maximum, 0..1."
+        },
+        {
+          "id": "VerticalVelocityMetersPerSecond",
+          "name": "Vertical Velocity Meters Per Second",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": "Climb rate when Use Thrust is not set, m/s (+ up). 0 holds the altitude."
+        },
+        {
+          "id": "TimestampSeconds",
+          "name": "Timestamp Seconds",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": "uBot sim time at which the command was issued."
+        },
+        {
+          "id": "Source",
+          "name": "Source",
+          "type": {
+            "category": "name",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": "Free-form origin tag, e.g. \"ROS\", \"MCP\", \"Blueprint\"."
+        }
+      ]
+    },
+    {
+      "id": "Break:FUBotBodyRateCommand",
+      "kind": "break",
+      "title": "Break UBot Body Rate Command",
+      "subtitle": "",
+      "owner": "",
+      "member": "",
+      "category": "Utilities|Struct",
+      "tooltip": "Adds a node that breaks a 'UBot Body Rate Command' into its member fields",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "UBotBodyRateCommand",
+          "name": "UBot Body Rate Command",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotBodyRateCommand",
+            "subtypeDisplay": "UBot Body Rate Command",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "BodyRateRadiansPerSecond",
+          "name": "Body Rate Radians Per Second",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "Desired angular velocity in the body frame, UE axes and UE rotation sense (+Z = yaw to the right), rad/s."
+        },
+        {
+          "id": "bUseThrust",
+          "name": "Use Thrust",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "Use Normalized Thrust. Otherwise the receiver sets the thrust itself to fly Vertical Velocity."
+        },
+        {
+          "id": "NormalizedThrust",
+          "name": "Normalized Thrust",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": "Collective thrust as a share of the vehicle's maximum, 0..1."
+        },
+        {
+          "id": "VerticalVelocityMetersPerSecond",
+          "name": "Vertical Velocity Meters Per Second",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": "Climb rate when Use Thrust is not set, m/s (+ up). 0 holds the altitude."
+        },
+        {
+          "id": "TimestampSeconds",
+          "name": "Timestamp Seconds",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": "uBot sim time at which the command was issued."
+        },
+        {
+          "id": "Source",
+          "name": "Source",
+          "type": {
+            "category": "name",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": true,
+          "tooltip": "Free-form origin tag, e.g. \"ROS\", \"MCP\", \"Blueprint\"."
+        }
+      ]
+    },
     {
       "id": "Break:FUBotFrameHeader",
       "kind": "break",
@@ -823,6 +1173,110 @@
           "default": "",
           "advanced": false,
           "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "Break:FUBotMotorCommand",
+      "kind": "break",
+      "title": "Break UBot Motor Command",
+      "subtitle": "",
+      "owner": "",
+      "member": "",
+      "category": "Utilities|Struct",
+      "tooltip": "Adds a node that breaks a 'UBot Motor Command' into its member fields",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "UBotMotorCommand",
+          "name": "UBot Motor Command",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotMotorCommand",
+            "subtypeDisplay": "UBot Motor Command",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "Type",
+          "name": "Type",
+          "type": {
+            "category": "enum",
+            "subtype": "EUBotMotorCommandType",
+            "subtypeDisplay": "EUBot Motor Command Type",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "What the values mean."
+        },
+        {
+          "id": "Values",
+          "name": "Values",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "One value per motor."
+        },
+        {
+          "id": "TimestampSeconds",
+          "name": "Timestamp Seconds",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "uBot sim time at which the command was issued."
+        },
+        {
+          "id": "Source",
+          "name": "Source",
+          "type": {
+            "category": "name",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "Free-form origin tag, e.g. \"ROS\", \"MCP\", \"Blueprint\"."
         }
       ]
     },
@@ -1566,7 +2020,7 @@
           },
           "default": "",
           "advanced": false,
-          "tooltip": "Body frame in UE axes (X forward, Y right, Z up). Linear in m/s."
+          "tooltip": "Body frame in UE axes (X forward, Y right, Z up). Linear in m/s. Receivers whose body tilts (multirotors) read it in the heading frame: X and Y along the current heading, Z up."
         },
         {
           "id": "AngularVelocityRadiansPerSecond",
@@ -1615,6 +2069,310 @@
           "default": "",
           "advanced": false,
           "tooltip": "Free-form origin tag, e.g. \"ROS\", \"MCP\", \"Blueprint\"."
+        }
+      ]
+    },
+    {
+      "id": "Make:FUBotAttitudeCommand",
+      "kind": "make",
+      "title": "Make UBot Attitude Command",
+      "subtitle": "",
+      "owner": "",
+      "member": "",
+      "category": "Utilities|Struct",
+      "tooltip": "Adds a node that create a 'UBot Attitude Command' from its members",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "Orientation",
+          "name": "Orientation",
+          "type": {
+            "category": "struct",
+            "subtype": "FQuat",
+            "subtypeDisplay": "Quat",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "(X=0.000000,Y=0.000000,Z=0.000000,W=1.000000)",
+          "advanced": false,
+          "tooltip": "Desired attitude, body to world, UE axes."
+        },
+        {
+          "id": "bUseYawRate",
+          "name": "Use Yaw Rate",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "False",
+          "advanced": false,
+          "tooltip": "Turn the heading at Yaw Rate instead of following the yaw of Orientation."
+        },
+        {
+          "id": "YawRateRadiansPerSecond",
+          "name": "Yaw Rate Radians Per Second",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "0.000000",
+          "advanced": true,
+          "tooltip": "Yaw rate when Use Yaw Rate is set, rad/s, UE rotation sense (+ turns right)."
+        },
+        {
+          "id": "bUseThrust",
+          "name": "Use Thrust",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "False",
+          "advanced": true,
+          "tooltip": "Use Normalized Thrust. Otherwise the receiver sets the thrust itself to fly Vertical Velocity."
+        },
+        {
+          "id": "NormalizedThrust",
+          "name": "Normalized Thrust",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "0.000000",
+          "advanced": true,
+          "tooltip": "Collective thrust as a share of the vehicle's maximum, 0..1."
+        },
+        {
+          "id": "VerticalVelocityMetersPerSecond",
+          "name": "Vertical Velocity Meters Per Second",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "0.000000",
+          "advanced": true,
+          "tooltip": "Climb rate when Use Thrust is not set, m/s (+ up). 0 holds the altitude."
+        },
+        {
+          "id": "TimestampSeconds",
+          "name": "Timestamp Seconds",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "0.000000",
+          "advanced": true,
+          "tooltip": "uBot sim time at which the command was issued."
+        },
+        {
+          "id": "Source",
+          "name": "Source",
+          "type": {
+            "category": "name",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "None",
+          "advanced": true,
+          "tooltip": "Free-form origin tag, e.g. \"ROS\", \"MCP\", \"Blueprint\"."
+        }
+      ],
+      "outputs": [
+        {
+          "id": "UBotAttitudeCommand",
+          "name": "UBot Attitude Command",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotAttitudeCommand",
+            "subtypeDisplay": "UBot Attitude Command",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "Make:FUBotBodyRateCommand",
+      "kind": "make",
+      "title": "Make UBot Body Rate Command",
+      "subtitle": "",
+      "owner": "",
+      "member": "",
+      "category": "Utilities|Struct",
+      "tooltip": "Adds a node that create a 'UBot Body Rate Command' from its members",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "BodyRateRadiansPerSecond",
+          "name": "Body Rate Radians Per Second",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "0.000000,0.000000,0.000000",
+          "advanced": false,
+          "tooltip": "Desired angular velocity in the body frame, UE axes and UE rotation sense (+Z = yaw to the right), rad/s."
+        },
+        {
+          "id": "bUseThrust",
+          "name": "Use Thrust",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "False",
+          "advanced": false,
+          "tooltip": "Use Normalized Thrust. Otherwise the receiver sets the thrust itself to fly Vertical Velocity."
+        },
+        {
+          "id": "NormalizedThrust",
+          "name": "Normalized Thrust",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "0.000000",
+          "advanced": true,
+          "tooltip": "Collective thrust as a share of the vehicle's maximum, 0..1."
+        },
+        {
+          "id": "VerticalVelocityMetersPerSecond",
+          "name": "Vertical Velocity Meters Per Second",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "0.000000",
+          "advanced": true,
+          "tooltip": "Climb rate when Use Thrust is not set, m/s (+ up). 0 holds the altitude."
+        },
+        {
+          "id": "TimestampSeconds",
+          "name": "Timestamp Seconds",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "0.000000",
+          "advanced": true,
+          "tooltip": "uBot sim time at which the command was issued."
+        },
+        {
+          "id": "Source",
+          "name": "Source",
+          "type": {
+            "category": "name",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "None",
+          "advanced": true,
+          "tooltip": "Free-form origin tag, e.g. \"ROS\", \"MCP\", \"Blueprint\"."
+        }
+      ],
+      "outputs": [
+        {
+          "id": "UBotBodyRateCommand",
+          "name": "UBot Body Rate Command",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotBodyRateCommand",
+            "subtypeDisplay": "UBot Body Rate Command",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
         }
       ]
     },
@@ -1866,6 +2624,110 @@
       ]
     },
     {
+      "id": "Make:FUBotMotorCommand",
+      "kind": "make",
+      "title": "Make UBot Motor Command",
+      "subtitle": "",
+      "owner": "",
+      "member": "",
+      "category": "Utilities|Struct",
+      "tooltip": "Adds a node that create a 'UBot Motor Command' from its members",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "Type",
+          "name": "Type",
+          "type": {
+            "category": "enum",
+            "subtype": "EUBotMotorCommandType",
+            "subtypeDisplay": "EUBot Motor Command Type",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "Normalized",
+          "advanced": false,
+          "tooltip": "What the values mean."
+        },
+        {
+          "id": "Values",
+          "name": "Values",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": "One value per motor."
+        },
+        {
+          "id": "TimestampSeconds",
+          "name": "Timestamp Seconds",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "0.000000",
+          "advanced": false,
+          "tooltip": "uBot sim time at which the command was issued."
+        },
+        {
+          "id": "Source",
+          "name": "Source",
+          "type": {
+            "category": "name",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "None",
+          "advanced": false,
+          "tooltip": "Free-form origin tag, e.g. \"ROS\", \"MCP\", \"Blueprint\"."
+        }
+      ],
+      "outputs": [
+        {
+          "id": "UBotMotorCommand",
+          "name": "UBot Motor Command",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotMotorCommand",
+            "subtypeDisplay": "UBot Motor Command",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
       "id": "Make:FUBotPackageDependency",
       "kind": "make",
       "title": "Make UBot Package Dependency",
@@ -2055,7 +2917,7 @@
           },
           "default": "0.000000,0.000000,0.000000",
           "advanced": false,
-          "tooltip": "Body frame in UE axes (X forward, Y right, Z up). Linear in m/s."
+          "tooltip": "Body frame in UE axes (X forward, Y right, Z up). Linear in m/s. Receivers whose body tilts (multirotors) read it in the heading frame: X and Y along the current heading, Z up."
         },
         {
           "id": "AngularVelocityRadiansPerSecond",
@@ -2283,6 +3145,289 @@
           "name": "Return Value",
           "type": {
             "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotAttitudeCommandable.ApplyAttitudeCommand",
+      "kind": "call",
+      "title": "Apply Attitude Command",
+      "subtitle": "Target is UBot Attitude Commandable",
+      "subtitleZh": "目标是UBot Attitude Commandable",
+      "owner": "UUBotAttitudeCommandable",
+      "member": "ApplyAttitudeCommand",
+      "category": "uBot|Actuation",
+      "tooltip": "Returns false when the command was rejected (not ready, not accepted by this vehicle, invalid values, ...).",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "execute",
+          "name": "",
+          "type": {
+            "category": "exec",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "interface",
+            "subtype": "UUBotAttitudeCommandable",
+            "subtypeDisplay": "UBot Attitude Commandable",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "Command",
+          "name": "Command",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotAttitudeCommand",
+            "subtypeDisplay": "UBot Attitude Command",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "then",
+          "name": "",
+          "type": {
+            "category": "exec",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotAttitudeCommandable.ApplyBodyRateCommand",
+      "kind": "call",
+      "title": "Apply Body Rate Command",
+      "subtitle": "Target is UBot Attitude Commandable",
+      "subtitleZh": "目标是UBot Attitude Commandable",
+      "owner": "UUBotAttitudeCommandable",
+      "member": "ApplyBodyRateCommand",
+      "category": "uBot|Actuation",
+      "tooltip": "Returns false when the command was rejected (not ready, not accepted by this vehicle, invalid values, ...).",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "execute",
+          "name": "",
+          "type": {
+            "category": "exec",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "interface",
+            "subtype": "UUBotAttitudeCommandable",
+            "subtypeDisplay": "UBot Attitude Commandable",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "Command",
+          "name": "Command",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotBodyRateCommand",
+            "subtypeDisplay": "UBot Body Rate Command",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "then",
+          "name": "",
+          "type": {
+            "category": "exec",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotAttitudeCommandable.ReleaseAttitudeCommand",
+      "kind": "call",
+      "title": "Release Attitude Command",
+      "subtitle": "Target is UBot Attitude Commandable",
+      "subtitleZh": "目标是UBot Attitude Commandable",
+      "owner": "UUBotAttitudeCommandable",
+      "member": "ReleaseAttitudeCommand",
+      "category": "uBot|Actuation",
+      "tooltip": "The sender stopped sending (for example its commands timed out); the vehicle falls back to its own behavior, such as a hover.",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "execute",
+          "name": "",
+          "type": {
+            "category": "exec",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "interface",
+            "subtype": "UUBotAttitudeCommandable",
+            "subtypeDisplay": "UBot Attitude Commandable",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "then",
+          "name": "",
+          "type": {
+            "category": "exec",
             "subtype": "",
             "subtypeDisplay": "",
             "container": "none",
@@ -4116,6 +5261,241 @@
       ]
     },
     {
+      "id": "UUBotMotorCommandable.ApplyMotorCommand",
+      "kind": "call",
+      "title": "Apply Motor Command",
+      "subtitle": "Target is UBot Motor Commandable",
+      "subtitleZh": "目标是UBot Motor Commandable",
+      "owner": "UUBotMotorCommandable",
+      "member": "ApplyMotorCommand",
+      "category": "uBot|Actuation",
+      "tooltip": "Returns false when the command was rejected (wrong number of values, not ready, invalid values, ...).",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "execute",
+          "name": "",
+          "type": {
+            "category": "exec",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "interface",
+            "subtype": "UUBotMotorCommandable",
+            "subtypeDisplay": "UBot Motor Commandable",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "Command",
+          "name": "Command",
+          "type": {
+            "category": "struct",
+            "subtype": "FUBotMotorCommand",
+            "subtypeDisplay": "UBot Motor Command",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "then",
+          "name": "",
+          "type": {
+            "category": "exec",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotMotorCommandable.GetMotorCount",
+      "kind": "pure",
+      "title": "Get Motor Count",
+      "subtitle": "Target is UBot Motor Commandable",
+      "subtitleZh": "目标是UBot Motor Commandable",
+      "owner": "UUBotMotorCommandable",
+      "member": "GetMotorCount",
+      "category": "uBot|Actuation",
+      "tooltip": "Number of motors, the length a motor command must have.",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "interface",
+            "subtype": "UUBotMotorCommandable",
+            "subtypeDisplay": "UBot Motor Commandable",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "int",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotMotorCommandable.ReleaseMotorCommand",
+      "kind": "call",
+      "title": "Release Motor Command",
+      "subtitle": "Target is UBot Motor Commandable",
+      "subtitleZh": "目标是UBot Motor Commandable",
+      "owner": "UUBotMotorCommandable",
+      "member": "ReleaseMotorCommand",
+      "category": "uBot|Actuation",
+      "tooltip": "The sender stopped sending (for example its commands timed out); the vehicle falls back to its own behavior.",
+      "keywords": "",
+      "flags": {
+        "static": false,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "execute",
+          "name": "",
+          "type": {
+            "category": "exec",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        },
+        {
+          "id": "self",
+          "name": "Target",
+          "type": {
+            "category": "interface",
+            "subtype": "UUBotMotorCommandable",
+            "subtypeDisplay": "UBot Motor Commandable",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "then",
+          "name": "",
+          "type": {
+            "category": "exec",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
       "id": "UUBotPackageLibrary.FindUBotPackage",
       "kind": "pure",
       "title": "Find uBot Package",
@@ -5101,6 +6481,238 @@
   ],
   "structs": [
     {
+      "id": "FUBotAttitudeCommand",
+      "displayName": "UBot Attitude Command",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotActuatorInterface.h",
+      "tooltip": "Attitude request for an aerial vehicle (attitude plus thrust or climb rate).",
+      "fields": [
+        {
+          "id": "NormalizedThrust",
+          "displayName": "Normalized Thrust",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Collective thrust as a share of the vehicle's maximum, 0..1.",
+          "access": "readWrite"
+        },
+        {
+          "id": "Orientation",
+          "displayName": "Orientation",
+          "type": {
+            "category": "struct",
+            "subtype": "FQuat",
+            "subtypeDisplay": "Quat",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Desired attitude, body to world, UE axes.",
+          "access": "readWrite"
+        },
+        {
+          "id": "Source",
+          "displayName": "Source",
+          "type": {
+            "category": "name",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Free-form origin tag, e.g. \"ROS\", \"MCP\", \"Blueprint\".",
+          "access": "readWrite"
+        },
+        {
+          "id": "TimestampSeconds",
+          "displayName": "Timestamp Seconds",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "uBot sim time at which the command was issued.",
+          "access": "readWrite"
+        },
+        {
+          "id": "VerticalVelocityMetersPerSecond",
+          "displayName": "Vertical Velocity Meters Per Second",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Climb rate when Use Thrust is not set, m/s (+ up). 0 holds the altitude.",
+          "access": "readWrite"
+        },
+        {
+          "id": "YawRateRadiansPerSecond",
+          "displayName": "Yaw Rate Radians Per Second",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Yaw rate when Use Yaw Rate is set, rad/s, UE rotation sense (+ turns right).",
+          "access": "readWrite"
+        },
+        {
+          "id": "bUseThrust",
+          "displayName": "Use Thrust",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Use Normalized Thrust. Otherwise the receiver sets the thrust itself to fly Vertical Velocity.",
+          "access": "readWrite"
+        },
+        {
+          "id": "bUseYawRate",
+          "displayName": "Use Yaw Rate",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Turn the heading at Yaw Rate instead of following the yaw of Orientation.",
+          "access": "readWrite"
+        }
+      ],
+      "make": "Make:FUBotAttitudeCommand",
+      "break": "Break:FUBotAttitudeCommand"
+    },
+    {
+      "id": "FUBotBodyRateCommand",
+      "displayName": "UBot Body Rate Command",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotActuatorInterface.h",
+      "tooltip": "Body-rate request for an aerial vehicle (body rates plus thrust or climb rate).",
+      "fields": [
+        {
+          "id": "BodyRateRadiansPerSecond",
+          "displayName": "Body Rate Radians Per Second",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Desired angular velocity in the body frame, UE axes and UE rotation sense (+Z = yaw to the right), rad/s.",
+          "access": "readWrite"
+        },
+        {
+          "id": "NormalizedThrust",
+          "displayName": "Normalized Thrust",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Collective thrust as a share of the vehicle's maximum, 0..1.",
+          "access": "readWrite"
+        },
+        {
+          "id": "Source",
+          "displayName": "Source",
+          "type": {
+            "category": "name",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Free-form origin tag, e.g. \"ROS\", \"MCP\", \"Blueprint\".",
+          "access": "readWrite"
+        },
+        {
+          "id": "TimestampSeconds",
+          "displayName": "Timestamp Seconds",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "uBot sim time at which the command was issued.",
+          "access": "readWrite"
+        },
+        {
+          "id": "VerticalVelocityMetersPerSecond",
+          "displayName": "Vertical Velocity Meters Per Second",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Climb rate when Use Thrust is not set, m/s (+ up). 0 holds the altitude.",
+          "access": "readWrite"
+        },
+        {
+          "id": "bUseThrust",
+          "displayName": "Use Thrust",
+          "type": {
+            "category": "bool",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Use Normalized Thrust. Otherwise the receiver sets the thrust itself to fly Vertical Velocity.",
+          "access": "readWrite"
+        }
+      ],
+      "make": "Make:FUBotBodyRateCommand",
+      "break": "Break:FUBotBodyRateCommand"
+    },
+    {
       "id": "FUBotFrameHeader",
       "displayName": "UBot Frame Header",
       "module": "UBotCore",
@@ -5342,6 +6954,77 @@
       ],
       "make": "Make:FUBotMediumSnapshot",
       "break": "Break:FUBotMediumSnapshot"
+    },
+    {
+      "id": "FUBotMotorCommand",
+      "displayName": "UBot Motor Command",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotActuatorInterface.h",
+      "tooltip": "One value per motor, in the receiver's motor order.",
+      "fields": [
+        {
+          "id": "Source",
+          "displayName": "Source",
+          "type": {
+            "category": "name",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "Free-form origin tag, e.g. \"ROS\", \"MCP\", \"Blueprint\".",
+          "access": "readWrite"
+        },
+        {
+          "id": "TimestampSeconds",
+          "displayName": "Timestamp Seconds",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "uBot sim time at which the command was issued.",
+          "access": "readWrite"
+        },
+        {
+          "id": "Type",
+          "displayName": "Type",
+          "type": {
+            "category": "enum",
+            "subtype": "EUBotMotorCommandType",
+            "subtypeDisplay": "EUBot Motor Command Type",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "What the values mean.",
+          "access": "readWrite"
+        },
+        {
+          "id": "Values",
+          "displayName": "Values",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "array",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "tooltip": "One value per motor.",
+          "access": "readWrite"
+        }
+      ],
+      "make": "Make:FUBotMotorCommand",
+      "break": "Break:FUBotMotorCommand"
     },
     {
       "id": "FUBotPackageDependency",
@@ -5916,7 +7599,7 @@
             "byRef": false,
             "const": false
           },
-          "tooltip": "Body frame in UE axes (X forward, Y right, Z up). Linear in m/s.",
+          "tooltip": "Body frame in UE axes (X forward, Y right, Z up). Linear in m/s. Receivers whose body tilts (multirotors) read it in the heading frame: X and Y along the current heading, Z up.",
           "access": "readWrite"
         },
         {
@@ -5955,6 +7638,27 @@
     }
   ],
   "enums": [
+    {
+      "id": "EUBotMotorCommandType",
+      "displayName": "EUBot Motor Command Type",
+      "module": "UBotCore",
+      "header": "Source/UBotCore/Public/UBotActuatorInterface.h",
+      "tooltip": "Meaning of the values of a motor command. Append new values at the end.",
+      "values": [
+        {
+          "id": "AngularVelocity",
+          "displayName": "Angular Velocity",
+          "value": 1,
+          "tooltip": "Motor speed, rad/s."
+        },
+        {
+          "id": "Normalized",
+          "displayName": "Normalized",
+          "value": 0,
+          "tooltip": "Share of each motor's maximum, 0..1."
+        }
+      ]
+    },
     {
       "id": "EUBotPackageLayer",
       "displayName": "EUBot Package Layer",
