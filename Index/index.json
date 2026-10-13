@@ -64,7 +64,16 @@
                         "Core.Conventions.ROS",
                         "Core.Interfaces",
                         "Core.PackageManager"
-                    ]
+                    ],
+                    "binaries": {
+                        "5.5": {
+                            "Win64": {
+                                "url": "https://github.com/AstreoX/uBotCore/releases/download/v0.1.2/UBotCore-0.1.2-UE5.5-Win64.zip",
+                                "sha256": "30053fd519fb4f7370cd86906fed66ae718837b3cebcc5c3592af5fe37609a9a",
+                                "size": 1123439
+                            }
+                        }
+                    }
                 }
             ]
         },
@@ -198,7 +207,16 @@
                         "ROS.VelocityCommand",
                         "ROS.AttitudeCommand",
                         "ROS.MotorCommand"
-                    ]
+                    ],
+                    "binaries": {
+                        "5.5": {
+                            "Win64": {
+                                "url": "https://github.com/AstreoX/uBotROS/releases/download/v0.1.2/UBotROS-0.1.2-UE5.5-Win64.zip",
+                                "sha256": "991f1100eff4c56c75a69dd0d1db157fba6fb04258debf22d058278d055269df",
+                                "size": 821162
+                            }
+                        }
+                    }
                 }
             ]
         },
@@ -244,7 +262,16 @@
                         { "name": "UBotCore", "version": "^0.1.2" }
                     ],
                     "enginePlugins": [ "EnhancedInput" ],
-                    "provides": [ "Actuation.Velocity", "Actuation.Attitude", "Actuation.Motor", "Body.Multirotor", "Aerial.Wind" ]
+                    "provides": [ "Actuation.Velocity", "Actuation.Attitude", "Actuation.Motor", "Body.Multirotor", "Aerial.Wind" ],
+                    "binaries": {
+                        "5.5": {
+                            "Win64": {
+                                "url": "https://github.com/AstreoX/uBotAerial/releases/download/v0.1.0/UBotAerial-0.1.0-UE5.5-Win64.zip",
+                                "sha256": "22fed2ea3d2e06971e3bc1fdb7be20a71f809cf1cd2884623c6466707a722ba1",
+                                "size": 4043919
+                            }
+                        }
+                    }
                 }
             ]
         },
