@@ -52,7 +52,7 @@ struct FUBotDocPin
 
 struct FUBotDocNode
 {
-    /** <OwnerCpp>.<Member>, Make:<FStruct>, Break:<FStruct>, <K2NodeClass> or Macro:<MacroName>. */
+    /** <OwnerCpp>.<Member>, Make:<FStruct>, Break:<FStruct>, <K2NodeClass>, <K2NodeClass>:<ClassCpp> or Macro:<MacroName>. */
     FString Id;
     /** call, pure, event, make, break or node. */
     FString Kind;
@@ -190,7 +190,7 @@ struct FUBotDocNodeListEntry
         Function,
         /** "event <ClassPath>:<Function>": an overridable event node. */
         Event,
-        /** "node <K2NodeClassPath>": a special K2 node. */
+        /** "node <K2NodeClassPath> [<ClassPath>]": a special K2 node; the class sets up a Get Subsystem node. */
         Node,
         /** "macro <BlueprintPath>:<MacroGraph>": a macro instance. */
         Macro
@@ -201,6 +201,8 @@ struct FUBotDocNodeListEntry
     FString Path;
     /** Function or macro graph name; empty for EKind::Node. */
     FString Member;
+    /** EKind::Node only: the class the node is set up for (the subsystem of a Get Subsystem node); empty for a node used as is. */
+    FString ClassPath;
     /** 1-based line in the list file, for messages. */
     int32 Line = 0;
 };
@@ -254,8 +256,20 @@ public:
     /** Make or Break node of a struct, id Make:<FStruct> / Break:<FStruct>. Uses the native make/break function when the struct declares one. */
     bool ExportStructNode(const UScriptStruct* Struct, bool bMake, FUBotDocNode& OutNode, FString& OutError);
 
-    /** A K2 node class without further setup (Branch, Sequence, ...), id = class name. */
+    /**
+     * A K2 node class without further setup (Branch, Sequence, ...), id = class name. Fails, without
+     * spawning, for a node the Blueprint action menu only offers set up for a class, struct, enum,
+     * function or variable (Get Subsystem, Cast, Make Struct, Switch on Enum, ...).
+     */
     bool ExportSpecialNode(UClass* NodeClass, FUBotDocNode& OutNode, FString& OutError);
+
+    /**
+     * A Get Subsystem node (K2Node_GetSubsystem, K2Node_GetSubsystemFromPC or K2Node_GetEngineSubsystem)
+     * set up for SubsystemClass, as the action menu offers it; id <K2NodeClass>:<SubsystemCpp>, e.g.
+     * K2Node_GetSubsystem:UUBotClockSubsystem. Fails for another node class and for a class that node
+     * does not offer.
+     */
+    bool ExportSubsystemNode(UClass* NodeClass, UClass* SubsystemClass, FUBotDocNode& OutNode, FString& OutError);
 
     /** A macro instance of MacroGraph, id Macro:<GraphName>. */
     bool ExportMacroNode(UEdGraph* MacroGraph, FUBotDocNode& OutNode, FString& OutError);

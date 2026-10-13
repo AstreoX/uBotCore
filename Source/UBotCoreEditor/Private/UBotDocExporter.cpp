@@ -1,5 +1,6 @@
 #include "UBotDocExporter.h"
 
+#include "BlueprintActionDatabase.h"
 #include "BlueprintEventNodeSpawner.h"
 #include "BlueprintFunctionNodeSpawner.h"
 #include "BlueprintNodeBinder.h"
@@ -23,6 +24,7 @@
 #include "K2Node_CallFunction.h"
 #include "K2Node_ComponentBoundEvent.h"
 #include "K2Node_Event.h"
+#include "K2Node_GetSubsystem.h"
 #include "K2Node_MacroInstance.h"
 #include "K2Node_MakeStruct.h"
 #include "K2Node_StructOperation.h"
@@ -37,7 +39,12 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "Settings/EditorStyleSettings.h"
+#include "Subsystems/AudioEngineSubsystem.h"
+#include "Subsystems/EngineSubsystem.h"
+#include "Subsystems/GameInstanceSubsystem.h"
+#include "Subsystems/LocalPlayerSubsystem.h"
 #include "Subsystems/Subsystem.h"
+#include "Subsystems/WorldSubsystem.h"
 #include "UBotCore.h"
 #include "UObject/Package.h"
 #include "UObject/UObjectHash.h"
@@ -338,6 +345,56 @@ namespace UBotDocExporterPrivate
         Out.Tooltip = Node.GetTooltipText().ToString();
         Out.Keywords = Node.GetKeywords().ToString();
         DropRepeatedPinTooltips(Out, Out.Tooltip);
+    }
+
+    /**
+     * Whether the Blueprint action menu offers NodeClass as is: a plain node spawner without a
+     * customization (Branch, Sequence, Make Array). A node the menu only offers set up for a class,
+     * struct, enum, function or variable (Get Subsystem, Cast, Make Struct, Switch on Enum, ...) may
+     * read that setup unchecked once it is in a graph: Get Subsystem's menu category does.
+     */
+    bool IsOfferedAsIs(const UClass& NodeClass)
+    {
+        for (const TPair<FObjectKey, FBlueprintActionDatabase::FActionList>& Entry : FBlueprintActionDatabase::Get().GetAllActions())
+        {
+            for (const UBlueprintNodeSpawner* Spawner : Entry.Value)
+            {
+                if (Spawner && Spawner->GetClass() == UBlueprintNodeSpawner::StaticClass() && Spawner->NodeClass.Get() == &NodeClass
+                    && !Spawner->CustomizeNodeDelegate.IsBound())
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * The classes whose subclasses a Get Subsystem node class offers getters for, as in its
+     * GetMenuActions; empty for any other node class. Get Editor Subsystem is left out: the menu of an
+     * Actor Blueprint does not offer it.
+     */
+    TArray<const UClass*> GetSubsystemBases(const UClass& NodeClass)
+    {
+        if (!NodeClass.IsChildOf<UK2Node_GetSubsystem>())
+        {
+            return {};
+        }
+        if (&NodeClass == UK2Node_GetSubsystem::StaticClass())
+        {
+            return { UGameInstanceSubsystem::StaticClass(), UWorldSubsystem::StaticClass(), ULocalPlayerSubsystem::StaticClass(), UAudioEngineSubsystem::StaticClass() };
+        }
+        // The subclasses are not exported from BlueprintGraph, so they are told apart by name.
+        const FString Name = NodeClass.GetName();
+        if (Name == TEXT("K2Node_GetSubsystemFromPC"))
+        {
+            return { ULocalPlayerSubsystem::StaticClass() };
+        }
+        if (Name == TEXT("K2Node_GetEngineSubsystem"))
+        {
+            return { UEngineSubsystem::StaticClass() };
+        }
+        return {};
     }
 
     /** Emits JSON exactly like JSON.stringify(Value, null, 2). */
@@ -873,7 +930,20 @@ bool FUBotDocExporter::ExportFunctionNode(const UFunction* Function, FUBotDocNod
     }
     const FString Id = GetCppName(Function->GetOwnerClass()) + TEXT(".") + Function->GetName();
     // The same spawner the action menu uses, so special call nodes (array, promotable operator, ...) are kept.
-    UBlueprintFunctionNodeSpawner* Spawner = UBlueprintFunctionNodeSpawner::Create(Function);
+    UBlueprintFunctionNodeSpawner* MenuSpawner = UBlueprintFunctionNodeSpawner::Create(Function);
+    UBlueprintNodeSpawner* Spawner = MenuSpawner;
+    // A promotable operator (Add, Subtract, Not Equal, ...) has one menu spawner for all its functions,
+    // bound to whichever function created it first (once the action menu is built, Subtract_IntInt
+    // would get the spawner of UTimeManagementBlueprintLibrary's FrameNumber - Int). Spawn that node
+    // class for this function instead.
+    if (MenuSpawner && MenuSpawner->GetFunction() != Function)
+    {
+        Spawner = UBlueprintNodeSpawner::Create(MenuSpawner->NodeClass, nullptr,
+            UBlueprintNodeSpawner::FCustomizeNodeDelegate::CreateLambda([Function](UEdGraphNode* NewNode, bool /*bIsTemplateNode*/)
+            {
+                CastChecked<UK2Node_CallFunction>(NewNode)->SetFromFunction(Function);
+            }));
+    }
     const bool bSpawned = SpawnAndRead(Spawner, Id, OutNode, OutError, [](UEdGraphNode& Node, FUBotDocNode& Out)
     {
         const UK2Node* K2Node = Cast<UK2Node>(&Node);
@@ -1006,15 +1076,69 @@ bool FUBotDocExporter::ExportStructNode(const UScriptStruct* Struct, bool bMake,
 
 bool FUBotDocExporter::ExportSpecialNode(UClass* NodeClass, FUBotDocNode& OutNode, FString& OutError)
 {
+    using namespace UBotDocExporterPrivate;
+
     if (!NodeClass || !NodeClass->IsChildOf<UK2Node>() || NodeClass->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated))
     {
         OutError = FString::Printf(TEXT("%s is not a placeable K2 node class."), NodeClass ? *NodeClass->GetPathName() : TEXT("<null>"));
         return false;
     }
+    // Checked before spawning: reading a node without the setup the menu always gives it can fail an
+    // engine assertion (a Get Subsystem node without its class does).
+    if (!IsOfferedAsIs(*NodeClass))
+    {
+        OutError = GetSubsystemBases(*NodeClass).IsEmpty()
+            ? FString::Printf(TEXT("the Blueprint editor offers %s only set up for a class, struct, enum, function or variable (like Cast or Make Struct), never as a bare node"), *NodeClass->GetName())
+            : FString::Printf(TEXT("%s needs the subsystem class it gets: write 'node %s /Script/<Module>.<SubsystemClass>'"), *NodeClass->GetName(), *NodeClass->GetPathName());
+        return false;
+    }
     return SpawnAndRead(UBlueprintNodeSpawner::Create(NodeClass), NodeClass->GetName(), OutNode, OutError, [](UEdGraphNode& Node, FUBotDocNode& Out)
     {
         Out.Kind = TEXT("node");
-        UBotDocExporterPrivate::FillNodeInfo(Node, Out);
+        FillNodeInfo(Node, Out);
+    });
+}
+
+bool FUBotDocExporter::ExportSubsystemNode(UClass* NodeClass, UClass* SubsystemClass, FUBotDocNode& OutNode, FString& OutError)
+{
+    using namespace UBotDocExporterPrivate;
+
+    if (!NodeClass || !SubsystemClass)
+    {
+        OutError = TEXT("No node class or subsystem class.");
+        return false;
+    }
+    const TArray<const UClass*> Bases = GetSubsystemBases(*NodeClass);
+    if (Bases.IsEmpty())
+    {
+        OutError = FString::Printf(TEXT("%s takes no class; only K2Node_GetSubsystem, K2Node_GetSubsystemFromPC and K2Node_GetEngineSubsystem do"), *NodeClass->GetName());
+        return false;
+    }
+    // The subsystems the node's GetMenuActions offers a getter for.
+    const bool bOffered = Bases.ContainsByPredicate([SubsystemClass](const UClass* Base) { return SubsystemClass->IsChildOf(Base); })
+        && UEdGraphSchema_K2::IsAllowableBlueprintVariableType(SubsystemClass, /*bAssumeBlueprintType*/ true);
+    if (!bOffered)
+    {
+        TArray<FString> BaseNames;
+        for (const UClass* Base : Bases)
+        {
+            BaseNames.Add(GetCppName(Base));
+        }
+        OutError = FString::Printf(TEXT("the Blueprint editor offers no %s for %s (it gets Blueprint-visible subclasses of %s)"),
+            *NodeClass->GetName(), *SubsystemClass->GetPathName(), *FString::Join(BaseNames, TEXT(", ")));
+        return false;
+    }
+
+    // The spawner GetMenuActions registers for each subsystem class.
+    UBlueprintNodeSpawner* Spawner = UBlueprintNodeSpawner::Create(NodeClass, nullptr,
+        UBlueprintNodeSpawner::FCustomizeNodeDelegate::CreateLambda([SubsystemClass](UEdGraphNode* NewNode, bool /*bIsTemplateNode*/)
+        {
+            CastChecked<UK2Node_GetSubsystem>(NewNode)->Initialize(SubsystemClass);
+        }));
+    return SpawnAndRead(Spawner, NodeClass->GetName() + TEXT(":") + GetCppName(SubsystemClass), OutNode, OutError, [](UEdGraphNode& Node, FUBotDocNode& Out)
+    {
+        Out.Kind = TEXT("node");
+        FillNodeInfo(Node, Out);
     });
 }
 
@@ -1382,7 +1506,11 @@ bool FUBotDocExporter::ExportNodeList(const TArray<FUBotDocNodeListEntry>& Entri
     TSet<FString> SeenIds;
     for (const FUBotDocNodeListEntry& Entry : Entries)
     {
-        const FString Spec = Entry.Member.IsEmpty() ? Entry.Path : Entry.Path + TEXT(":") + Entry.Member;
+        FString Spec = Entry.Member.IsEmpty() ? Entry.Path : Entry.Path + TEXT(":") + Entry.Member;
+        if (!Entry.ClassPath.IsEmpty())
+        {
+            Spec += TEXT(" ") + Entry.ClassPath;
+        }
         FUBotDocNode Node;
         FString Error;
         bool bExported = false;
@@ -1415,13 +1543,18 @@ bool FUBotDocExporter::ExportNodeList(const TArray<FUBotDocNodeListEntry>& Entri
         case EKind::Node:
         {
             UClass* NodeClass = FindClassByPath(Entry.Path);
+            UClass* ClassArgument = Entry.ClassPath.IsEmpty() ? nullptr : FindClassByPath(Entry.ClassPath);
             if (!NodeClass)
             {
                 Error = FString::Printf(TEXT("node class '%s' not found"), *Entry.Path);
             }
+            else if (!Entry.ClassPath.IsEmpty() && !ClassArgument)
+            {
+                Error = FString::Printf(TEXT("class '%s' not found"), *Entry.ClassPath);
+            }
             else
             {
-                bExported = ExportSpecialNode(NodeClass, Node, Error);
+                bExported = ClassArgument ? ExportSubsystemNode(NodeClass, ClassArgument, Node, Error) : ExportSpecialNode(NodeClass, Node, Error);
             }
             break;
         }
@@ -1508,12 +1641,14 @@ bool FUBotDocExporter::ParseNodeList(const FString& Text, TArray<FUBotDocNodeLis
         FUBotDocNodeListEntry Entry;
         Entry.Line = LineNumber;
         FString Spec;
+        // "node <K2NodeClassPath> <ClassPath>": a node set up for a class (a Get Subsystem node).
+        const bool bNodeWithClass = Tokens.Num() == 3 && Tokens[0].Equals(TEXT("node"), ESearchCase::IgnoreCase);
         if (Tokens.Num() == 1)
         {
             Entry.Kind = EKind::Function;
             Spec = Tokens[0];
         }
-        else if (Tokens.Num() == 2)
+        else if (Tokens.Num() == 2 || bNodeWithClass)
         {
             if (Tokens[0].Equals(TEXT("event"), ESearchCase::IgnoreCase))
             {
@@ -1536,7 +1671,7 @@ bool FUBotDocExporter::ParseNodeList(const FString& Text, TArray<FUBotDocNodeLis
         }
         else
         {
-            AddError(TEXT("expected '[event|node|macro] <path>'"));
+            AddError(TEXT("expected '[event|node|macro] <path>' or 'node <K2NodeClassPath> <ClassPath>'"));
             continue;
         }
 
@@ -1552,6 +1687,16 @@ bool FUBotDocExporter::ParseNodeList(const FString& Text, TArray<FUBotDocNodeLis
             {
                 AddError(TEXT("a node entry is a K2 node class path without ':'"));
                 continue;
+            }
+            if (bNodeWithClass)
+            {
+                const FString& ClassPath = Tokens[2];
+                if (!ClassPath.StartsWith(TEXT("/")) || ClassPath.Contains(TEXT(":")))
+                {
+                    AddError(TEXT("the class after a node class is a class path such as /Script/Module.Class"));
+                    continue;
+                }
+                Entry.ClassPath = ClassPath;
             }
             Entry.Path = Spec;
         }

@@ -463,8 +463,11 @@ git 的运行方式：不经过 shell，参数逐个加引号；只允许 `https
 /Script/Engine.KismetSystemLibrary:PrintString                              # 函数调用节点
 event /Script/Engine.Actor:ReceiveBeginPlay                                  # 可覆盖的事件节点
 node /Script/BlueprintGraph.K2Node_IfThenElse                                # 特殊 K2 节点
+node /Script/BlueprintGraph.K2Node_GetSubsystem /Script/UBotCore.UBotClockSubsystem  # 某个子系统的 Get 节点
 macro /Engine/EditorBlueprintResources/StandardMacros.StandardMacros:ForLoop # 宏
 ```
+
+`node <K2 节点类>` 只接受蓝图编辑器菜单原样提供的节点（Branch、Sequence、Make Array 等）；菜单里只在设置好类型、函数或变量之后才提供的节点（Cast、Make 结构体、Switch on 枚举等）会报错，不会生成。子系统的 Get 节点在节点类后面写子系统类，支持 `K2Node_GetSubsystem`（World、GameInstance、LocalPlayer、AudioEngine 子系统）、`K2Node_GetSubsystemFromPC`（LocalPlayer 子系统）和 `K2Node_GetEngineSubsystem`。它的节点 id 是 `<节点类>:<子系统 C++ 类名>`，例如 `K2Node_GetSubsystem:UUBotClockSubsystem`；标题是类的显示名（`UBot Clock Subsystem`），与图里的紧凑节点一致，菜单里显示为 `Get UBotClockSubsystem`。
 
 退出码：成功为 `0`；参数有误、插件或清单项无法解析、节点无法生成、`-MergeZh` 无法读取、属于其他插件或不是英文导出的中文版本、输出无法写入时为 `1`。
 

@@ -1,3 +1,4 @@
+#include "BlueprintActionDatabase.h"
 #include "Components/ActorComponent.h"
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
@@ -589,22 +590,25 @@ bool FUBotDocExportNodeListParsingTest::RunTest(const FString& Parameters)
         TEXT("\r\n")
         TEXT("  event /Script/Engine.Actor:ReceiveBeginPlay   # trailing comment\n")
         TEXT("node /Script/BlueprintGraph.K2Node_IfThenElse\n")
-        TEXT("macro /Engine/EditorBlueprintResources/StandardMacros.StandardMacros:ForLoop");
+        TEXT("macro /Engine/EditorBlueprintResources/StandardMacros.StandardMacros:ForLoop\n")
+        TEXT("node  /Script/BlueprintGraph.K2Node_GetSubsystem\t/Script/UBotCore.UBotClockSubsystem  # Get Subsystem");
 
     TArray<FUBotDocNodeListEntry> Entries;
     TArray<FString> Errors;
     TestTrue(TEXT("Valid list parses"), FUBotDocExporter::ParseNodeList(Valid, Entries, Errors));
     TestEqual(TEXT("No errors"), Errors.Num(), 0);
-    if (TestEqual(TEXT("Four entries"), Entries.Num(), 4))
+    if (TestEqual(TEXT("Five entries"), Entries.Num(), 5))
     {
         TestTrue(TEXT("Function"), Entries[0].Kind == EKind::Function && Entries[0].Path == TEXT("/Script/Engine.KismetSystemLibrary")
             && Entries[0].Member == TEXT("PrintString") && Entries[0].Line == 2);
         TestTrue(TEXT("Event"), Entries[1].Kind == EKind::Event && Entries[1].Path == TEXT("/Script/Engine.Actor")
             && Entries[1].Member == TEXT("ReceiveBeginPlay") && Entries[1].Line == 4);
         TestTrue(TEXT("Node"), Entries[2].Kind == EKind::Node && Entries[2].Path == TEXT("/Script/BlueprintGraph.K2Node_IfThenElse")
-            && Entries[2].Member.IsEmpty() && Entries[2].Line == 5);
+            && Entries[2].Member.IsEmpty() && Entries[2].ClassPath.IsEmpty() && Entries[2].Line == 5);
         TestTrue(TEXT("Macro: the last ':' separates the macro"), Entries[3].Kind == EKind::Macro
             && Entries[3].Path == TEXT("/Engine/EditorBlueprintResources/StandardMacros.StandardMacros") && Entries[3].Member == TEXT("ForLoop"));
+        TestTrue(TEXT("Node with a class"), Entries[4].Kind == EKind::Node && Entries[4].Path == TEXT("/Script/BlueprintGraph.K2Node_GetSubsystem")
+            && Entries[4].ClassPath == TEXT("/Script/UBotCore.UBotClockSubsystem") && Entries[4].Member.IsEmpty() && Entries[4].Line == 7);
     }
 
     const TCHAR* const InvalidLines[] =
@@ -616,6 +620,11 @@ bool FUBotDocExportNodeListParsingTest::RunTest(const FString& Parameters)
         TEXT("Script/Engine.KismetSystemLibrary:PrintString"),
         TEXT("event node /Script/Engine.Actor:ReceiveBeginPlay"),
         TEXT("macro /Engine/EditorBlueprintResources/StandardMacros.StandardMacros"),
+        // Only a node entry takes a class, and only one.
+        TEXT("event /Script/Engine.Actor:ReceiveTick /Script/Engine.Actor"),
+        TEXT("node /Script/BlueprintGraph.K2Node_GetSubsystem UBotClockSubsystem"),
+        TEXT("node /Script/BlueprintGraph.K2Node_GetSubsystem /Script/UBotCore.UBotClockSubsystem:Tick"),
+        TEXT("node /Script/BlueprintGraph.K2Node_GetSubsystem /Script/UBotCore.UBotClockSubsystem /Script/Engine.Actor"),
     };
     for (const TCHAR* Line : InvalidLines)
     {
@@ -718,6 +727,166 @@ bool FUBotDocExportNodeListTest::RunTest(const FString& Parameters)
     {
         TestEqual(TEXT("Macro title"), ForLoop->Title, FString(TEXT("For Loop")));
         TestTrue(TEXT("Macro has inputs"), ForLoop->Inputs.Num() >= 3);
+    }
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotDocExportSubsystemNodeTest, "UBotCore.Editor.DocExport.SubsystemNode",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotDocExportSubsystemNodeTest::RunTest(const FString& Parameters)
+{
+    using namespace UBotDocExportTestsPrivate;
+
+    FScopedEnglishCulture English;
+    TArray<FUBotDocNodeListEntry> Entries;
+    TArray<FString> Errors;
+    FUBotDocExporter::ParseNodeList(TEXT("node /Script/BlueprintGraph.K2Node_GetSubsystem /Script/UBotCore.UBotClockSubsystem\n"), Entries, Errors);
+
+    FUBotDocApi Api;
+    {
+        FUBotDocExporter Exporter;
+        if (!TestTrue(TEXT("Get Subsystem node exports"), Exporter.ExportNodeList(Entries, Api, Errors)))
+        {
+            for (const FString& Message : Errors)
+            {
+                AddError(Message);
+            }
+            return false;
+        }
+    }
+
+    // The id names the node class and the subsystem, so it stays the same however the class is displayed.
+    const FUBotDocNode* Node = FindNode(Api, TEXT("K2Node_GetSubsystem:UUBotClockSubsystem"));
+    if (!TestNotNull(TEXT("Node id <K2NodeClass>:<SubsystemCpp>"), Node))
+    {
+        return false;
+    }
+    TestEqual(TEXT("One node"), Api.Nodes.Num(), 1);
+    TestEqual(TEXT("Kind"), Node->Kind, FString(TEXT("node")));
+    // The menu offers "Get UBotClockSubsystem"; the node in the graph shows the class's display name, compact.
+    TestEqual(TEXT("Title as drawn in the graph"), Node->Title, FString(TEXT("UBot Clock Subsystem")));
+    TestEqual(TEXT("Title is the class display name"), Node->Title, UUBotClockSubsystem::StaticClass()->GetDisplayNameText().ToString());
+    TestEqual(TEXT("No subtitle"), Node->Subtitle, FString());
+    TestTrue(TEXT("Compact"), Node->bCompact);
+    TestEqual(TEXT("Compact title"), Node->CompactTitle, Node->Title);
+    TestEqual(TEXT("Menu category"), Node->Category, FString(TEXT("World Subsystems")));
+    TestTrue(TEXT("Tooltip names the subsystem kind"), Node->Tooltip.StartsWith(TEXT("Get UBot Clock Subsystem (World Subsystem)")));
+    TestTrue(TEXT("No owner or member, like other special nodes"), Node->Owner.IsEmpty() && Node->Member.IsEmpty());
+    // An Actor Blueprint shows no world context pin.
+    TestEqual(TEXT("No inputs"), Node->Inputs.Num(), 0);
+    if (TestEqual(TEXT("One output"), Node->Outputs.Num(), 1))
+    {
+        TestEqual(TEXT("Output pin id"), Node->Outputs[0].Id, FString(TEXT("ReturnValue")));
+        TestEqual(TEXT("Output is the subsystem"), DescribeType(Node->Outputs[0].Type), FString(TEXT("object:UUBotClockSubsystem")));
+    }
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotDocExportNodesNeedingSetupTest, "UBotCore.Editor.DocExport.NodesNeedingSetup",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotDocExportNodesNeedingSetupTest::RunTest(const FString& Parameters)
+{
+    using namespace UBotDocExportTestsPrivate;
+
+    FScopedEnglishCulture English;
+    // Line 1 failed an engine assertion before it was checked: the bare node reads its missing class.
+    const FString List =
+        TEXT("node /Script/BlueprintGraph.K2Node_GetSubsystem\n")
+        TEXT("node /Script/BlueprintGraph.K2Node_DynamicCast\n")
+        TEXT("node /Script/BlueprintGraph.K2Node_IfThenElse /Script/UBotCore.UBotClockSubsystem\n")
+        TEXT("node /Script/BlueprintGraph.K2Node_GetSubsystem /Script/Engine.Actor\n")
+        TEXT("node /Script/BlueprintGraph.K2Node_GetSubsystemFromPC /Script/UBotCore.UBotClockSubsystem\n")
+        TEXT("node /Script/BlueprintGraph.K2Node_GetSubsystem /Script/UBotCore.NoSuchSubsystem\n")
+        TEXT("node /Script/BlueprintGraph.K2Node_IfThenElse\n");
+    TArray<FUBotDocNodeListEntry> Entries;
+    TArray<FString> ParseErrors;
+    if (!TestTrue(TEXT("The list parses"), FUBotDocExporter::ParseNodeList(List, Entries, ParseErrors)) || !TestEqual(TEXT("Seven entries"), Entries.Num(), 7))
+    {
+        return false;
+    }
+
+    FUBotDocExporter Exporter;
+    FUBotDocApi Api;
+    TArray<FString> Errors;
+    TestFalse(TEXT("Entries that need a setup fail"), Exporter.ExportNodeList(Entries, Api, Errors));
+    const TCHAR* const Expected[][2] =
+    {
+        { TEXT("Line 1: "), TEXT("needs the subsystem class it gets: write 'node /Script/BlueprintGraph.K2Node_GetSubsystem /Script/<Module>.<SubsystemClass>'") },
+        { TEXT("Line 2: "), TEXT("offers K2Node_DynamicCast only set up for") },
+        { TEXT("Line 3: "), TEXT("K2Node_IfThenElse takes no class") },
+        { TEXT("Line 4: "), TEXT("offers no K2Node_GetSubsystem for /Script/Engine.Actor") },
+        { TEXT("Line 5: "), TEXT("offers no K2Node_GetSubsystemFromPC for /Script/UBotCore.UBotClockSubsystem (it gets Blueprint-visible subclasses of ULocalPlayerSubsystem)") },
+        { TEXT("Line 6: "), TEXT("class '/Script/UBotCore.NoSuchSubsystem' not found") },
+    };
+    if (TestEqual(TEXT("One error per bad entry"), Errors.Num(), static_cast<int32>(UE_ARRAY_COUNT(Expected))))
+    {
+        for (int32 Index = 0; Index < Errors.Num(); ++Index)
+        {
+            TestTrue(*FString::Printf(TEXT("Error %d: %s"), Index, *Errors[Index]),
+                Errors[Index].StartsWith(Expected[Index][0]) && Errors[Index].Contains(Expected[Index][1]));
+        }
+    }
+    // The other entries still export.
+    TestEqual(TEXT("Only Branch is exported"), Api.Nodes.Num(), 1);
+    TestNotNull(TEXT("Branch"), FindNode(Api, TEXT("K2Node_IfThenElse")));
+
+    // The same check guards a direct call.
+    FUBotDocNode Node;
+    FString Error;
+    TestFalse(TEXT("A bare Get Subsystem node is refused"), Exporter.ExportSpecialNode(FindObject<UClass>(nullptr, TEXT("/Script/BlueprintGraph.K2Node_GetSubsystem")), Node, Error));
+    TestTrue(TEXT("with the reason"), Error.Contains(TEXT("needs the subsystem class")));
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotDocExportOperatorNodesTest, "UBotCore.Editor.DocExport.OperatorNodes",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotDocExportOperatorNodesTest::RunTest(const FString& Parameters)
+{
+    using namespace UBotDocExportTestsPrivate;
+
+    FScopedEnglishCulture English;
+    // Checking a bare node builds the action menu, which caches one spawner per promotable operator,
+    // bound to the first of its functions it met (FrameNumber - Int for Subtract). Every function must
+    // still be documented as itself, also the second function of an operator in one list.
+    FBlueprintActionDatabase::Get().GetAllActions();
+    TArray<FUBotDocNodeListEntry> Entries;
+    TArray<FString> Errors;
+    FUBotDocExporter::ParseNodeList(
+        TEXT("node /Script/BlueprintGraph.K2Node_IfThenElse\n")
+        TEXT("/Script/Engine.KismetMathLibrary:Subtract_IntInt\n")
+        TEXT("/Script/Engine.KismetMathLibrary:Subtract_Int64Int64\n")
+        TEXT("/Script/Engine.KismetMathLibrary:NotEqual_Int64Int64\n"), Entries, Errors);
+
+    FUBotDocApi Api;
+    {
+        FUBotDocExporter Exporter;
+        if (!TestTrue(TEXT("Operator nodes export"), Exporter.ExportNodeList(Entries, Api, Errors)))
+        {
+            for (const FString& Message : Errors)
+            {
+                AddError(Message);
+            }
+            return false;
+        }
+    }
+
+    const TCHAR* const Expected[][3] =
+    {
+        { TEXT("UKismetMathLibrary.Subtract_IntInt"), TEXT("int - int"), TEXT("-") },
+        { TEXT("UKismetMathLibrary.Subtract_Int64Int64"), TEXT("integer64 - integer64"), TEXT("-") },
+        { TEXT("UKismetMathLibrary.NotEqual_Int64Int64"), TEXT("Not Equal (Integer64)"), TEXT("!=") },
+    };
+    for (const auto& Row : Expected)
+    {
+        if (const FUBotDocNode* Node = FindNode(Api, Row[0]); TestNotNull(Row[0], Node))
+        {
+            TestEqual(*FString::Printf(TEXT("%s title"), Row[0]), Node->Title, FString(Row[1]));
+            TestEqual(*FString::Printf(TEXT("%s compact title"), Row[0]), Node->CompactTitle, FString(Row[2]));
+            TestEqual(*FString::Printf(TEXT("%s kind"), Row[0]), Node->Kind, FString(TEXT("pure")));
+        }
     }
     return true;
 }
