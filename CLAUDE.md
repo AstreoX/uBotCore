@@ -4,7 +4,7 @@ Guide for coding agents and contributors working in this repository (AstreoX/uBo
 
 ## What this is
 
-UBotCore is the base Unreal Engine 5.5 plugin of the uBot family. It provides the shared sensor frame header, simulation clock, UE/ROS (REP-103) conventions, sample scheduler, sensor/actuator/perception-medium interfaces, the robot identity component and the uBot package manager basics (version and dependency validation, package index, runtime status, editor panel, commandlets). It depends on engine modules only: no ROS headers, no other uBot plugin. `UBotSensor` and `UBotROS` depend on it (`UBotCore ^0.1.0`). The repo also holds the package index `Index/index.json`, read by uBot Manager, the editor panel and the docs site.
+UBotCore is the base Unreal Engine 5.5 plugin of the uBot family. It provides the shared sensor frame header, simulation clock, UE/ROS (REP-103) conventions, sample scheduler, sensor/actuator/perception-medium interfaces, the robot identity component and the uBot package manager basics (version and dependency validation, package index, runtime status, editor panel, commandlets). It depends on engine modules only: no ROS headers, no other uBot plugin. `UBotSensor` (`UBotCore ^0.1.0`), `UBotROS` and `UBotAerial` (`UBotCore ^0.1.2`) depend on it. The repo also holds the package index `Index/index.json`, read by uBot Manager, the editor panel and the docs site.
 
 ## Layout
 
@@ -101,7 +101,7 @@ Package index, `formatVersion` 2, with `packages`, `recipes` and `replacements`.
 1. Set `VersionName` (SemVer) in `UBotCore.uplugin`. The `.uplugin` at the tag must match the index `version`, or uBot Manager keeps offering an update.
 2. Append the index version entry (`ref` = `vX.Y.Z`), regenerate `docs/api.json`, update `README.md`.
 3. Tag `vX.Y.Z` and push the tag, upload the zip, then add `binaries` (see above). Maintainers tag and release; do not create tags or releases unless asked.
-4. UBotSensor and UBotROS require `UBotCore ^0.1.0`; a `0.2.0` falls outside that range, so keep 0.1.x API-compatible.
+4. Dependents require `UBotCore ^0.1.x` (UBotSensor `^0.1.0`, UBotROS and UBotAerial `^0.1.2`); a `0.2.0` falls outside that range, so keep 0.1.x API-compatible.
 
 ## Git
 

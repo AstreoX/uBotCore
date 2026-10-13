@@ -51,6 +51,20 @@
                             }
                         }
                     }
+                },
+                {
+                    "version": "0.1.2",
+                    "ref": "v0.1.2",
+                    "engine": "~5.5",
+                    "requires": [],
+                    "enginePlugins": [],
+                    "provides": [
+                        "Core.FrameHeader",
+                        "Core.Clock",
+                        "Core.Conventions.ROS",
+                        "Core.Interfaces",
+                        "Core.PackageManager"
+                    ]
                 }
             ]
         },
@@ -167,6 +181,24 @@
                             }
                         }
                     }
+                },
+                {
+                    "version": "0.1.2",
+                    "ref": "v0.1.2",
+                    "engine": "~5.5",
+                    "requires": [
+                        { "name": "UBotCore", "version": "^0.1.2" },
+                        { "name": "UBotSensor", "version": "^0.1.0" }
+                    ],
+                    "enginePlugins": [],
+                    "provides": [
+                        "ROS.SensorPublishing",
+                        "ROS.TF",
+                        "ROS.Clock",
+                        "ROS.VelocityCommand",
+                        "ROS.AttitudeCommand",
+                        "ROS.MotorCommand"
+                    ]
                 }
             ]
         },
@@ -196,18 +228,20 @@
             "name": "UBotAerial",
             "friendlyName": "uBot Aerial",
             "description": {
-                "en": "Multirotor drones: simplified flight for navigation, rigid-body dynamics with velocity, attitude, body-rate and motor control, and wind.",
-                "zh-CN": "多旋翼无人机：面向导航的简化飞控，带速度、姿态、角速度和电机控制的刚体动力学，以及风。"
+                "en": "Multirotor drones: simplified flight for navigation, rigid-body dynamics with velocity, attitude, body-rate and motor control, wind, and example drone Blueprints.",
+                "zh-CN": "多旋翼无人机：面向导航的简化飞控，带速度、姿态、角速度和电机控制的刚体动力学，风，以及示例无人机蓝图。"
             },
             "layer": "Capability",
             "repository": "https://github.com/AstreoX/uBotAerial.git",
+            "docsUrl": "https://github.com/AstreoX/uBotAerial",
             "tags": [ "aerial" ],
             "versions": [
                 {
                     "version": "0.1.0",
-                    "planned": true,
+                    "ref": "v0.1.0",
+                    "engine": "~5.5",
                     "requires": [
-                        { "name": "UBotCore", "version": "^0.1.0" }
+                        { "name": "UBotCore", "version": "^0.1.2" }
                     ],
                     "enginePlugins": [ "EnhancedInput" ],
                     "provides": [ "Actuation.Velocity", "Actuation.Attitude", "Actuation.Motor", "Body.Multirotor", "Aerial.Wind" ]

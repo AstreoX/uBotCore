@@ -16,7 +16,8 @@ uBotCore 是 **Foundation** 层，只依赖 UE 引擎模块，不包含任何 RO
 | --- | --- | --- | --- |
 | `UBotCore` | Foundation | 仅引擎模块 | 本插件 |
 | `UBotSensor` | Capability | `UBotCore ^0.1.0` | 位姿、里程计、IMU、2D/3D 激光雷达、RGB/深度相机、烟雾等感知介质 |
-| `UBotROS` | Adapter | `UBotCore ^0.1.0`、`UBotSensor ^0.1.0` | 通过自带的轻量 TCP 桥（ubot_ros_bridge）发布传感器、TF 与 /clock，接收速度指令 |
+| `UBotROS` | Adapter | `UBotCore ^0.1.2`、`UBotSensor ^0.1.0` | 通过自带的轻量 TCP 桥（ubot_ros_bridge）发布传感器、TF 与 /clock，接收速度、姿态和电机指令 |
+| `UBotAerial` | Capability | `UBotCore ^0.1.2` | 多旋翼无人机：面向导航的简化飞控，带速度、姿态、角速度和电机控制的刚体动力学，风，示例无人机蓝图 |
 
 以上关系来自本仓库的 Package 索引 [`Index/index.json`](Index/index.json)（格式 2，也列出规划中的 Package），uBot Manager 默认从 GitHub 读取它。
 
@@ -540,6 +541,6 @@ C++ 使用 `FUBotPackageRegistry::Get()`：`GetInstalledPackages`、`FindPackage
 
 ## 版本与许可
 
-当前版本 **0.1.1**（Beta，`IsBetaVersion`），仓库 <https://github.com/AstreoX/uBotCore>。
+当前版本 **0.1.2**（Beta，`IsBetaVersion`），仓库 <https://github.com/AstreoX/uBotCore>。
 
 Copyright 2026 AstreoX。本项目以 [Apache License 2.0](LICENSE) 发布，可以自由使用、修改和再分发（包括商业用途），再分发时需保留 `LICENSE` 与 `NOTICE` 文件，并注明你修改过的文件。
