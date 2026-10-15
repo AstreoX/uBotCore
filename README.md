@@ -27,7 +27,7 @@
 
 ## What it is
 
-uBot Core is the foundation plugin of the uBot family for Unreal Engine 5.5. It provides the components that all uBot plugins share, so that they use the same time base, coordinate conventions and units. It depends only on Unreal Engine modules, contains no ROS code, and is currently released as a beta.
+uBot Core is the foundation plugin of the uBot family for Unreal Engine 5.5. It provides the components that all uBot plugins share, so that they use the same time base, coordinate conventions and units.
 
 - **Frame header.** Every sensor sample carries a sensor id, frame id, sequence number, timestamp and status code.
 - **Simulation clock.** All uBot timestamps use the world's game time. Fixed time step, pause and single-step are available from Blueprints and C++.
