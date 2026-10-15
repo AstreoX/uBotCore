@@ -6,7 +6,7 @@
   </picture>
 </p>
 <h1 align="center">uBot Core</h1>
-<p align="center"><b>Shared simulation clock, frame header and package management for the uBot plugin family.</b></p>
+<p align="center"><b>Core of the uBot plugin family: unified frame header, simulation clock and package management.</b></p>
 <p align="center">
   <a href="https://github.com/AstreoX/uBotCore/releases"><img alt="release" src="https://img.shields.io/github/v/release/AstreoX/uBotCore?label=release"></a>
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/github/license/AstreoX/uBotCore"></a>

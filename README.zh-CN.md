@@ -6,7 +6,7 @@
   </picture>
 </p>
 <h1 align="center">uBot Core</h1>
-<p align="center"><b>uBot 插件家族共用的仿真时钟、帧头与插件管理。</b></p>
+<p align="center"><b>uBot 系列插件的核心，负责统一的帧头封装、仿真时钟与插件管理。</b></p>
 <p align="center">
   <a href="https://github.com/AstreoX/uBotCore/releases"><img alt="release" src="https://img.shields.io/github/v/release/AstreoX/uBotCore?label=release"></a>
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/github/license/AstreoX/uBotCore"></a>
@@ -27,7 +27,7 @@
 
 ## 简介
 
-uBot Core 是 uBot 插件家族的基础插件，适用于 Unreal Engine 5.5。它提供所有 uBot 插件共用的基础组件，使各插件在时间基准、坐标系和单位上保持一致。它只依赖 UE 引擎模块，不包含 ROS 代码，当前为 Beta 版本。
+uBot Core 是 uBot 系列插件中的基础插件，适用于 Unreal Engine 5.5。它提供所有 uBot 插件共用的基础组件，使各插件在时间基准、坐标系和单位上保持一致。它只依赖 UE 引擎模块，不包含 ROS 代码，当前为 Beta 版本。
 
 - **帧头**：每个传感器样本都包含传感器 ID、坐标系 ID、序号、时间戳和状态码。
 - **仿真时钟**：所有 uBot 时间戳取自世界的游戏时间，可在蓝图和 C++ 中设置固定步长、暂停和单步执行。
@@ -71,7 +71,7 @@ git clone --branch v0.1.2 https://github.com/AstreoX/uBotCore <Project>/Plugins/
 | 查阅时钟、坐标约定、采样调度和接口的 C++ API | [docs/CPP-API.md](docs/CPP-API.md) |
 | 了解模块划分与测试方法 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) |
 
-## uBot 家族
+## uBot 系列
 
 | 仓库 | 说明 |
 | --- | --- |
