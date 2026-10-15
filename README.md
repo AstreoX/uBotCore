@@ -27,68 +27,49 @@
 
 ## What it is
 
-uBot Core is the foundation plugin of the uBot family for Unreal Engine 5.5. It holds what all uBot plugins share, so they agree on time, frames and units. It depends only on Unreal Engine modules, contains no ROS code, and is currently a beta release.
+uBot Core is the foundation plugin of the uBot family for Unreal Engine 5.5. It provides the components that all uBot plugins share, so that they use the same time base, coordinate conventions and units. It depends only on Unreal Engine modules, contains no ROS code, and is currently released as a beta.
 
-- **One frame header.** Every sensor sample carries a sensor id, frame id, sequence number, timestamp and status code.
-- **One simulation clock.** All uBot timestamps use the world's game time; set a fixed time step, pause and single-step from Blueprints or C++.
-- **UE and ROS conventions.** Convert positions, rotations, angular velocity, time and names between Unreal (left-handed, cm) and ROS REP-103 (right-handed, m).
-- **Shared interfaces.** Sensor, actuator, command and perception-medium interfaces connect plugins without depending on each other's classes.
+- **Frame header.** Every sensor sample carries a sensor id, frame id, sequence number, timestamp and status code.
+- **Simulation clock.** All uBot timestamps use the world's game time. Fixed time step, pause and single-step are available from Blueprints and C++.
+- **UE and ROS conventions.** Conversion of positions, rotations, angular velocity, time and names between Unreal (left-handed, cm) and ROS REP-103 (right-handed, m).
+- **Shared interfaces.** Sensor, actuator, command and perception-medium interfaces connect plugins without class dependencies between them.
 - **Identity and sampling.** The `uBot Identity` component names a robot; the sample scheduler fires at most once per frame.
-- **Package management.** Package index, dependency and version checks and the `Window > uBot` panel; uBot Manager installs and updates packages.
+- **Package management.** Package index, dependency and version checks, and the `Window > uBot` panel. uBot Manager installs and updates packages.
 
 ## Install
 
-**With uBot Manager (recommended)** — [step-by-step guide](https://astreox.github.io/uBotDocs/start/install/)
+**With uBot Manager (recommended)**, see the [step-by-step guide](https://astreox.github.io/uBotDocs/start/install/):
 
 1. Download the installer from the [uBot Manager releases](https://github.com/AstreoX/uBotManager/releases) and run it.
-2. Open your project's `.uproject` in uBot Manager, select `UBotCore`, then review and apply the changes. Dependencies are added automatically.
-3. Open the project in Unreal Engine 5.5. `Window > uBot` lists uBot Core and its version under Loaded Packages.
+2. Open the project's `.uproject` in uBot Manager, select `UBotCore`, then review and apply the changes. Dependencies are resolved automatically.
+3. Open the project in Unreal Engine 5.5. The Loaded Packages section of `Window > uBot` lists uBot Core and its version.
 
-**From source:** clone a release tag into your project, enable *uBot Core* (category uBot) in `Edit > Plugins` and restart the editor. On first launch the editor offers to compile the modules.
+**From source:** clone a release tag into the project, enable *uBot Core* (category uBot) under `Edit > Plugins` and restart the editor. The editor prompts to compile the modules on first launch.
 
 ```shell
 git clone --branch v0.1.2 https://github.com/AstreoX/uBotCore <Project>/Plugins/uBot/uBotCore
 ```
 
-**Requirements:** Unreal Engine 5.5. Source installs need git and Visual Studio 2022 with the C++ toolchain. uBot Manager runs on Windows 10 and 11 and uses prebuilt packages where it can.
-
-## Quick start
-
-Show the simulation time on screen. Add `UBotCore` to your module's `PublicDependencyModuleNames`, then in an Actor:
-
-```cpp
-#include "Engine/Engine.h"
-#include "UBotClock.h"
-
-void AMyActor::Tick(float DeltaSeconds)
-{
-    Super::Tick(DeltaSeconds);
-    const double Now = UBot::Clock::GetSimTimeSeconds(this);
-    GEngine->AddOnScreenDebugMessage(1, 0.f, FColor::Green,
-        FString::Printf(TEXT("%.3f"), Now));
-}
-```
-
-`GetSimTimeSeconds` returns the world's game time, so it follows pause and time dilation. In Game and PIE worlds, `UUBotClockSubsystem::Get(this)` also gives `PauseSimulation()`, `StepSimulation(1)` and `ResumeSimulation()`. In Blueprints, use `Get UBotClockSubsystem` and `Get Sim Time Seconds`.
+**Requirements:** Unreal Engine 5.5. A source install requires git and Visual Studio 2022 with the C++ toolchain. uBot Manager runs on Windows 10 and 11 and installs prebuilt packages where available.
 
 ## Documentation
 
-The manual is on the [documentation site](https://astreox.github.io/uBotDocs/core/). The site and the Markdown files in `docs/` are written in Chinese.
+The manual is published on the [documentation site](https://astreox.github.io/uBotDocs/core/). The site and the Markdown files in `docs/` are written in Chinese.
 
 | I want to ... | Go to |
 | --- | --- |
-| Read the simulation time, pause or single-step | [Simulation clock](https://astreox.github.io/uBotDocs/core/clock/) |
+| Read the simulation time; pause and single-step | [Simulation clock](https://astreox.github.io/uBotDocs/core/clock/) |
 | Convert coordinates, time and names between UE and ROS | [UE/ROS conventions](https://astreox.github.io/uBotDocs/core/conventions/) |
-| Read frame headers and sample status codes | [Frame header and sample status](https://astreox.github.io/uBotDocs/concepts/frame-header/) |
+| Interpret frame headers and sample status codes | [Frame header and sample status](https://astreox.github.io/uBotDocs/concepts/frame-header/) |
 | Connect sensors, actuators and commands across plugins | [Interfaces between plugins](https://astreox.github.io/uBotDocs/concepts/interfaces/) |
-| Name a robot: id, namespace, base frame | [Identity component](https://astreox.github.io/uBotDocs/core/identity/) |
-| See installed packages in the panel, Blueprints or CLI | [Package query and editor panel](https://astreox.github.io/uBotDocs/core/packages/) |
-| Turn my own plugin into a uBot Package | [Writing a uBot Package](https://astreox.github.io/uBotDocs/develop/package-authoring/) |
+| Name a robot (id, namespace, base frame) | [Identity component](https://astreox.github.io/uBotDocs/core/identity/) |
+| Inspect installed packages (panel, Blueprints, command line) | [Package query and editor panel](https://astreox.github.io/uBotDocs/core/packages/) |
+| Write my own uBot Package | [Writing a uBot Package](https://astreox.github.io/uBotDocs/develop/package-authoring/) |
 | Use sensors and interfaces from C++ | [Using uBot from C++](https://astreox.github.io/uBotDocs/develop/cpp/) |
-| Look up the package index, `UBot` block, status file, extension points | [docs/PACKAGES.md](docs/PACKAGES.md) |
+| Look up the package index, `UBot` descriptor block, status file and extension points | [docs/PACKAGES.md](docs/PACKAGES.md) |
 | Run the `UBotPackage` and `UBotDocExport` commandlets | [docs/COMMANDLETS.md](docs/COMMANDLETS.md) |
-| Look up the C++ clock, conventions, scheduler and interface APIs | [docs/CPP-API.md](docs/CPP-API.md) |
-| See the module layout and run the tests | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) |
+| Look up the C++ API for clock, conventions, scheduler and interfaces | [docs/CPP-API.md](docs/CPP-API.md) |
+| Find the module layout and the test instructions | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) |
 
 ## uBot family
 
@@ -103,10 +84,10 @@ The manual is on the [documentation site](https://astreox.github.io/uBotDocs/cor
 
 ## Development
 
-- **Build:** clone into a UE 5.5 C++ project under `Plugins/uBot/uBotCore`; the editor offers to compile the modules on first launch.
-- **Test:** the Automation tests are named `UBotCore.*`. In the editor open `Tools > Session Frontend`, switch to the Automation tab and filter by `UBotCore`. The command-line run is in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
-- **Report an issue:** open one on [GitHub](https://github.com/AstreoX/uBotCore/issues) with the uBot Core version and the `LogUBot` lines from the editor log.
+- **Build:** clone into the `Plugins/uBot/uBotCore` folder of a UE 5.5 C++ project. The editor prompts to compile the modules on first launch.
+- **Test:** the Automation tests are named `UBotCore.*`. Open `Tools > Session Frontend`, select the Automation tab and filter by `UBotCore`. The command-line invocation is in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+- **Issues:** report them on [GitHub Issues](https://github.com/AstreoX/uBotCore/issues), stating the uBot Core version and the relevant `LogUBot` lines from the editor log.
 
 ## License
 
-[Apache License 2.0](LICENSE), see also [NOTICE](NOTICE). Copyright 2026 AstreoX. You may use, modify and redistribute it, including commercially; keep the `LICENSE` and `NOTICE` files and mark the files you changed.
+[Apache License 2.0](LICENSE), see also [NOTICE](NOTICE). Copyright 2026 AstreoX. The software may be used, modified and redistributed, including commercially, provided that the `LICENSE` and `NOTICE` files are kept and modified files are marked.
