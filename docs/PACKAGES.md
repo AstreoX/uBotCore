@@ -1,3 +1,4 @@
+
 # Package 管理参考
 
 下面的内容原样移自重写前的 README，文档站（https://astreox.github.io/uBotDocs/）上对应的页面没有覆盖其中的细节。
@@ -197,7 +198,15 @@ FUBotExtensionRegistry::Get().UnregisterAllFromPackage(TEXT("MyCsvFormat"));
 - 一个扩展点只能由一个 Package 声明（同一个 Package 重复声明会更新描述）；同一扩展点下扩展名必须唯一，重复注册返回 `false`。
 - 扩展可以先于扩展点注册（模块加载顺序），会被保留，扩展点声明后才通过 `GetExtensions` 返回；扩展点声明之前该函数返回空。
 - 按注册顺序返回；`GetExtensionsAs<T>` 用 `StaticCastSharedRef`，`T` 由声明方文档约定，请保证类型正确。
-- 注册表线程安全，`OnExtensionsChanged` 在内部锁之外广播。
+- 注册表线程安全。扩展点或扩展变化后，变化通知在内部数据锁之外、在改动注册表的那个线程上广播，所以处理函数里可以回调注册表；它也因此可能不在游戏线程上运行，处理函数里不要等待只有改动注册表才能完成的工作。
+- 监听变化用 `AddExtensionsChangedHandler(Delegate)`（返回句柄），不再监听时用 `RemoveExtensionsChangedHandler(Handle)`。这两个函数与广播使用同一把锁，所以别的线程正在注册、注销扩展时也可以安全调用；`RemoveExtensionsChangedHandler` 返回后，处理函数不会还在别的线程里运行，也不会再被调用。不要在注册表的处理函数里调用这两个函数。公开成员 `OnExtensionsChanged` 为兼容保留，但直接对它绑定、解除绑定不会与别的线程的广播同步，请改用上面两个函数。
+
+  ```cpp
+  Handle = FUBotExtensionRegistry::Get().AddExtensionsChangedHandler(
+      FUBotExtensionRegistry::FOnExtensionsChanged::FDelegate::CreateUObject(this, &UMyObject::HandleExtensionsChanged));
+  // ...
+  FUBotExtensionRegistry::Get().RemoveExtensionsChangedHandler(Handle);
+  ```
 - 其他查询：`GetExtensionPoints`、`GetAllExtensions`、`IsExtensionPointDeclared`、`UnregisterExtension`。
 
 ## 蓝图与 C++ 查询

@@ -2,11 +2,18 @@
 
 #include "Components/SceneComponent.h"
 #include "GameFramework/Actor.h"
-#include "UBotRosConventions.h"
 
 namespace UBot::Identity::Private
 {
     const TCHAR* const DefaultBaseFrameId = TEXT("base_link");
+
+    bool IsNameTokenCharacter(TCHAR Character)
+    {
+        return (Character >= TEXT('a') && Character <= TEXT('z'))
+            || (Character >= TEXT('A') && Character <= TEXT('Z'))
+            || (Character >= TEXT('0') && Character <= TEXT('9'))
+            || Character == TEXT('_');
+    }
 
     FString NormalizeNamespace(const FString& Value)
     {
@@ -49,7 +56,7 @@ FString UUBotIdentityComponent::GetResolvedNamespace() const
     {
         return Configured;
     }
-    return UBot::Ros::SanitizeRosName(GetResolvedRobotId());
+    return UBot::Identity::SanitizeNameToken(GetResolvedRobotId());
 }
 
 FString UUBotIdentityComponent::GetBaseFrameId() const
@@ -71,6 +78,33 @@ USceneComponent* UUBotIdentityComponent::GetBaseComponent() const
 
 namespace UBot::Identity
 {
+    FString SanitizeNameToken(const FString& Name)
+    {
+        FString Result;
+        Result.Reserve(Name.Len() + 1);
+        for (int32 Index = 0; Index < Name.Len(); ++Index)
+        {
+            const TCHAR Character = Name[Index];
+            const TCHAR Output = Private::IsNameTokenCharacter(Character) ? Character : TEXT('_');
+            // ROS 2 forbids repeated underscores, so runs collapse whether or not they were in the input.
+            if (Output == TEXT('_') && Result.Len() > 0 && Result[Result.Len() - 1] == TEXT('_'))
+            {
+                continue;
+            }
+            Result.AppendChar(Output);
+        }
+
+        if (Result.IsEmpty())
+        {
+            return TEXT("ubot");
+        }
+        if (Result[0] >= TEXT('0') && Result[0] <= TEXT('9'))
+        {
+            Result.InsertAt(0, TEXT('_'));
+        }
+        return Result;
+    }
+
     UUBotIdentityComponent* Find(const AActor* Actor)
     {
         return IsValid(Actor) ? Actor->FindComponentByClass<UUBotIdentityComponent>() : nullptr;
@@ -91,7 +125,7 @@ namespace UBot::Identity
         {
             return Identity->GetResolvedNamespace();
         }
-        return UBot::Ros::SanitizeRosName(ResolveRobotId(Actor));
+        return SanitizeNameToken(ResolveRobotId(Actor));
     }
 
     FString ResolveBaseFrameId(const AActor* Actor)

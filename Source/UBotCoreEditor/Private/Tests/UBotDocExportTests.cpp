@@ -237,6 +237,24 @@ bool FUBotDocExportFunctionNodesTest::RunTest(const FString& Parameters)
     {
         TestTrue(TEXT("const FVector& is a const reference"), Node.Inputs[0].Type.bByRef && Node.Inputs[0].Type.bConst);
     }
+    // DeprecatedFunction metadata is what the exporter reads.
+    TestTrue(TEXT("The UE To ROS node is deprecated"), Node.bDeprecated);
+
+    // The neutral node that replaced it: same pin, not deprecated, found by the old and the new keywords.
+    if (!TestTrue(TEXT("PositionUEToRightHanded exports"), Exporter.ExportFunctionNode(FindFunction(UUBotConventionsLibrary::StaticClass(), TEXT("PositionUEToRightHanded")), Node, Error)))
+    {
+        AddError(Error);
+        return false;
+    }
+    TestEqual(TEXT("Right-handed id"), Node.Id, FString(TEXT("UUBotConventionsLibrary.PositionUEToRightHanded")));
+    TestEqual(TEXT("Right-handed kind"), Node.Kind, FString(TEXT("pure")));
+    TestEqual(TEXT("Right-handed title"), Node.Title, FString(TEXT("UE To Right-Handed Position")));
+    TestEqual(TEXT("Right-handed category"), Node.Category, FString(TEXT("uBot|Conventions")));
+    TestTrue(TEXT("Right-handed static"), Node.bStatic);
+    TestEqual(TEXT("Right-handed keywords"), Node.Keywords, FString(TEXT("right handed FLU SI ROS REP103 MuJoCo convert location")));
+    TestEqual(TEXT("Right-handed inputs"), DescribePins(Node.Inputs), FString(TEXT("UECentimeters|UECentimeters|vector")));
+    TestEqual(TEXT("Right-handed outputs"), DescribePins(Node.Outputs), FString(TEXT("ReturnValue|Return Value|vector")));
+    TestFalse(TEXT("The right-handed node is not deprecated"), Node.bDeprecated);
 
     // A const pure member function keeps its target pin.
     if (!TestTrue(TEXT("GetResolvedRobotId exports"), Exporter.ExportFunctionNode(FindFunction(UUBotIdentityComponent::StaticClass(), TEXT("GetResolvedRobotId")), Node, Error)))

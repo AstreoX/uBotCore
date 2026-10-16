@@ -34,6 +34,16 @@ public:
      */
     bool ConsumeDue(double NowSeconds);
 
+    /**
+     * For fixed-step simulations: counts the due times <= NowSeconds from NextDue on, at most MaxSteps,
+     * and returns that count. NextDue then advances past every due time <= NowSeconds; due times beyond
+     * the first MaxSteps are skipped and added to the dropped counter. OutFirstDueSeconds (optional)
+     * receives the first counted due time; the k-th one is OutFirstDueSeconds + k * GetIntervalSeconds().
+     * Returns 0 if MaxSteps < 1, NowSeconds is not finite or earlier than NextDue, or the scheduler is not
+     * initialized; OutFirstDueSeconds is left unchanged then.
+     */
+    int32 ConsumeDueSteps(double NowSeconds, int32 MaxSteps, double* OutFirstDueSeconds = nullptr);
+
     double GetRateHz() const { return RateHz; }
     double GetIntervalSeconds() const { return IntervalSeconds; }
     double GetNextDueSeconds() const { return NextDueSeconds; }
@@ -43,6 +53,12 @@ public:
 private:
     void ApplyRate(double InRateHz);
     double DueTimeForIndex(int64 Index) const;
+    /**
+     * Moves NextDue to the first grid point strictly after NowSeconds and returns how many due times it
+     * passed (at least 1). The caller has checked that the scheduler is initialized and NowSeconds is
+     * finite and not before NextDue. Does not touch the dropped counter.
+     */
+    int64 AdvancePastNow(double NowSeconds);
 
     double RateHz = 1.0;
     double IntervalSeconds = 1.0;

@@ -10,10 +10,10 @@
 #include "GameFramework/Actor.h"
 #include "GameFramework/WorldSettings.h"
 #include "Interfaces/Interface_AssetUserData.h"
+#include "Math/RandomStream.h"
 #include "UBotActuatorInterface.h"
 #include "UBotIdentityComponent.h"
 #include "UBotPerceptionMedium.h"
-#include "UBotRosConventions.h"
 #include "UBotSensorInterface.h"
 
 namespace UBotInterfaceTests
@@ -79,6 +79,31 @@ namespace UBotInterfaceTests
 
     const FVector Origin(0.0, 0.0, 0.0);
     const FVector AlongX(1000.0, 0.0, 0.0);
+
+    constexpr int32 NameTokenSeed = 20251009 + 7;
+    constexpr int32 NameTokenIterations = 500;
+
+    /** The name token rules: [A-Za-z0-9_], no repeated underscore, no leading digit, not empty. */
+    bool IsValidNameToken(const FString& Name)
+    {
+        if (Name.IsEmpty() || (Name[0] >= TEXT('0') && Name[0] <= TEXT('9')))
+        {
+            return false;
+        }
+        for (int32 Index = 0; Index < Name.Len(); ++Index)
+        {
+            const TCHAR Character = Name[Index];
+            const bool bAllowed = (Character >= TEXT('a') && Character <= TEXT('z'))
+                || (Character >= TEXT('A') && Character <= TEXT('Z'))
+                || (Character >= TEXT('0') && Character <= TEXT('9'))
+                || Character == TEXT('_');
+            if (!bAllowed || (Character == TEXT('_') && Index > 0 && Name[Index - 1] == TEXT('_')))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotMediumEffectiveDensityTest, "UBotCore.Medium.EffectiveDensity", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
@@ -302,6 +327,68 @@ bool FUBotMediumBoundsEarlyOutTest::RunTest(const FString& Parameters)
     return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotIdentitySanitizeNameTokenTest, "UBotCore.Identity.SanitizeNameToken", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotIdentitySanitizeNameTokenTest::RunTest(const FString& Parameters)
+{
+    using namespace UBotInterfaceTests;
+
+    struct FCase
+    {
+        const TCHAR* Input;
+        const TCHAR* Expected;
+    };
+    const FCase Cases[] =
+    {
+        { TEXT(""), TEXT("ubot") },
+        { TEXT("robot_1"), TEXT("robot_1") },
+        { TEXT("BaseLink"), TEXT("BaseLink") },
+        { TEXT("Robot A"), TEXT("Robot_A") },
+        { TEXT("Rover-01"), TEXT("Rover_01") },
+        { TEXT("/fleet/rover_a/"), TEXT("_fleet_rover_a_") },
+        { TEXT("a--b"), TEXT("a_b") },
+        { TEXT("a__b"), TEXT("a_b") },
+        { TEXT("a - b"), TEXT("a_b") },
+        { TEXT("robot.v2"), TEXT("robot_v2") },
+        { TEXT("1robot"), TEXT("_1robot") },
+        { TEXT("9"), TEXT("_9") },
+        { TEXT("-1robot"), TEXT("_1robot") },
+        { TEXT("_1robot"), TEXT("_1robot") },
+        { TEXT("rob\u00F6t"), TEXT("rob_t") },
+        { TEXT("\u673A\u5668\u4EBA_7"), TEXT("_7") },
+        { TEXT("!!!"), TEXT("_") },
+    };
+    for (const FCase& Case : Cases)
+    {
+        TestEqualSensitive(*FString::Printf(TEXT("SanitizeNameToken(\"%s\")"), Case.Input), UBot::Identity::SanitizeNameToken(Case.Input), Case.Expected);
+    }
+
+    // Every output must be a valid name token, whatever the input.
+    const TCHAR Alphabet[] = TEXT("aZ09_ -./:~!\u00E9\u4E2D");
+    const int32 AlphabetLength = UE_ARRAY_COUNT(Alphabet) - 1;
+    FRandomStream Stream(NameTokenSeed);
+    int32 InvalidCount = 0;
+    for (int32 Iteration = 0; Iteration < NameTokenIterations; ++Iteration)
+    {
+        FString Input;
+        const int32 Length = Stream.RandRange(0, 12);
+        for (int32 Index = 0; Index < Length; ++Index)
+        {
+            Input.AppendChar(Alphabet[Stream.RandRange(0, AlphabetLength - 1)]);
+        }
+        const FString Output = UBot::Identity::SanitizeNameToken(Input);
+        if (!IsValidNameToken(Output))
+        {
+            ++InvalidCount;
+            AddError(FString::Printf(TEXT("SanitizeNameToken(\"%s\") produced invalid name \"%s\""), *Input, *Output));
+        }
+        // A token is its own sanitized form.
+        TestEqualSensitive(TEXT("SanitizeNameToken is idempotent"), UBot::Identity::SanitizeNameToken(Output), Output);
+    }
+    TestEqual(TEXT("Invalid sanitized names"), InvalidCount, 0);
+    return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotIdentityComponentWithoutOwnerTest, "UBotCore.Identity.ComponentWithoutOwner", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FUBotIdentityComponentWithoutOwnerTest::RunTest(const FString& Parameters)
@@ -313,18 +400,18 @@ bool FUBotIdentityComponentWithoutOwnerTest::RunTest(const FString& Parameters)
     }
 
     TestEqualSensitive(TEXT("No robot id and no owner -> empty"), *Identity->GetResolvedRobotId(), TEXT(""));
-    TestEqualSensitive(TEXT("Namespace of an empty robot id"), *Identity->GetResolvedNamespace(), *UBot::Ros::SanitizeRosName(FString()));
+    TestEqualSensitive(TEXT("Namespace of an empty robot id"), *Identity->GetResolvedNamespace(), *UBot::Identity::SanitizeNameToken(FString()));
     TestEqualSensitive(TEXT("Default base frame"), *Identity->GetBaseFrameId(), TEXT("base_link"));
     TestNull(TEXT("No owner -> no base component"), Identity->GetBaseComponent());
 
     Identity->RobotId = TEXT("  Rover-01 ");
     TestEqualSensitive(TEXT("Robot id is trimmed"), *Identity->GetResolvedRobotId(), TEXT("Rover-01"));
-    TestEqualSensitive(TEXT("Empty namespace -> sanitized robot id"), *Identity->GetResolvedNamespace(), *UBot::Ros::SanitizeRosName(TEXT("Rover-01")));
+    TestEqualSensitive(TEXT("Empty namespace -> sanitized robot id"), *Identity->GetResolvedNamespace(), *UBot::Identity::SanitizeNameToken(TEXT("Rover-01")));
 
     Identity->Namespace = TEXT(" /fleet/rover_a/ ");
     TestEqualSensitive(TEXT("Explicit namespace keeps inner separators"), *Identity->GetResolvedNamespace(), TEXT("fleet/rover_a"));
     Identity->Namespace = TEXT("/");
-    TestEqualSensitive(TEXT("Separator-only namespace counts as empty"), *Identity->GetResolvedNamespace(), *UBot::Ros::SanitizeRosName(TEXT("Rover-01")));
+    TestEqualSensitive(TEXT("Separator-only namespace counts as empty"), *Identity->GetResolvedNamespace(), *UBot::Identity::SanitizeNameToken(TEXT("Rover-01")));
 
     Identity->BaseFrameId = TEXT("");
     TestEqualSensitive(TEXT("Empty base frame -> base_link"), *Identity->GetBaseFrameId(), TEXT("base_link"));
@@ -339,7 +426,7 @@ bool FUBotIdentityNullActorTest::RunTest(const FString& Parameters)
 {
     TestNull(TEXT("Find(nullptr)"), UBot::Identity::Find(nullptr));
     TestEqualSensitive(TEXT("ResolveRobotId(nullptr)"), *UBot::Identity::ResolveRobotId(nullptr), TEXT(""));
-    TestEqualSensitive(TEXT("ResolveNamespace(nullptr)"), *UBot::Identity::ResolveNamespace(nullptr), *UBot::Ros::SanitizeRosName(FString()));
+    TestEqualSensitive(TEXT("ResolveNamespace(nullptr)"), *UBot::Identity::ResolveNamespace(nullptr), *UBot::Identity::SanitizeNameToken(FString()));
     TestEqualSensitive(TEXT("ResolveBaseFrameId(nullptr)"), *UBot::Identity::ResolveBaseFrameId(nullptr), TEXT("base_link"));
     TestNull(TEXT("ResolveBaseComponent(nullptr)"), UBot::Identity::ResolveBaseComponent(nullptr));
     return true;
@@ -368,7 +455,7 @@ bool FUBotIdentityActorFallbacksTest::RunTest(const FString& Parameters)
 
     TestNull(TEXT("Bare actor has no identity"), UBot::Identity::Find(Bare));
     TestEqualSensitive(TEXT("Robot id falls back to the actor name"), *UBot::Identity::ResolveRobotId(Bare), *Bare->GetName());
-    TestEqualSensitive(TEXT("Namespace falls back to the sanitized actor name"), *UBot::Identity::ResolveNamespace(Bare), *UBot::Ros::SanitizeRosName(Bare->GetName()));
+    TestEqualSensitive(TEXT("Namespace falls back to the sanitized actor name"), *UBot::Identity::ResolveNamespace(Bare), *UBot::Identity::SanitizeNameToken(Bare->GetName()));
     TestFalse(TEXT("Sanitized namespace has no '-'"), UBot::Identity::ResolveNamespace(Bare).Contains(TEXT("-")));
     TestEqualSensitive(TEXT("Base frame falls back to base_link"), *UBot::Identity::ResolveBaseFrameId(Bare), TEXT("base_link"));
     TestTrue(TEXT("Base component falls back to the root"), UBot::Identity::ResolveBaseComponent(Bare) == BareRoot);
@@ -386,7 +473,7 @@ bool FUBotIdentityActorFallbacksTest::RunTest(const FString& Parameters)
 
     TestTrue(TEXT("Find returns the identity component"), UBot::Identity::Find(Robot) == Identity);
     TestEqualSensitive(TEXT("Empty robot id -> owner name"), *UBot::Identity::ResolveRobotId(Robot), *Robot->GetName());
-    TestEqualSensitive(TEXT("Empty namespace -> sanitized owner name"), *UBot::Identity::ResolveNamespace(Robot), *UBot::Ros::SanitizeRosName(Robot->GetName()));
+    TestEqualSensitive(TEXT("Empty namespace -> sanitized owner name"), *UBot::Identity::ResolveNamespace(Robot), *UBot::Identity::SanitizeNameToken(Robot->GetName()));
     TestEqualSensitive(TEXT("Default base frame"), *UBot::Identity::ResolveBaseFrameId(Robot), TEXT("base_link"));
     TestTrue(TEXT("Empty base component -> owner root"), UBot::Identity::ResolveBaseComponent(Robot) == Root);
 
@@ -394,7 +481,7 @@ bool FUBotIdentityActorFallbacksTest::RunTest(const FString& Parameters)
     Identity->BaseFrameId = TEXT("chassis_link");
     Identity->BaseComponent.PathToComponent = Mast->GetName();
     TestEqualSensitive(TEXT("Configured robot id"), *UBot::Identity::ResolveRobotId(Robot), TEXT("Rover 7"));
-    TestEqualSensitive(TEXT("Namespace from the configured robot id"), *UBot::Identity::ResolveNamespace(Robot), *UBot::Ros::SanitizeRosName(TEXT("Rover 7")));
+    TestEqualSensitive(TEXT("Namespace from the configured robot id"), *UBot::Identity::ResolveNamespace(Robot), *UBot::Identity::SanitizeNameToken(TEXT("Rover 7")));
     TestEqualSensitive(TEXT("Configured base frame"), *UBot::Identity::ResolveBaseFrameId(Robot), TEXT("chassis_link"));
     TestTrue(TEXT("Configured base component"), UBot::Identity::ResolveBaseComponent(Robot) == Mast);
 

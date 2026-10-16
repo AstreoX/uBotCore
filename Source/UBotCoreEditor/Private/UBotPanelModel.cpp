@@ -62,7 +62,8 @@ FUBotPanelModel::~FUBotPanelModel()
 void FUBotPanelModel::Initialize()
 {
     PackagesChangedHandle = FUBotPackageRegistry::Get().OnPackagesChanged.AddSP(this, &FUBotPanelModel::HandlePackagesChanged);
-    ExtensionsChangedHandle = FUBotExtensionRegistry::Get().OnExtensionsChanged.AddSP(this, &FUBotPanelModel::HandleExtensionsChanged);
+    ExtensionsChangedHandle = FUBotExtensionRegistry::Get().AddExtensionsChangedHandler(
+        FUBotExtensionRegistry::FOnExtensionsChanged::FDelegate::CreateSP(this, &FUBotPanelModel::HandleExtensionsChanged));
     RuntimeStatusChangedHandle = FUBotRuntimeStatus::Get().OnChanged.AddSP(this, &FUBotPanelModel::RequestRebuild);
     bIndexReloadPending = true;
     Rebuild();
@@ -71,7 +72,7 @@ void FUBotPanelModel::Initialize()
 void FUBotPanelModel::Shutdown()
 {
     FUBotPackageRegistry::Get().OnPackagesChanged.Remove(PackagesChangedHandle);
-    FUBotExtensionRegistry::Get().OnExtensionsChanged.Remove(ExtensionsChangedHandle);
+    FUBotExtensionRegistry::Get().RemoveExtensionsChangedHandler(ExtensionsChangedHandle);
     FUBotRuntimeStatus::Get().OnChanged.Remove(RuntimeStatusChangedHandle);
     PackagesChangedHandle.Reset();
     ExtensionsChangedHandle.Reset();

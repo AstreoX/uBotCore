@@ -2,8 +2,11 @@
 #include "Math/RandomStream.h"
 #include "Misc/AutomationTest.h"
 #include "UBotConventionsLibrary.h"
+#include "UBotIdentityComponent.h"
+#include "UBotRightHandedConventions.h"
 #include "UBotRosConventions.h"
 #include "UBotUnits.h"
+#include "UObject/Class.h"
 
 #include <limits>
 
@@ -62,6 +65,36 @@ namespace UBotConventionsTests
         const double Same = FMath::Max(FMath::Max(FMath::Abs(A.X - B.X), FMath::Abs(A.Y - B.Y)), FMath::Max(FMath::Abs(A.Z - B.Z), FMath::Abs(A.W - B.W)));
         const double Opposite = FMath::Max(FMath::Max(FMath::Abs(A.X + B.X), FMath::Abs(A.Y + B.Y)), FMath::Max(FMath::Abs(A.Z + B.Z), FMath::Abs(A.W + B.W)));
         return FMath::Min(Same, Opposite);
+    }
+
+    /** Exact equality: the forwarding functions must not differ by a single ulp. */
+    bool SameVector(const FVector& A, const FVector& B)
+    {
+        return A.X == B.X && A.Y == B.Y && A.Z == B.Z;
+    }
+
+    bool SameQuat(const FQuat& A, const FQuat& B)
+    {
+        return A.X == B.X && A.Y == B.Y && A.Z == B.Z && A.W == B.W;
+    }
+
+    bool SameTransform(const FTransform& A, const FTransform& B)
+    {
+        return SameQuat(A.GetRotation(), B.GetRotation()) && SameVector(A.GetTranslation(), B.GetTranslation()) && SameVector(A.GetScale3D(), B.GetScale3D());
+    }
+
+    /** Random string over characters a sanitizer has to keep, replace or collapse. */
+    FString RandomNameInput(FRandomStream& Stream)
+    {
+        const TCHAR Alphabet[] = TEXT("aZ09_ -./:~!\u00E9\u4E2D");
+        const int32 AlphabetLength = UE_ARRAY_COUNT(Alphabet) - 1;
+        FString Input;
+        const int32 Length = Stream.RandRange(0, 12);
+        for (int32 Index = 0; Index < Length; ++Index)
+        {
+            Input.AppendChar(Alphabet[Stream.RandRange(0, AlphabetLength - 1)]);
+        }
+        return Input;
     }
 
     /**
@@ -134,31 +167,31 @@ bool FUBotConventionsAxisMappingTest::RunTest(const FString& Parameters)
 {
     using namespace UBotConventionsTests;
 
-    TestTrue(TEXT("UE position cm -> ROS meters with Y mirrored"), VectorError(UBot::Ros::PositionUEToROS(FVector(100.0, 250.0, -50.0)), FVector(1.0, -2.5, -0.5)) <= Tolerance);
-    TestTrue(TEXT("ROS position meters -> UE cm with Y mirrored"), VectorError(UBot::Ros::PositionROSToUE(FVector(1.0, -2.5, -0.5)), FVector(100.0, 250.0, -50.0)) <= Tolerance);
-    TestTrue(TEXT("Polar vector UE -> ROS"), VectorError(UBot::Ros::VectorUEToROS(FVector(1.0, 2.0, 3.0)), FVector(1.0, -2.0, 3.0)) <= Tolerance);
-    TestTrue(TEXT("Polar vector ROS -> UE"), VectorError(UBot::Ros::VectorROSToUE(FVector(1.0, -2.0, 3.0)), FVector(1.0, 2.0, 3.0)) <= Tolerance);
-    TestTrue(TEXT("Axial vector UE -> ROS"), VectorError(UBot::Ros::AngularVelocityUEToROS(FVector(1.0, 2.0, 3.0)), FVector(-1.0, 2.0, -3.0)) <= Tolerance);
-    TestTrue(TEXT("Axial vector ROS -> UE"), VectorError(UBot::Ros::AngularVelocityROSToUE(FVector(-1.0, 2.0, -3.0)), FVector(1.0, 2.0, 3.0)) <= Tolerance);
-    TestTrue(TEXT("Axial vector is the negated polar mapping"), VectorError(UBot::Ros::AngularVelocityUEToROS(FVector(0.3, -0.7, 1.1)), -UBot::Ros::VectorUEToROS(FVector(0.3, -0.7, 1.1))) <= Tolerance);
+    TestTrue(TEXT("UE position cm -> right-handed meters with Y mirrored"), VectorError(UBot::RightHanded::PositionFromUE(FVector(100.0, 250.0, -50.0)), FVector(1.0, -2.5, -0.5)) <= Tolerance);
+    TestTrue(TEXT("Right-handed position meters -> UE cm with Y mirrored"), VectorError(UBot::RightHanded::PositionToUE(FVector(1.0, -2.5, -0.5)), FVector(100.0, 250.0, -50.0)) <= Tolerance);
+    TestTrue(TEXT("Polar vector UE -> right-handed"), VectorError(UBot::RightHanded::VectorFromUE(FVector(1.0, 2.0, 3.0)), FVector(1.0, -2.0, 3.0)) <= Tolerance);
+    TestTrue(TEXT("Polar vector right-handed -> UE"), VectorError(UBot::RightHanded::VectorToUE(FVector(1.0, -2.0, 3.0)), FVector(1.0, 2.0, 3.0)) <= Tolerance);
+    TestTrue(TEXT("Axial vector UE -> right-handed"), VectorError(UBot::RightHanded::AngularVelocityFromUE(FVector(1.0, 2.0, 3.0)), FVector(-1.0, 2.0, -3.0)) <= Tolerance);
+    TestTrue(TEXT("Axial vector right-handed -> UE"), VectorError(UBot::RightHanded::AngularVelocityToUE(FVector(-1.0, 2.0, -3.0)), FVector(1.0, 2.0, 3.0)) <= Tolerance);
+    TestTrue(TEXT("Axial vector is the negated polar mapping"), VectorError(UBot::RightHanded::AngularVelocityFromUE(FVector(0.3, -0.7, 1.1)), -UBot::RightHanded::VectorFromUE(FVector(0.3, -0.7, 1.1))) <= Tolerance);
 
     const FQuat Unit = FQuat(0.1, 0.2, 0.3, 0.4).GetNormalized();
-    const FQuat Mirrored = UBot::Ros::RotationUEToROS(Unit);
+    const FQuat Mirrored = UBot::RightHanded::RotationFromUE(Unit);
     TestTrue(TEXT("Quaternion (x, y, z, w) -> (-x, y, -z, w)"), FMath::Abs(Mirrored.X + Unit.X) <= Tolerance && FMath::Abs(Mirrored.Y - Unit.Y) <= Tolerance
         && FMath::Abs(Mirrored.Z + Unit.Z) <= Tolerance && FMath::Abs(Mirrored.W - Unit.W) <= Tolerance);
-    TestTrue(TEXT("Unnormalized input is normalized"), QuatError(UBot::Ros::RotationUEToROS(FQuat(0.2, 0.4, 0.6, 0.8)), Mirrored) <= Tolerance);
-    TestTrue(TEXT("Degenerate input yields identity"), QuatError(UBot::Ros::RotationUEToROS(FQuat(0.0, 0.0, 0.0, 0.0)), FQuat::Identity) <= Tolerance);
-    TestTrue(TEXT("Rotation ROS -> UE uses the same mapping"), QuatError(UBot::Ros::RotationROSToUE(Unit), Mirrored) <= Tolerance);
+    TestTrue(TEXT("Unnormalized input is normalized"), QuatError(UBot::RightHanded::RotationFromUE(FQuat(0.2, 0.4, 0.6, 0.8)), Mirrored) <= Tolerance);
+    TestTrue(TEXT("Degenerate input yields identity"), QuatError(UBot::RightHanded::RotationFromUE(FQuat(0.0, 0.0, 0.0, 0.0)), FQuat::Identity) <= Tolerance);
+    TestTrue(TEXT("Rotation right-handed -> UE uses the same mapping"), QuatError(UBot::RightHanded::RotationToUE(Unit), Mirrored) <= Tolerance);
 
     const FTransform Scaled(Unit, FVector(100.0, 200.0, 300.0), FVector(2.0, 3.0, 4.0));
-    const FTransform ROSTransform = UBot::Ros::TransformUEToROS(Scaled);
-    TestTrue(TEXT("Transform scale is dropped"), VectorError(ROSTransform.GetScale3D(), FVector::OneVector) <= Tolerance);
-    TestTrue(TEXT("Transform translation cm -> m"), VectorError(ROSTransform.GetTranslation(), FVector(1.0, -2.0, 3.0)) <= Tolerance);
-    TestTrue(TEXT("Transform rotation mirrored"), QuatError(ROSTransform.GetRotation(), Mirrored) <= Tolerance);
-    TestTrue(TEXT("ROS -> UE transform scale is dropped"), VectorError(UBot::Ros::TransformROSToUE(FTransform(Unit, FVector::ZeroVector, FVector(5.0))).GetScale3D(), FVector::OneVector) <= Tolerance);
+    const FTransform MappedTransform = UBot::RightHanded::TransformFromUE(Scaled);
+    TestTrue(TEXT("Transform scale is dropped"), VectorError(MappedTransform.GetScale3D(), FVector::OneVector) <= Tolerance);
+    TestTrue(TEXT("Transform translation cm -> m"), VectorError(MappedTransform.GetTranslation(), FVector(1.0, -2.0, 3.0)) <= Tolerance);
+    TestTrue(TEXT("Transform rotation mirrored"), QuatError(MappedTransform.GetRotation(), Mirrored) <= Tolerance);
+    TestTrue(TEXT("Right-handed -> UE transform scale is dropped"), VectorError(UBot::RightHanded::TransformToUE(FTransform(Unit, FVector::ZeroVector, FVector(5.0))).GetScale3D(), FVector::OneVector) <= Tolerance);
 
-    TestEqual(TEXT("Yaw UE -> ROS is negated"), UBot::Ros::YawUEToROS(0.75), -0.75);
-    TestEqual(TEXT("Yaw ROS -> UE is negated"), UBot::Ros::YawROSToUE(-0.75), 0.75);
+    TestEqual(TEXT("Yaw UE -> right-handed is negated"), UBot::RightHanded::YawFromUE(0.75), -0.75);
+    TestEqual(TEXT("Yaw right-handed -> UE is negated"), UBot::RightHanded::YawToUE(-0.75), 0.75);
     return true;
 }
 
@@ -186,25 +219,25 @@ bool FUBotConventionsRoundTripTest::RunTest(const FString& Parameters)
         const FTransform Transform = RandomRigidTransform(Stream, 10000.0);
         const double Yaw = Stream.FRandRange(-UE_DOUBLE_PI, UE_DOUBLE_PI);
 
-        PositionError = FMath::Max(PositionError, VectorError(UBot::Ros::PositionROSToUE(UBot::Ros::PositionUEToROS(Centimeters)), Centimeters));
-        PositionReverseError = FMath::Max(PositionReverseError, VectorError(UBot::Ros::PositionUEToROS(UBot::Ros::PositionROSToUE(Meters)), Meters));
-        VectorRoundTripError = FMath::Max(VectorRoundTripError, VectorError(UBot::Ros::VectorROSToUE(UBot::Ros::VectorUEToROS(Value)), Value));
-        VectorRoundTripError = FMath::Max(VectorRoundTripError, VectorError(UBot::Ros::VectorUEToROS(UBot::Ros::VectorROSToUE(Value)), Value));
-        AngularError = FMath::Max(AngularError, VectorError(UBot::Ros::AngularVelocityROSToUE(UBot::Ros::AngularVelocityUEToROS(Value)), Value));
-        AngularError = FMath::Max(AngularError, VectorError(UBot::Ros::AngularVelocityUEToROS(UBot::Ros::AngularVelocityROSToUE(Value)), Value));
-        RotationError = FMath::Max(RotationError, QuatError(UBot::Ros::RotationROSToUE(UBot::Ros::RotationUEToROS(Rotation)), Rotation));
-        RotationError = FMath::Max(RotationError, QuatError(UBot::Ros::RotationUEToROS(UBot::Ros::RotationROSToUE(Rotation)), Rotation));
+        PositionError = FMath::Max(PositionError, VectorError(UBot::RightHanded::PositionToUE(UBot::RightHanded::PositionFromUE(Centimeters)), Centimeters));
+        PositionReverseError = FMath::Max(PositionReverseError, VectorError(UBot::RightHanded::PositionFromUE(UBot::RightHanded::PositionToUE(Meters)), Meters));
+        VectorRoundTripError = FMath::Max(VectorRoundTripError, VectorError(UBot::RightHanded::VectorToUE(UBot::RightHanded::VectorFromUE(Value)), Value));
+        VectorRoundTripError = FMath::Max(VectorRoundTripError, VectorError(UBot::RightHanded::VectorFromUE(UBot::RightHanded::VectorToUE(Value)), Value));
+        AngularError = FMath::Max(AngularError, VectorError(UBot::RightHanded::AngularVelocityToUE(UBot::RightHanded::AngularVelocityFromUE(Value)), Value));
+        AngularError = FMath::Max(AngularError, VectorError(UBot::RightHanded::AngularVelocityFromUE(UBot::RightHanded::AngularVelocityToUE(Value)), Value));
+        RotationError = FMath::Max(RotationError, QuatError(UBot::RightHanded::RotationToUE(UBot::RightHanded::RotationFromUE(Rotation)), Rotation));
+        RotationError = FMath::Max(RotationError, QuatError(UBot::RightHanded::RotationFromUE(UBot::RightHanded::RotationToUE(Rotation)), Rotation));
 
-        const FTransform RoundTrip = UBot::Ros::TransformROSToUE(UBot::Ros::TransformUEToROS(Transform));
+        const FTransform RoundTrip = UBot::RightHanded::TransformToUE(UBot::RightHanded::TransformFromUE(Transform));
         TransformRotationError = FMath::Max(TransformRotationError, QuatError(RoundTrip.GetRotation(), Transform.GetRotation()));
         TransformTranslationError = FMath::Max(TransformTranslationError, VectorError(RoundTrip.GetTranslation(), Transform.GetTranslation()));
 
-        YawError = FMath::Max(YawError, FMath::Abs(UBot::Ros::YawROSToUE(UBot::Ros::YawUEToROS(Yaw)) - Yaw));
-        YawError = FMath::Max(YawError, FMath::Abs(UBot::Ros::YawUEToROS(UBot::Ros::YawROSToUE(Yaw)) - Yaw));
+        YawError = FMath::Max(YawError, FMath::Abs(UBot::RightHanded::YawToUE(UBot::RightHanded::YawFromUE(Yaw)) - Yaw));
+        YawError = FMath::Max(YawError, FMath::Abs(UBot::RightHanded::YawFromUE(UBot::RightHanded::YawToUE(Yaw)) - Yaw));
     }
 
-    TestTrue(*FString::Printf(TEXT("Position UE -> ROS -> UE (max error %g cm)"), PositionError), PositionError <= Tolerance);
-    TestTrue(*FString::Printf(TEXT("Position ROS -> UE -> ROS (max error %g m)"), PositionReverseError), PositionReverseError <= Tolerance);
+    TestTrue(*FString::Printf(TEXT("Position UE -> right-handed -> UE (max error %g cm)"), PositionError), PositionError <= Tolerance);
+    TestTrue(*FString::Printf(TEXT("Position right-handed -> UE -> right-handed (max error %g m)"), PositionReverseError), PositionReverseError <= Tolerance);
     TestTrue(*FString::Printf(TEXT("Polar vector round trips (max error %g)"), VectorRoundTripError), VectorRoundTripError <= Tolerance);
     TestTrue(*FString::Printf(TEXT("Angular velocity round trips (max error %g)"), AngularError), AngularError <= Tolerance);
     TestTrue(*FString::Printf(TEXT("Rotation round trips (max error %g)"), RotationError), RotationError <= Tolerance);
@@ -232,14 +265,14 @@ bool FUBotConventionsRotationMirrorTest::RunTest(const FString& Parameters)
         const FVector V = RandomVector(Stream, 500.0);
 
         // Rotating then mirroring equals mirroring then applying the mirrored rotation (R' = M R M).
-        RotateError = FMath::Max(RotateError, VectorError(UBot::Ros::RotationUEToROS(A).RotateVector(UBot::Ros::VectorUEToROS(V)), UBot::Ros::VectorUEToROS(A.RotateVector(V))));
+        RotateError = FMath::Max(RotateError, VectorError(UBot::RightHanded::RotationFromUE(A).RotateVector(UBot::RightHanded::VectorFromUE(V)), UBot::RightHanded::VectorFromUE(A.RotateVector(V))));
         // The quaternion mapping is a homomorphism, so composed rotations and inverses map consistently.
-        CompositionError = FMath::Max(CompositionError, QuatError(UBot::Ros::RotationUEToROS(A * B), UBot::Ros::RotationUEToROS(A) * UBot::Ros::RotationUEToROS(B)));
-        InverseError = FMath::Max(InverseError, QuatError(UBot::Ros::RotationUEToROS(A.Inverse()), UBot::Ros::RotationUEToROS(A).Inverse()));
-        NormError = FMath::Max(NormError, FMath::Abs(UBot::Ros::RotationUEToROS(A * 3.0).Size() - 1.0));
+        CompositionError = FMath::Max(CompositionError, QuatError(UBot::RightHanded::RotationFromUE(A * B), UBot::RightHanded::RotationFromUE(A) * UBot::RightHanded::RotationFromUE(B)));
+        InverseError = FMath::Max(InverseError, QuatError(UBot::RightHanded::RotationFromUE(A.Inverse()), UBot::RightHanded::RotationFromUE(A).Inverse()));
+        NormError = FMath::Max(NormError, FMath::Abs(UBot::RightHanded::RotationFromUE(A * 3.0).Size() - 1.0));
     }
 
-    TestTrue(*FString::Printf(TEXT("RotationUEToROS(q).RotateVector(VectorUEToROS(v)) == VectorUEToROS(q.RotateVector(v)) (max error %g)"), RotateError), RotateError <= Tolerance);
+    TestTrue(*FString::Printf(TEXT("RotationFromUE(q).RotateVector(VectorFromUE(v)) == VectorFromUE(q.RotateVector(v)) (max error %g)"), RotateError), RotateError <= Tolerance);
     TestTrue(*FString::Printf(TEXT("Mapping preserves composition (max error %g)"), CompositionError), CompositionError <= Tolerance);
     TestTrue(*FString::Printf(TEXT("Mapping preserves inverses (max error %g)"), InverseError), InverseError <= Tolerance);
     TestTrue(*FString::Printf(TEXT("Mapped rotations are normalized (max error %g)"), NormError), NormError <= Tolerance);
@@ -269,24 +302,24 @@ bool FUBotConventionsAngularVelocityTest::RunTest(const FString& Parameters)
         const FQuat CurrentBody = (Previous * Step).GetNormalized();
 
         const FVector UEWorld = AngularVelocityFromQuats(Previous, CurrentWorld, DeltaSeconds, false);
-        const FVector ROSWorld = AngularVelocityFromQuats(UBot::Ros::RotationUEToROS(Previous), UBot::Ros::RotationUEToROS(CurrentWorld), DeltaSeconds, false);
-        WorldFrameError = FMath::Max(WorldFrameError, VectorError(UBot::Ros::AngularVelocityUEToROS(UEWorld), ROSWorld));
+        const FVector MappedWorld = AngularVelocityFromQuats(UBot::RightHanded::RotationFromUE(Previous), UBot::RightHanded::RotationFromUE(CurrentWorld), DeltaSeconds, false);
+        WorldFrameError = FMath::Max(WorldFrameError, VectorError(UBot::RightHanded::AngularVelocityFromUE(UEWorld), MappedWorld));
 
         const FVector UEBody = AngularVelocityFromQuats(Previous, CurrentBody, DeltaSeconds, true);
-        const FVector ROSBody = AngularVelocityFromQuats(UBot::Ros::RotationUEToROS(Previous), UBot::Ros::RotationUEToROS(CurrentBody), DeltaSeconds, true);
-        BodyFrameError = FMath::Max(BodyFrameError, VectorError(UBot::Ros::AngularVelocityUEToROS(UEBody), ROSBody));
+        const FVector MappedBody = AngularVelocityFromQuats(UBot::RightHanded::RotationFromUE(Previous), UBot::RightHanded::RotationFromUE(CurrentBody), DeltaSeconds, true);
+        BodyFrameError = FMath::Max(BodyFrameError, VectorError(UBot::RightHanded::AngularVelocityFromUE(UEBody), MappedBody));
 
         // Rigid body point velocity v = w x r must agree with the polar mapping of v.
         const FVector Lever = RandomVector(Stream, 5.0);
         PointVelocityError = FMath::Max(PointVelocityError, VectorError(
-            FVector::CrossProduct(UBot::Ros::AngularVelocityUEToROS(UEWorld), UBot::Ros::VectorUEToROS(Lever)),
-            UBot::Ros::VectorUEToROS(FVector::CrossProduct(UEWorld, Lever))));
+            FVector::CrossProduct(UBot::RightHanded::AngularVelocityFromUE(UEWorld), UBot::RightHanded::VectorFromUE(Lever)),
+            UBot::RightHanded::VectorFromUE(FVector::CrossProduct(UEWorld, Lever))));
 
         // Torque t = r x F is axial as well.
         const FVector Force = RandomVector(Stream, 100.0);
         TorqueError = FMath::Max(TorqueError, VectorError(
-            UBot::Ros::AngularVelocityUEToROS(FVector::CrossProduct(Lever, Force)),
-            FVector::CrossProduct(UBot::Ros::VectorUEToROS(Lever), UBot::Ros::VectorUEToROS(Force))));
+            UBot::RightHanded::AngularVelocityFromUE(FVector::CrossProduct(Lever, Force)),
+            FVector::CrossProduct(UBot::RightHanded::VectorFromUE(Lever), UBot::RightHanded::VectorFromUE(Force))));
     }
 
     // Velocities reach about 50 rad/s, so allow for the scale.
@@ -314,12 +347,12 @@ bool FUBotConventionsTransformTest::RunTest(const FString& Parameters)
         const FVector LocalCentimeters = RandomVector(Stream, 1000.0);
 
         // Mapping the transform and the local point gives the mapped world point.
-        const FVector ROSWorld = UBot::Ros::TransformUEToROS(A).TransformPosition(UBot::Ros::PositionUEToROS(LocalCentimeters));
-        PointError = FMath::Max(PointError, VectorError(ROSWorld, UBot::Ros::PositionUEToROS(A.TransformPosition(LocalCentimeters))));
+        const FVector MappedWorld = UBot::RightHanded::TransformFromUE(A).TransformPosition(UBot::RightHanded::PositionFromUE(LocalCentimeters));
+        PointError = FMath::Max(PointError, VectorError(MappedWorld, UBot::RightHanded::PositionFromUE(A.TransformPosition(LocalCentimeters))));
 
         // FTransform A * B applies A first, then B; the mapping keeps that structure.
-        const FTransform MappedProduct = UBot::Ros::TransformUEToROS(A * B);
-        const FTransform ProductOfMapped = UBot::Ros::TransformUEToROS(A) * UBot::Ros::TransformUEToROS(B);
+        const FTransform MappedProduct = UBot::RightHanded::TransformFromUE(A * B);
+        const FTransform ProductOfMapped = UBot::RightHanded::TransformFromUE(A) * UBot::RightHanded::TransformFromUE(B);
         CompositionRotationError = FMath::Max(CompositionRotationError, QuatError(MappedProduct.GetRotation(), ProductOfMapped.GetRotation()));
         CompositionTranslationError = FMath::Max(CompositionTranslationError, VectorError(MappedProduct.GetTranslation(), ProductOfMapped.GetTranslation()));
     }
@@ -344,18 +377,18 @@ bool FUBotConventionsYawTest::RunTest(const FString& Parameters)
     for (int32 Iteration = 0; Iteration < RandomIterations; ++Iteration)
     {
         const double UEYaw = Stream.FRandRange(-UE_DOUBLE_PI, UE_DOUBLE_PI);
-        const double ROSYaw = UBot::Ros::YawUEToROS(UEYaw);
+        const double MappedYaw = UBot::RightHanded::YawFromUE(UEYaw);
         const FQuat UEHeading(FVector::UpVector, UEYaw);
 
         // A pure heading maps to a pure heading with the converted yaw.
-        HeadingError = FMath::Max(HeadingError, QuatError(UBot::Ros::RotationUEToROS(UEHeading), FQuat(FVector::UpVector, ROSYaw)));
+        HeadingError = FMath::Max(HeadingError, QuatError(UBot::RightHanded::RotationFromUE(UEHeading), FQuat(FVector::UpVector, MappedYaw)));
         // FRotator yaw (degrees) describes the same rotation as the UE heading quaternion.
         RotatorError = FMath::Max(RotatorError, QuatError(FRotator(0.0, UBot::Units::RadiansToDegrees(UEYaw), 0.0).Quaternion(), UEHeading));
-        // A planar scan beam at the UE angle points along the ROS angle after the vector mapping.
+        // A planar scan beam at the UE angle points along the mapped angle after the vector mapping.
         const FVector UEBeam = UEHeading.RotateVector(FVector::ForwardVector);
-        BeamError = FMath::Max(BeamError, VectorError(UBot::Ros::VectorUEToROS(UEBeam), FVector(FMath::Cos(ROSYaw), FMath::Sin(ROSYaw), 0.0)));
+        BeamError = FMath::Max(BeamError, VectorError(UBot::RightHanded::VectorFromUE(UEBeam), FVector(FMath::Cos(MappedYaw), FMath::Sin(MappedYaw), 0.0)));
         // A yaw rate is the Z component of the axial angular velocity.
-        YawRateError = FMath::Max(YawRateError, FMath::Abs(UBot::Ros::AngularVelocityUEToROS(FVector(0.0, 0.0, UEYaw)).Z - ROSYaw));
+        YawRateError = FMath::Max(YawRateError, FMath::Abs(UBot::RightHanded::AngularVelocityFromUE(FVector(0.0, 0.0, UEYaw)).Z - MappedYaw));
     }
 
     TestTrue(*FString::Printf(TEXT("Heading quaternion matches converted yaw (max error %g)"), HeadingError), HeadingError <= Tolerance);
@@ -365,7 +398,199 @@ bool FUBotConventionsYawTest::RunTest(const FString& Parameters)
     return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotConventionsBlueprintNodesTest, "UBotCore.Conventions.BlueprintNodes", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotConventionsBlueprintNodesTest::RunTest(const FString& Parameters)
+{
+    using namespace UBotConventionsTests;
+
+    // The documented mappings through the nodes.
+    TestTrue(TEXT("Position node: UE cm -> right-handed meters"), VectorError(UUBotConventionsLibrary::PositionUEToRightHanded(FVector(100.0, 250.0, -50.0)), FVector(1.0, -2.5, -0.5)) <= Tolerance);
+    TestTrue(TEXT("Position node: right-handed meters -> UE cm"), VectorError(UUBotConventionsLibrary::PositionRightHandedToUE(FVector(1.0, -2.5, -0.5)), FVector(100.0, 250.0, -50.0)) <= Tolerance);
+    TestTrue(TEXT("Vector node: UE -> right-handed"), VectorError(UUBotConventionsLibrary::VectorUEToRightHanded(FVector(1.0, 2.0, 3.0)), FVector(1.0, -2.0, 3.0)) <= Tolerance);
+    TestTrue(TEXT("Vector node: right-handed -> UE"), VectorError(UUBotConventionsLibrary::VectorRightHandedToUE(FVector(1.0, -2.0, 3.0)), FVector(1.0, 2.0, 3.0)) <= Tolerance);
+    TestTrue(TEXT("Angular velocity node: UE -> right-handed"), VectorError(UUBotConventionsLibrary::AngularVelocityUEToRightHanded(FVector(1.0, 2.0, 3.0)), FVector(-1.0, 2.0, -3.0)) <= Tolerance);
+    TestTrue(TEXT("Angular velocity node: right-handed -> UE"), VectorError(UUBotConventionsLibrary::AngularVelocityRightHandedToUE(FVector(-1.0, 2.0, -3.0)), FVector(1.0, 2.0, 3.0)) <= Tolerance);
+
+    const FQuat Unit = FQuat(0.1, 0.2, 0.3, 0.4).GetNormalized();
+    const FQuat Mirrored = UUBotConventionsLibrary::RotationUEToRightHanded(Unit);
+    TestTrue(TEXT("Rotation node: (x, y, z, w) -> (-x, y, -z, w)"), FMath::Abs(Mirrored.X + Unit.X) <= Tolerance && FMath::Abs(Mirrored.Y - Unit.Y) <= Tolerance
+        && FMath::Abs(Mirrored.Z + Unit.Z) <= Tolerance && FMath::Abs(Mirrored.W - Unit.W) <= Tolerance);
+    TestTrue(TEXT("Rotation node: right-handed -> UE uses the same mapping"), QuatError(UUBotConventionsLibrary::RotationRightHandedToUE(Unit), Mirrored) <= Tolerance);
+
+    const FTransform Scaled(Unit, FVector(100.0, 200.0, 300.0), FVector(2.0, 3.0, 4.0));
+    const FTransform MappedTransform = UUBotConventionsLibrary::TransformUEToRightHanded(Scaled);
+    TestTrue(TEXT("Transform node: scale is dropped"), VectorError(MappedTransform.GetScale3D(), FVector::OneVector) <= Tolerance);
+    TestTrue(TEXT("Transform node: translation cm -> m"), VectorError(MappedTransform.GetTranslation(), FVector(1.0, -2.0, 3.0)) <= Tolerance);
+    TestTrue(TEXT("Transform node: rotation mirrored"), QuatError(MappedTransform.GetRotation(), Mirrored) <= Tolerance);
+    TestTrue(TEXT("Transform node: right-handed -> UE translation m -> cm"), VectorError(UUBotConventionsLibrary::TransformRightHandedToUE(MappedTransform).GetTranslation(), FVector(100.0, 200.0, 300.0)) <= Tolerance);
+
+    TestEqual(TEXT("Yaw node: UE -> right-handed is negated"), UUBotConventionsLibrary::YawUEToRightHanded(0.75), -0.75);
+    TestEqual(TEXT("Yaw node: right-handed -> UE is negated"), UUBotConventionsLibrary::YawRightHandedToUE(-0.75), 0.75);
+
+    // The nodes are the C++ functions, not a second implementation.
+    FRandomStream Stream(RandomSeed + 9);
+    TSet<FString> Mismatched;
+    const auto Check = [&Mismatched](const TCHAR* Name, bool bSame)
+    {
+        if (!bSame)
+        {
+            Mismatched.Add(FString(Name));
+        }
+    };
+    for (int32 Iteration = 0; Iteration < RandomIterations; ++Iteration)
+    {
+        const FVector Centimeters = RandomVector(Stream, 100000.0);
+        const FVector Meters = RandomVector(Stream, 1000.0);
+        const FVector Value = RandomVector(Stream, 50.0);
+        const FQuat Rotation = RandomRotation(Stream);
+        const FQuat TransformRotation = RandomRotation(Stream);
+        const FVector TransformTranslation = RandomVector(Stream, 10000.0);
+        const FVector TransformScale = FVector::OneVector + RandomVector(Stream, 0.5);
+        const FTransform Transform(TransformRotation, TransformTranslation, TransformScale);
+        const double Yaw = Stream.FRandRange(-UE_DOUBLE_PI, UE_DOUBLE_PI);
+
+        Check(TEXT("PositionUEToRightHanded"), SameVector(UUBotConventionsLibrary::PositionUEToRightHanded(Centimeters), UBot::RightHanded::PositionFromUE(Centimeters)));
+        Check(TEXT("PositionRightHandedToUE"), SameVector(UUBotConventionsLibrary::PositionRightHandedToUE(Meters), UBot::RightHanded::PositionToUE(Meters)));
+        Check(TEXT("VectorUEToRightHanded"), SameVector(UUBotConventionsLibrary::VectorUEToRightHanded(Value), UBot::RightHanded::VectorFromUE(Value)));
+        Check(TEXT("VectorRightHandedToUE"), SameVector(UUBotConventionsLibrary::VectorRightHandedToUE(Value), UBot::RightHanded::VectorToUE(Value)));
+        Check(TEXT("AngularVelocityUEToRightHanded"), SameVector(UUBotConventionsLibrary::AngularVelocityUEToRightHanded(Value), UBot::RightHanded::AngularVelocityFromUE(Value)));
+        Check(TEXT("AngularVelocityRightHandedToUE"), SameVector(UUBotConventionsLibrary::AngularVelocityRightHandedToUE(Value), UBot::RightHanded::AngularVelocityToUE(Value)));
+        Check(TEXT("RotationUEToRightHanded"), SameQuat(UUBotConventionsLibrary::RotationUEToRightHanded(Rotation), UBot::RightHanded::RotationFromUE(Rotation)));
+        Check(TEXT("RotationRightHandedToUE"), SameQuat(UUBotConventionsLibrary::RotationRightHandedToUE(Rotation), UBot::RightHanded::RotationToUE(Rotation)));
+        Check(TEXT("TransformUEToRightHanded"), SameTransform(UUBotConventionsLibrary::TransformUEToRightHanded(Transform), UBot::RightHanded::TransformFromUE(Transform)));
+        Check(TEXT("TransformRightHandedToUE"), SameTransform(UUBotConventionsLibrary::TransformRightHandedToUE(Transform), UBot::RightHanded::TransformToUE(Transform)));
+        Check(TEXT("YawUEToRightHanded"), UUBotConventionsLibrary::YawUEToRightHanded(Yaw) == UBot::RightHanded::YawFromUE(Yaw));
+        Check(TEXT("YawRightHandedToUE"), UUBotConventionsLibrary::YawRightHandedToUE(Yaw) == UBot::RightHanded::YawToUE(Yaw));
+    }
+    for (const FString& Name : Mismatched)
+    {
+        AddError(FString::Printf(TEXT("Node %s differs from the C++ function"), *Name));
+    }
+    TestEqual(TEXT("Nodes that differ from the C++ functions"), Mismatched.Num(), 0);
+
+#if WITH_METADATA
+    // Twelve new nodes; the seventeen old ones are deprecated with a message, none of the new ones is.
+    const TCHAR* const NewNodes[] =
+    {
+        TEXT("PositionUEToRightHanded"), TEXT("PositionRightHandedToUE"), TEXT("VectorUEToRightHanded"), TEXT("VectorRightHandedToUE"),
+        TEXT("AngularVelocityUEToRightHanded"), TEXT("AngularVelocityRightHandedToUE"), TEXT("RotationUEToRightHanded"), TEXT("RotationRightHandedToUE"),
+        TEXT("TransformUEToRightHanded"), TEXT("TransformRightHandedToUE"), TEXT("YawUEToRightHanded"), TEXT("YawRightHandedToUE"),
+    };
+    const TCHAR* const DeprecatedNodes[] =
+    {
+        TEXT("PositionUEToROS"), TEXT("PositionROSToUE"), TEXT("VectorUEToROS"), TEXT("VectorROSToUE"),
+        TEXT("AngularVelocityUEToROS"), TEXT("AngularVelocityROSToUE"), TEXT("RotationUEToROS"), TEXT("RotationROSToUE"),
+        TEXT("TransformUEToROS"), TEXT("TransformROSToUE"), TEXT("YawUEToROS"), TEXT("YawROSToUE"),
+        TEXT("CameraLinkToOpticalRotation"), TEXT("GetOpticalFrameSuffix"), TEXT("SecondsToRosTime"), TEXT("RosTimeToSeconds"), TEXT("SanitizeRosName"),
+    };
+    const UClass* LibraryClass = UUBotConventionsLibrary::StaticClass();
+    for (const TCHAR* Name : NewNodes)
+    {
+        const UFunction* Function = LibraryClass->FindFunctionByName(Name);
+        if (TestNotNull(*FString::Printf(TEXT("Node %s exists"), Name), Function))
+        {
+            TestFalse(*FString::Printf(TEXT("Node %s is not deprecated"), Name), Function->HasMetaData(TEXT("DeprecatedFunction")));
+        }
+    }
+    for (const TCHAR* Name : DeprecatedNodes)
+    {
+        const UFunction* Function = LibraryClass->FindFunctionByName(Name);
+        if (TestNotNull(*FString::Printf(TEXT("Node %s still exists"), Name), Function))
+        {
+            TestTrue(*FString::Printf(TEXT("Node %s is deprecated"), Name), Function->HasMetaData(TEXT("DeprecatedFunction")));
+            TestFalse(*FString::Printf(TEXT("Node %s says what to use"), Name), Function->GetMetaData(TEXT("DeprecationMessage")).IsEmpty());
+        }
+    }
+#endif // WITH_METADATA
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotConventionsDeprecatedForwardersTest, "UBotCore.Conventions.DeprecatedForwarders", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+PRAGMA_DISABLE_DEPRECATION_WARNINGS
+
+bool FUBotConventionsDeprecatedForwardersTest::RunTest(const FString& Parameters)
+{
+    using namespace UBotConventionsTests;
+
+    // The deprecated UBot::Ros math functions and the deprecated math nodes return exactly what the
+    // UBot::RightHanded function returns, so migrating cannot change a result.
+    FRandomStream Stream(RandomSeed + 8);
+    TSet<FString> Mismatched;
+    const auto Check = [&Mismatched](const TCHAR* Name, bool bSame)
+    {
+        if (!bSame)
+        {
+            Mismatched.Add(FString(Name));
+        }
+    };
+    const auto CheckRotation = [&Check](const FQuat& Rotation)
+    {
+        Check(TEXT("UBot::Ros::RotationUEToROS"), SameQuat(UBot::Ros::RotationUEToROS(Rotation), UBot::RightHanded::RotationFromUE(Rotation)));
+        Check(TEXT("UBot::Ros::RotationROSToUE"), SameQuat(UBot::Ros::RotationROSToUE(Rotation), UBot::RightHanded::RotationToUE(Rotation)));
+        Check(TEXT("RotationUEToROS node"), SameQuat(UUBotConventionsLibrary::RotationUEToROS(Rotation), UBot::RightHanded::RotationFromUE(Rotation)));
+        Check(TEXT("RotationROSToUE node"), SameQuat(UUBotConventionsLibrary::RotationROSToUE(Rotation), UBot::RightHanded::RotationToUE(Rotation)));
+    };
+
+    // Unnormalized and degenerate rotations take the same path through the forwarders.
+    CheckRotation(FQuat(0.2, 0.4, 0.6, 0.8));
+    CheckRotation(FQuat(0.0, 0.0, 0.0, 0.0));
+
+    for (int32 Iteration = 0; Iteration < RandomIterations; ++Iteration)
+    {
+        const FVector Centimeters = RandomVector(Stream, 100000.0);
+        const FVector Meters = RandomVector(Stream, 1000.0);
+        const FVector Value = RandomVector(Stream, 50.0);
+        const FQuat Rotation = RandomRotation(Stream);
+        const FQuat TransformRotation = RandomRotation(Stream);
+        const FVector TransformTranslation = RandomVector(Stream, 10000.0);
+        const FVector TransformScale = FVector::OneVector + RandomVector(Stream, 0.5);
+        const FTransform Transform(TransformRotation, TransformTranslation, TransformScale);
+        const double Yaw = Stream.FRandRange(-UE_DOUBLE_PI, UE_DOUBLE_PI);
+
+        Check(TEXT("UBot::Ros::PositionUEToROS"), SameVector(UBot::Ros::PositionUEToROS(Centimeters), UBot::RightHanded::PositionFromUE(Centimeters)));
+        Check(TEXT("UBot::Ros::PositionROSToUE"), SameVector(UBot::Ros::PositionROSToUE(Meters), UBot::RightHanded::PositionToUE(Meters)));
+        Check(TEXT("UBot::Ros::VectorUEToROS"), SameVector(UBot::Ros::VectorUEToROS(Value), UBot::RightHanded::VectorFromUE(Value)));
+        Check(TEXT("UBot::Ros::VectorROSToUE"), SameVector(UBot::Ros::VectorROSToUE(Value), UBot::RightHanded::VectorToUE(Value)));
+        Check(TEXT("UBot::Ros::AngularVelocityUEToROS"), SameVector(UBot::Ros::AngularVelocityUEToROS(Value), UBot::RightHanded::AngularVelocityFromUE(Value)));
+        Check(TEXT("UBot::Ros::AngularVelocityROSToUE"), SameVector(UBot::Ros::AngularVelocityROSToUE(Value), UBot::RightHanded::AngularVelocityToUE(Value)));
+        Check(TEXT("UBot::Ros::TransformUEToROS"), SameTransform(UBot::Ros::TransformUEToROS(Transform), UBot::RightHanded::TransformFromUE(Transform)));
+        Check(TEXT("UBot::Ros::TransformROSToUE"), SameTransform(UBot::Ros::TransformROSToUE(Transform), UBot::RightHanded::TransformToUE(Transform)));
+        Check(TEXT("UBot::Ros::YawUEToROS"), UBot::Ros::YawUEToROS(Yaw) == UBot::RightHanded::YawFromUE(Yaw));
+        Check(TEXT("UBot::Ros::YawROSToUE"), UBot::Ros::YawROSToUE(Yaw) == UBot::RightHanded::YawToUE(Yaw));
+        CheckRotation(Rotation);
+
+        Check(TEXT("PositionUEToROS node"), SameVector(UUBotConventionsLibrary::PositionUEToROS(Centimeters), UBot::RightHanded::PositionFromUE(Centimeters)));
+        Check(TEXT("PositionROSToUE node"), SameVector(UUBotConventionsLibrary::PositionROSToUE(Meters), UBot::RightHanded::PositionToUE(Meters)));
+        Check(TEXT("VectorUEToROS node"), SameVector(UUBotConventionsLibrary::VectorUEToROS(Value), UBot::RightHanded::VectorFromUE(Value)));
+        Check(TEXT("VectorROSToUE node"), SameVector(UUBotConventionsLibrary::VectorROSToUE(Value), UBot::RightHanded::VectorToUE(Value)));
+        Check(TEXT("AngularVelocityUEToROS node"), SameVector(UUBotConventionsLibrary::AngularVelocityUEToROS(Value), UBot::RightHanded::AngularVelocityFromUE(Value)));
+        Check(TEXT("AngularVelocityROSToUE node"), SameVector(UUBotConventionsLibrary::AngularVelocityROSToUE(Value), UBot::RightHanded::AngularVelocityToUE(Value)));
+        Check(TEXT("TransformUEToROS node"), SameTransform(UUBotConventionsLibrary::TransformUEToROS(Transform), UBot::RightHanded::TransformFromUE(Transform)));
+        Check(TEXT("TransformROSToUE node"), SameTransform(UUBotConventionsLibrary::TransformROSToUE(Transform), UBot::RightHanded::TransformToUE(Transform)));
+        Check(TEXT("YawUEToROS node"), UUBotConventionsLibrary::YawUEToROS(Yaw) == UBot::RightHanded::YawFromUE(Yaw));
+        Check(TEXT("YawROSToUE node"), UUBotConventionsLibrary::YawROSToUE(Yaw) == UBot::RightHanded::YawToUE(Yaw));
+
+        const FString Name = RandomNameInput(Stream);
+        Check(TEXT("UBot::Ros::SanitizeRosName"), UBot::Ros::SanitizeRosName(Name).Equals(UBot::Identity::SanitizeNameToken(Name), ESearchCase::CaseSensitive));
+        Check(TEXT("SanitizeRosName node"), UUBotConventionsLibrary::SanitizeRosName(Name).Equals(UBot::Identity::SanitizeNameToken(Name), ESearchCase::CaseSensitive));
+    }
+    TestTrue(TEXT("SanitizeRosName of an empty string"), UBot::Ros::SanitizeRosName(FString()).Equals(UBot::Identity::SanitizeNameToken(FString()), ESearchCase::CaseSensitive));
+
+    for (const FString& Name : Mismatched)
+    {
+        AddError(FString::Printf(TEXT("%s differs from its replacement"), *Name));
+    }
+    TestEqual(TEXT("Deprecated forwarders that differ from their replacement"), Mismatched.Num(), 0);
+    return true;
+}
+
+PRAGMA_ENABLE_DEPRECATION_WARNINGS
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotConventionsCameraOpticalTest, "UBotCore.Conventions.CameraOpticalFrame", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+PRAGMA_DISABLE_DEPRECATION_WARNINGS
 
 bool FUBotConventionsCameraOpticalTest::RunTest(const FString& Parameters)
 {
@@ -385,10 +610,10 @@ bool FUBotConventionsCameraOpticalTest::RunTest(const FString& Parameters)
     for (int32 Iteration = 0; Iteration < RandomIterations; ++Iteration)
     {
         const FQuat CameraUE = RandomRotation(Stream);
-        const FQuat OpticalROS = UBot::Ros::RotationUEToROS(CameraUE) * LinkToOptical;
-        AxisError = FMath::Max(AxisError, VectorError(OpticalROS.RotateVector(FVector::ZAxisVector), UBot::Ros::VectorUEToROS(CameraUE.GetForwardVector())));
-        AxisError = FMath::Max(AxisError, VectorError(OpticalROS.RotateVector(FVector::XAxisVector), UBot::Ros::VectorUEToROS(CameraUE.GetRightVector())));
-        AxisError = FMath::Max(AxisError, VectorError(OpticalROS.RotateVector(FVector::YAxisVector), UBot::Ros::VectorUEToROS(-CameraUE.GetUpVector())));
+        const FQuat OpticalROS = UBot::RightHanded::RotationFromUE(CameraUE) * LinkToOptical;
+        AxisError = FMath::Max(AxisError, VectorError(OpticalROS.RotateVector(FVector::ZAxisVector), UBot::RightHanded::VectorFromUE(CameraUE.GetForwardVector())));
+        AxisError = FMath::Max(AxisError, VectorError(OpticalROS.RotateVector(FVector::XAxisVector), UBot::RightHanded::VectorFromUE(CameraUE.GetRightVector())));
+        AxisError = FMath::Max(AxisError, VectorError(OpticalROS.RotateVector(FVector::YAxisVector), UBot::RightHanded::VectorFromUE(-CameraUE.GetUpVector())));
     }
     TestTrue(*FString::Printf(TEXT("UE camera axes match the ROS optical frame (max error %g)"), AxisError), AxisError <= Tolerance);
 
@@ -397,7 +622,11 @@ bool FUBotConventionsCameraOpticalTest::RunTest(const FString& Parameters)
     return true;
 }
 
+PRAGMA_ENABLE_DEPRECATION_WARNINGS
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotConventionsRosTimeTest, "UBotCore.Conventions.RosTime", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+PRAGMA_DISABLE_DEPRECATION_WARNINGS
 
 bool FUBotConventionsRosTimeTest::RunTest(const FString& Parameters)
 {
@@ -477,7 +706,11 @@ bool FUBotConventionsRosTimeTest::RunTest(const FString& Parameters)
     return true;
 }
 
+PRAGMA_ENABLE_DEPRECATION_WARNINGS
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotConventionsSanitizeTest, "UBotCore.Conventions.SanitizeRosName", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+PRAGMA_DISABLE_DEPRECATION_WARNINGS
 
 bool FUBotConventionsSanitizeTest::RunTest(const FString& Parameters)
 {
@@ -538,5 +771,7 @@ bool FUBotConventionsSanitizeTest::RunTest(const FString& Parameters)
     TestEqualSensitive(TEXT("Blueprint sanitize"), UUBotConventionsLibrary::SanitizeRosName(TEXT("Robot A")), TEXT("Robot_A"));
     return true;
 }
+
+PRAGMA_ENABLE_DEPRECATION_WARNINGS
 
 #endif // WITH_DEV_AUTOMATION_TESTS

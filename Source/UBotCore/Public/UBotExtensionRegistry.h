@@ -41,11 +41,14 @@ struct UBOTCORE_API FUBotExtensionRecord
  * and returned once the point exists. Packages must call UnregisterAllFromPackage in
  * ShutdownModule so no extension outlives the code that implements it.
  *
- * Registration, removal and queries are thread-safe. OnExtensionsChanged is broadcast on the
+ * Registration, removal and queries are thread-safe. The change notification is broadcast on the
  * calling thread after the internal data lock is released, so handlers may call back into the
- * registry; bind and unbind handlers from the game thread. Broadcasts from different threads are
- * serialized (the delegate itself is not thread-safe), so a handler must not block on work that
- * another thread can only finish by changing the registry.
+ * registry. Broadcasts from different threads are serialized (the delegate itself is not
+ * thread-safe), so a handler must not block on work that another thread can only finish by changing
+ * the registry. Add and remove handlers with AddExtensionsChangedHandler and
+ * RemoveExtensionsChangedHandler: they take the lock that serializes the broadcasts, so they are safe
+ * while another thread changes the registry, and when a removal returns no thread is running the
+ * handler and none will call it again.
  */
 class UBOTCORE_API FUBotExtensionRegistry
 {
@@ -105,7 +108,26 @@ public:
 
     DECLARE_MULTICAST_DELEGATE_OneParam(FOnExtensionsChanged, FName /*PointName*/);
 
-    /** Broadcast with the affected point after a point or an extension is added or removed. */
+    /**
+     * Calls Handler, on the thread that changed the registry, with the affected point after a point or an
+     * extension is added or removed. Safe to call from any thread, also while another thread changes the
+     * registry; waits for a broadcast in progress. Do not call it, or RemoveExtensionsChangedHandler, from
+     * within a handler of this registry. Returns the handle for RemoveExtensionsChangedHandler.
+     */
+    FDelegateHandle AddExtensionsChangedHandler(FOnExtensionsChanged::FDelegate Handler);
+
+    /**
+     * Removes a handler added by AddExtensionsChangedHandler. Waits for a broadcast in progress on another
+     * thread, so when it returns the handler is not running and is never called again. Does nothing for an
+     * invalid or unknown handle.
+     */
+    void RemoveExtensionsChangedHandler(FDelegateHandle Handle);
+
+    /**
+     * Broadcast with the affected point after a point or an extension is added or removed. Public for
+     * compatibility; binding and unbinding it directly is not synchronized with a broadcast on another
+     * thread. Use AddExtensionsChangedHandler and RemoveExtensionsChangedHandler instead.
+     */
     FOnExtensionsChanged OnExtensionsChanged;
 
 private:
@@ -115,6 +137,7 @@ private:
     void BroadcastChanged(FName PointName);
 
     mutable FCriticalSection Lock;
+    // Serializes broadcasts and changes to the handler list (OnExtensionsChanged is not thread-safe).
     // Recursive: a handler may register something, which broadcasts again on the same thread.
     FCriticalSection BroadcastLock;
     TArray<FUBotExtensionPointInfo> Points;

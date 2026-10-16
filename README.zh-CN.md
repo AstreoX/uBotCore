@@ -31,7 +31,7 @@ uBot Core 是 uBot 系列插件中的基础插件，适用于 Unreal Engine 5.5�
 
 - **帧头**：每个传感器样本都包含传感器 ID、坐标系 ID、序号、时间戳和状态码。
 - **仿真时钟**：所有 uBot 时间戳取自世界的游戏时间，可在蓝图和 C++ 中设置固定步长、暂停和单步执行。
-- **UE 与 ROS 约定**：在 UE（左手系，厘米）与 ROS REP-103（右手系，米）之间转换位置、旋转、角速度、时间和名称。
+- **坐标约定**：在 UE（左手系，厘米）与右手系、Z 轴朝上的 SI 坐标（如 ROS REP-103、MuJoCo）之间转换位置、旋转、角速度和变换。
 - **共享接口**：定义传感器、执行器、指令和感知介质接口，插件之间无需依赖对方的类即可对接。
 - **身份与采样**：`uBot Identity` 组件用于给机器人命名；采样调度器每帧最多触发一次。
 - **插件管理**：提供 Package 索引、依赖与版本校验和 `Window > uBot` 面板；安装与更新由 uBot Manager 完成。
@@ -59,7 +59,7 @@ git clone --branch v0.1.2 https://github.com/AstreoX/uBotCore <Project>/Plugins/
 | 我想… | 去这里 |
 | --- | --- |
 | 读取仿真时间，暂停与单步执行 | [仿真时钟](https://astreox.github.io/uBotDocs/core/clock/) |
-| 在 UE 与 ROS 之间转换坐标、时间和名称 | [UE/ROS 约定库](https://astreox.github.io/uBotDocs/core/conventions/) |
+| 在 UE 与右手系 SI 坐标之间转换 | [坐标约定](https://astreox.github.io/uBotDocs/core/conventions/) |
 | 解读帧头与采样状态码 | [帧头与采样状态](https://astreox.github.io/uBotDocs/concepts/frame-header/) |
 | 在插件之间对接传感器、执行器和指令 | [插件间接口](https://astreox.github.io/uBotDocs/concepts/interfaces/) |
 | 为机器人命名（ID、命名空间、基座坐标系） | [Identity 组件](https://astreox.github.io/uBotDocs/core/identity/) |

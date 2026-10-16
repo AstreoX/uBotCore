@@ -1,9 +1,9 @@
 {
     "FileVersion": 3,
-    "Version": 3,
-    "VersionName": "0.1.2",
+    "Version": 4,
+    "VersionName": "0.1.3",
     "FriendlyName": "uBot Core",
-    "Description": "uBot foundation layer: shared frame header, simulation clock, UE/ROS conventions, extension interfaces and the uBot package manager.",
+    "Description": "uBot foundation layer: shared frame header, simulation clock, coordinate conventions (UE and right-handed SI), extension interfaces and the uBot package manager.",
     "Category": "uBot",
     "CreatedBy": "AstreoX",
     "CreatedByURL": "https://github.com/AstreoX",
@@ -29,7 +29,7 @@
         "Provides": [
             "Core.FrameHeader",
             "Core.Clock",
-            "Core.Conventions.ROS",
+            "Core.Conventions",
             "Core.Interfaces",
             "Core.PackageManager"
         ],

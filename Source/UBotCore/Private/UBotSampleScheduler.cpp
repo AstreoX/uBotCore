@@ -30,12 +30,38 @@ void FUBotSampleScheduler::SetRateHz(double InRateHz)
 
 bool FUBotSampleScheduler::ConsumeDue(double NowSeconds)
 {
-    using UBot::Scheduler::Private::MaxExactGridIntervals;
-
     if (!bInitialized || !FMath::IsFinite(NowSeconds) || NowSeconds < NextDueSeconds)
     {
         return false;
     }
+
+    // The first due time fires; every further one that has passed is skipped.
+    DroppedSampleCount += AdvancePastNow(NowSeconds) - 1;
+    return true;
+}
+
+int32 FUBotSampleScheduler::ConsumeDueSteps(double NowSeconds, int32 MaxSteps, double* OutFirstDueSeconds)
+{
+    if (!bInitialized || MaxSteps < 1 || !FMath::IsFinite(NowSeconds) || NowSeconds < NextDueSeconds)
+    {
+        return 0;
+    }
+
+    const double FirstDueSeconds = NextDueSeconds;
+    const int64 Passed = AdvancePastNow(NowSeconds);
+    // The earliest due times are the ones counted; the later ones are skipped.
+    const int32 Steps = static_cast<int32>(FMath::Min<int64>(Passed, MaxSteps));
+    DroppedSampleCount += Passed - Steps;
+    if (OutFirstDueSeconds)
+    {
+        *OutFirstDueSeconds = FirstDueSeconds;
+    }
+    return Steps;
+}
+
+int64 FUBotSampleScheduler::AdvancePastNow(double NowSeconds)
+{
+    using UBot::Scheduler::Private::MaxExactGridIntervals;
 
     const double ElapsedIntervals = (NowSeconds - AnchorSeconds) / IntervalSeconds;
     if (!FMath::IsFinite(ElapsedIntervals) || ElapsedIntervals >= MaxExactGridIntervals)
@@ -44,11 +70,11 @@ bool FUBotSampleScheduler::ConsumeDue(double NowSeconds)
         const double Skipped = FMath::IsFinite(ElapsedIntervals)
             ? FMath::FloorToDouble(ElapsedIntervals) - static_cast<double>(NextIndex)
             : MaxExactGridIntervals;
-        DroppedSampleCount += static_cast<int64>(FMath::Clamp(Skipped, 0.0, MaxExactGridIntervals));
+        const int64 SkippedCount = static_cast<int64>(FMath::Clamp(Skipped, 0.0, MaxExactGridIntervals));
         AnchorSeconds = NowSeconds;
         NextIndex = 1;
         NextDueSeconds = FMath::Max(DueTimeForIndex(1), std::nextafter(NowSeconds, std::numeric_limits<double>::infinity()));
-        return true;
+        return SkippedCount + 1;
     }
 
     // Smallest grid index whose due time is strictly after NowSeconds. The floor estimate can be off
@@ -72,10 +98,10 @@ bool FUBotSampleScheduler::ConsumeDue(double NowSeconds)
         Due = EarlierDue;
     }
 
-    DroppedSampleCount += Index - NextIndex - 1;
+    const int64 Passed = Index - NextIndex;
     NextIndex = Index;
     NextDueSeconds = Due;
-    return true;
+    return Passed;
 }
 
 void FUBotSampleScheduler::ApplyRate(double InRateHz)

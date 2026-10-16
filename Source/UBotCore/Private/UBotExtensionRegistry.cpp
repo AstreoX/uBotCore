@@ -192,6 +192,24 @@ bool FUBotExtensionRegistry::IsExtensionPointDeclared(FName PointName) const
     return FindPointIndexLocked(PointName) != INDEX_NONE;
 }
 
+FDelegateHandle FUBotExtensionRegistry::AddExtensionsChangedHandler(FOnExtensionsChanged::FDelegate Handler)
+{
+    // Same lock as the broadcast: a multicast delegate must not be changed while another thread broadcasts it.
+    FScopeLock ScopeLock(&BroadcastLock);
+    return OnExtensionsChanged.Add(MoveTemp(Handler));
+}
+
+void FUBotExtensionRegistry::RemoveExtensionsChangedHandler(FDelegateHandle Handle)
+{
+    if (!Handle.IsValid())
+    {
+        return;
+    }
+    // Waits for a broadcast in progress on another thread, so the handler is idle when this returns.
+    FScopeLock ScopeLock(&BroadcastLock);
+    OnExtensionsChanged.Remove(Handle);
+}
+
 void FUBotExtensionRegistry::BroadcastChanged(FName PointName)
 {
     // Multicast delegates are not thread-safe: concurrent Broadcast calls trip the engine's access

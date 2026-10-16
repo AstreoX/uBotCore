@@ -41,7 +41,7 @@ public:
     UFUNCTION(BlueprintPure, Category = "uBot|Identity")
     FString GetResolvedRobotId() const;
 
-    /** Namespace, or UBot::Ros::SanitizeRosName(GetResolvedRobotId()) when empty. */
+    /** Namespace, or UBot::Identity::SanitizeNameToken(GetResolvedRobotId()) when empty. */
     UFUNCTION(BlueprintPure, Category = "uBot|Identity")
     FString GetResolvedNamespace() const;
 
@@ -56,15 +56,22 @@ public:
 
 namespace UBot::Identity
 {
+    /**
+     * Portable name token: keeps [A-Za-z0-9_], replaces every other character by '_', collapses repeated
+     * underscores, prefixes '_' when the first character is a digit and never returns an empty string
+     * (fallback "ubot"). Valid as a ROS name token, a C identifier and a file name.
+     */
+    UBOTCORE_API FString SanitizeNameToken(const FString& Name);
+
     /** The actor's identity component, or nullptr. */
     UBOTCORE_API UUBotIdentityComponent* Find(const AActor* Actor);
 
     // Same resolution rules as the component, with fallbacks when the actor has none.
-    // A null actor yields an empty robot id, SanitizeRosName("") as namespace, "base_link" and nullptr.
+    // A null actor yields an empty robot id, SanitizeNameToken("") as namespace, "base_link" and nullptr.
 
     /** Identity -> actor name. */
     UBOTCORE_API FString ResolveRobotId(const AActor* Actor);
-    /** Identity -> SanitizeRosName(robot id). */
+    /** Identity -> SanitizeNameToken(robot id). */
     UBOTCORE_API FString ResolveNamespace(const AActor* Actor);
     /** Identity -> "base_link". */
     UBOTCORE_API FString ResolveBaseFrameId(const AActor* Actor);

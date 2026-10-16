@@ -1,7 +1,9 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Dom/JsonObject.h"
+#include "Dom/JsonValue.h"
 #include "Interfaces/IPluginManager.h"
+#include "Misc/FileHelper.h"
 #include "Misc/AutomationTest.h"
 #include "Misc/Paths.h"
 #include "Serialization/JsonReader.h"
@@ -102,6 +104,106 @@ namespace UBotPackageTests
     {
         const FUBotPackageInfo* Package = FindByName(Packages, Name);
         return Package && HasProblem(*Package, Fragment);
+    }
+
+    /**
+     * One version entry of an index file as written. FUBotPackageIndexVersion carries only the version, the ref
+     * and the planned flag, so the fields that must match a descriptor are read from the file itself.
+     */
+    struct FIndexVersionFields
+    {
+        FString Text;
+        FUBotSemVer SemVer;
+        bool bPlanned = false;
+        TArray<FUBotPackageDependency> Requires;
+        TArray<FString> Provides;
+        TArray<FString> EnginePlugins;
+    };
+
+    TArray<FString> ReadStringArray(const FJsonObject& Json, const TCHAR* Field)
+    {
+        TArray<FString> Result;
+        const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
+        if (Json.TryGetArrayField(Field, Values) && Values != nullptr)
+        {
+            for (const TSharedPtr<FJsonValue>& Value : *Values)
+            {
+                FString Item;
+                if (Value.IsValid() && Value->TryGetString(Item))
+                {
+                    Result.Add(Item);
+                }
+            }
+        }
+        return Result;
+    }
+
+    /** The version entries of every package in an index file, by lower-case package name; false with OutError if the file cannot be read. */
+    bool ReadIndexVersionFields(const FString& IndexPath, TMap<FString, TArray<FIndexVersionFields>>& OutPackages, FString& OutError)
+    {
+        FString Text;
+        if (!FFileHelper::LoadFileToString(Text, *IndexPath))
+        {
+            OutError = TEXT("the file cannot be read");
+            return false;
+        }
+        const TSharedPtr<FJsonObject> Root = ParseJsonObject(Text);
+        const TArray<TSharedPtr<FJsonValue>>* Packages = nullptr;
+        if (!Root.IsValid() || !Root->TryGetArrayField(TEXT("packages"), Packages) || Packages == nullptr)
+        {
+            OutError = TEXT("the file has no \"packages\" array");
+            return false;
+        }
+
+        for (const TSharedPtr<FJsonValue>& PackageValue : *Packages)
+        {
+            const TSharedPtr<FJsonObject>* Package = nullptr;
+            FString Name;
+            const TArray<TSharedPtr<FJsonValue>>* Versions = nullptr;
+            if (!PackageValue.IsValid() || !PackageValue->TryGetObject(Package) || Package == nullptr
+                || !(*Package)->TryGetStringField(TEXT("name"), Name) || !(*Package)->TryGetArrayField(TEXT("versions"), Versions) || Versions == nullptr)
+            {
+                continue;
+            }
+
+            TArray<FIndexVersionFields>& Entries = OutPackages.FindOrAdd(Name.ToLower());
+            for (const TSharedPtr<FJsonValue>& VersionValue : *Versions)
+            {
+                const TSharedPtr<FJsonObject>* Version = nullptr;
+                if (!VersionValue.IsValid() || !VersionValue->TryGetObject(Version) || Version == nullptr)
+                {
+                    continue;
+                }
+
+                FIndexVersionFields Fields;
+                if (!(*Version)->TryGetStringField(TEXT("version"), Fields.Text) || !FUBotSemVer::Parse(Fields.Text, Fields.SemVer))
+                {
+                    continue;
+                }
+                (*Version)->TryGetBoolField(TEXT("planned"), Fields.bPlanned);
+                Fields.Provides = ReadStringArray(**Version, TEXT("provides"));
+                Fields.EnginePlugins = ReadStringArray(**Version, TEXT("enginePlugins"));
+
+                const TArray<TSharedPtr<FJsonValue>>* Requires = nullptr;
+                if ((*Version)->TryGetArrayField(TEXT("requires"), Requires) && Requires != nullptr)
+                {
+                    for (const TSharedPtr<FJsonValue>& RequirementValue : *Requires)
+                    {
+                        const TSharedPtr<FJsonObject>* Requirement = nullptr;
+                        if (!RequirementValue.IsValid() || !RequirementValue->TryGetObject(Requirement) || Requirement == nullptr)
+                        {
+                            continue;
+                        }
+                        FUBotPackageDependency& Dependency = Fields.Requires.AddDefaulted_GetRef();
+                        (*Requirement)->TryGetStringField(TEXT("name"), Dependency.Name);
+                        (*Requirement)->TryGetStringField(TEXT("version"), Dependency.Version);
+                        (*Requirement)->TryGetBoolField(TEXT("optional"), Dependency.bOptional);
+                    }
+                }
+                Entries.Add(MoveTemp(Fields));
+            }
+        }
+        return true;
     }
 }
 
@@ -1673,8 +1775,18 @@ bool FUBotPackageBuiltInIndexTest::RunTest(const FString& Parameters)
         TestTrue(FString::Printf(TEXT("%s has a safe install folder"), *Package.Name), Package.InstallFolder.IsEmpty() || FUBotPackageIndex::IsSafeFolderName(Package.InstallFolder));
     }
 
-    // Installed packages must agree with the index entry for their own version: the index is what
-    // uBot Manager plans with before anything is cloned.
+    // The per-version fields of the index file as written (requires, provides, engine plugins of every version,
+    // planned ones included).
+    TMap<FString, TArray<FIndexVersionFields>> IndexFields;
+    FString FieldsError;
+    const bool bFieldsRead = ReadIndexVersionFields(IndexPath, IndexFields, FieldsError);
+    if (!TestTrue(FString::Printf(TEXT("The versions of Index/index.json can be read (%s)"), *FieldsError), bFieldsRead))
+    {
+        return false;
+    }
+
+    // Installed packages must agree with the index entry of their own version, planned or released: the index
+    // is what uBot Manager plans with before anything is cloned.
     {
         FUBotPackageRegistry Registry;
         Registry.Refresh();
@@ -1685,35 +1797,39 @@ bool FUBotPackageBuiltInIndexTest::RunTest(const FString& Parameters)
             {
                 continue;
             }
-            // A package in development (installed from its repository before its first release, or ahead of the
-            // next one) may carry a version the index still lists as planned.
-            const bool bInstallable = Entry->AvailableVersions.Contains(Installed.Version);
-            const bool bInDevelopment = !bInstallable && Entry->IndexVersions.ContainsByPredicate(
-                [&Installed](const FUBotPackageIndexVersion& IndexVersion) { return IndexVersion.bPlanned && IndexVersion.Version == Installed.Version; });
-            TestTrue(FString::Printf(TEXT("%s %s is listed in the index (installable, or planned while in development)"), *Installed.Name, *Installed.Version),
-                bInstallable || bInDevelopment);
-            if (bInDevelopment)
+
+            FUBotSemVer InstalledVersion;
+            const TArray<FIndexVersionFields>* Versions = IndexFields.Find(Installed.Name.ToLower());
+            const FIndexVersionFields* Fields = nullptr;
+            if (Versions != nullptr && FUBotSemVer::Parse(Installed.Version, InstalledVersion))
             {
-                AddInfo(FString::Printf(TEXT("%s %s is in development: the index lists this version as planned."), *Installed.Name, *Installed.Version));
+                Fields = Versions->FindByPredicate([&InstalledVersion](const FIndexVersionFields& Candidate) { return Candidate.SemVer == InstalledVersion; });
             }
-            if (Entry->Version != Installed.Version)
+            if (!TestNotNull(FString::Printf(TEXT("%s %s has a version entry in the index"), *Installed.Name, *Installed.Version), Fields))
             {
                 continue;
             }
-            TestEqual(FString::Printf(TEXT("%s provides match the descriptor"), *Installed.Name),
-                FString::Join(Entry->Provides, TEXT(",")), FString::Join(Installed.Provides, TEXT(",")));
+            if (Fields->bPlanned)
+            {
+                // A package in development (installed from its repository before its release) matches the
+                // planned entry of its version.
+                AddInfo(FString::Printf(TEXT("%s %s is in development: the index lists this version as planned."), *Installed.Name, *Installed.Version));
+            }
+
+            TestEqual(FString::Printf(TEXT("%s %s provides match the descriptor"), *Installed.Name, *Installed.Version),
+                FString::Join(Fields->Provides, TEXT(",")), FString::Join(Installed.Provides, TEXT(",")));
+            TestEqual(FString::Printf(TEXT("%s %s engine plugins match the descriptor"), *Installed.Name, *Installed.Version),
+                FString::Join(Fields->EnginePlugins, TEXT(",")), FString::Join(Installed.ExternalRequires, TEXT(",")));
             TestEqual(FString::Printf(TEXT("%s tags match the descriptor"), *Installed.Name),
                 FString::Join(Entry->Tags, TEXT(",")), FString::Join(Installed.Tags, TEXT(",")));
             TestEqual(FString::Printf(TEXT("%s layer matches the descriptor"), *Installed.Name), Entry->Layer, Installed.Layer);
-            TestEqual(FString::Printf(TEXT("%s engine plugins match the descriptor"), *Installed.Name),
-                FString::Join(Entry->ExternalRequires, TEXT(",")), FString::Join(Installed.ExternalRequires, TEXT(",")));
-            if (TestEqual(FString::Printf(TEXT("%s has the descriptor's requirements"), *Installed.Name), Entry->Requires.Num(), Installed.Requires.Num()))
+            if (TestEqual(FString::Printf(TEXT("%s %s has the descriptor's requirements"), *Installed.Name, *Installed.Version), Fields->Requires.Num(), Installed.Requires.Num()))
             {
-                for (int32 RequirementIndex = 0; RequirementIndex < Entry->Requires.Num(); ++RequirementIndex)
+                for (int32 RequirementIndex = 0; RequirementIndex < Fields->Requires.Num(); ++RequirementIndex)
                 {
-                    const FUBotPackageDependency& FromIndex = Entry->Requires[RequirementIndex];
+                    const FUBotPackageDependency& FromIndex = Fields->Requires[RequirementIndex];
                     const FUBotPackageDependency& FromDescriptor = Installed.Requires[RequirementIndex];
-                    TestTrue(FString::Printf(TEXT("%s requirement %d matches the descriptor"), *Installed.Name, RequirementIndex),
+                    TestTrue(FString::Printf(TEXT("%s %s requirement %d matches the descriptor"), *Installed.Name, *Installed.Version, RequirementIndex),
                         FromIndex.Name == FromDescriptor.Name && FromIndex.Version == FromDescriptor.Version && FromIndex.bOptional == FromDescriptor.bOptional);
                 }
             }
@@ -1724,15 +1840,69 @@ bool FUBotPackageBuiltInIndexTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("ROS resolves over the index"), FUBotPackageRegistry::ResolveDependencyOrder(Index, TEXT("UBotROS"), Order));
     TestEqual(TEXT("ROS install order"), FString::Join(Order, TEXT(",")), FString(TEXT("UBotCore,UBotSensor,UBotROS")));
 
-    TArray<FUBotPackageInfo> AllEnabled = Index;
-    for (FUBotPackageInfo& Package : AllEnabled)
+    // The index describes two states, and each must hold together on its own. A package whose newest version is
+    // announced but not released belongs to the second one only: mixing the two would require, for example, the
+    // Core version of a planned package from a Core that is not out yet.
+    //
+    // Released state: the packages that have a released version, each at its newest released version and that
+    // version's metadata (what the parsed index entries carry).
     {
-        Package.State = EUBotPackageState::Enabled;
+        TArray<FUBotPackageInfo> Released;
+        for (const FUBotPackageInfo& Package : Index)
+        {
+            if (!Package.bPlanned)
+            {
+                FUBotPackageInfo& Item = Released.Add_GetRef(Package);
+                Item.State = EUBotPackageState::Enabled;
+            }
+        }
+        TestTrue(TEXT("The index has released packages"), Released.Num() >= 3);
+        FUBotPackageRegistry::ValidatePackageSet(Released);
+        for (const FUBotPackageInfo& Package : Released)
+        {
+            TestEqual(FString::Printf(TEXT("%s %s is consistent with the released index (%s)"), *Package.Name, *Package.Version, *FString::Join(Package.Problems, TEXT(" "))),
+                Package.Problems.Num(), 0);
+        }
     }
-    FUBotPackageRegistry::ValidatePackageSet(AllEnabled);
-    for (const FUBotPackageInfo& Package : AllEnabled)
+
+    // Announced state: every package at its newest version, planned ones included, with that version's requires.
     {
-        TestEqual(FString::Printf(TEXT("%s is consistent with the rest of the index"), *Package.Name), Package.Problems.Num(), 0);
+        TArray<FUBotPackageInfo> Announced;
+        for (const FUBotPackageInfo& Package : Index)
+        {
+            const TArray<FIndexVersionFields>* Versions = IndexFields.Find(Package.Name.ToLower());
+            const FIndexVersionFields* Newest = nullptr;
+            if (Versions != nullptr)
+            {
+                for (const FIndexVersionFields& Candidate : *Versions)
+                {
+                    if (Newest == nullptr || Candidate.SemVer > Newest->SemVer)
+                    {
+                        Newest = &Candidate;
+                    }
+                }
+            }
+            if (!TestNotNull(FString::Printf(TEXT("%s has a version in the index file"), *Package.Name), Newest))
+            {
+                continue;
+            }
+
+            FUBotPackageInfo& Item = Announced.AddDefaulted_GetRef();
+            Item.Name = Package.Name;
+            Item.Version = Newest->Text;
+            Item.Layer = Package.Layer;
+            Item.Requires = Newest->Requires;
+            Item.Provides = Newest->Provides;
+            Item.ExternalRequires = Newest->EnginePlugins;
+            Item.State = EUBotPackageState::Enabled;
+        }
+        TestEqual(TEXT("Every package is announced at its newest version"), Announced.Num(), Index.Num());
+        FUBotPackageRegistry::ValidatePackageSet(Announced);
+        for (const FUBotPackageInfo& Package : Announced)
+        {
+            TestEqual(FString::Printf(TEXT("%s %s is consistent with the announced index (%s)"), *Package.Name, *Package.Version, *FString::Join(Package.Problems, TEXT(" "))),
+                Package.Problems.Num(), 0);
+        }
     }
 
     for (const FUBotPackageReplacement& Replacement : Replacements)

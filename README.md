@@ -31,7 +31,7 @@ uBot Core is the foundation plugin of the uBot family for Unreal Engine 5.5. It 
 
 - **Frame header.** Every sensor sample carries a sensor id, frame id, sequence number, timestamp and status code.
 - **Simulation clock.** All uBot timestamps use the world's game time. Fixed time step, pause and single-step are available from Blueprints and C++.
-- **UE and ROS conventions.** Conversion of positions, rotations, angular velocity, time and names between Unreal (left-handed, cm) and ROS REP-103 (right-handed, m).
+- **Coordinate conventions.** Conversion of positions, rotations, angular velocity and transforms between Unreal (left-handed, cm) and right-handed, Z-up SI frames such as ROS REP-103 or MuJoCo.
 - **Shared interfaces.** Sensor, actuator, command and perception-medium interfaces connect plugins without class dependencies between them.
 - **Identity and sampling.** The `uBot Identity` component names a robot; the sample scheduler fires at most once per frame.
 - **Package management.** Package index, dependency and version checks, and the `Window > uBot` panel. uBot Manager installs and updates packages.
@@ -59,7 +59,7 @@ The manual is published on the [documentation site](https://astreox.github.io/uB
 | I want to ... | Go to |
 | --- | --- |
 | Read the simulation time; pause and single-step | [Simulation clock](https://astreox.github.io/uBotDocs/core/clock/) |
-| Convert coordinates, time and names between UE and ROS | [UE/ROS conventions](https://astreox.github.io/uBotDocs/core/conventions/) |
+| Convert coordinates between UE and right-handed SI frames | [Coordinate conventions](https://astreox.github.io/uBotDocs/core/conventions/) |
 | Interpret frame headers and sample status codes | [Frame header and sample status](https://astreox.github.io/uBotDocs/concepts/frame-header/) |
 | Connect sensors, actuators and commands across plugins | [Interfaces between plugins](https://astreox.github.io/uBotDocs/concepts/interfaces/) |
 | Name a robot (id, namespace, base frame) | [Identity component](https://astreox.github.io/uBotDocs/core/identity/) |

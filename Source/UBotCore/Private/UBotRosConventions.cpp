@@ -1,98 +1,76 @@
 #include "UBotRosConventions.h"
 
-#include "UBotUnits.h"
+#include "UBotIdentityComponent.h"
+#include "UBotRightHandedConventions.h"
 
 namespace UBot::Ros::Private
 {
     constexpr int64 NanosecondsPerSecond = 1000000000;
     constexpr uint32 MaxNanoseconds = 999999999;
-
-    FVector MirrorPolarVector(const FVector& Value)
-    {
-        return FVector(Value.X, -Value.Y, Value.Z);
-    }
-
-    FVector MirrorAxialVector(const FVector& Value)
-    {
-        return FVector(-Value.X, Value.Y, -Value.Z);
-    }
-
-    FQuat MirrorRotation(const FQuat& Rotation)
-    {
-        FQuat Result(-Rotation.X, Rotation.Y, -Rotation.Z, Rotation.W);
-        Result.Normalize();
-        return Result;
-    }
-
-    bool IsRosNameCharacter(TCHAR Character)
-    {
-        return (Character >= TEXT('a') && Character <= TEXT('z'))
-            || (Character >= TEXT('A') && Character <= TEXT('Z'))
-            || (Character >= TEXT('0') && Character <= TEXT('9'))
-            || Character == TEXT('_');
-    }
 }
 
+// The whole namespace is deprecated: the math forwards to UBot::RightHanded, the ROS-only functions keep
+// their bodies until they are removed.
 namespace UBot::Ros
 {
     FVector PositionUEToROS(const FVector& UECentimeters)
     {
-        return Private::MirrorPolarVector(UBot::Units::CentimetersToMeters(UECentimeters));
+        return UBot::RightHanded::PositionFromUE(UECentimeters);
     }
 
     FVector PositionROSToUE(const FVector& ROSMeters)
     {
-        return Private::MirrorPolarVector(UBot::Units::MetersToCentimeters(ROSMeters));
+        return UBot::RightHanded::PositionToUE(ROSMeters);
     }
 
     FVector VectorUEToROS(const FVector& Value)
     {
-        return Private::MirrorPolarVector(Value);
+        return UBot::RightHanded::VectorFromUE(Value);
     }
 
     FVector VectorROSToUE(const FVector& Value)
     {
-        return Private::MirrorPolarVector(Value);
+        return UBot::RightHanded::VectorToUE(Value);
     }
 
     FVector AngularVelocityUEToROS(const FVector& UERadiansPerSecond)
     {
-        return Private::MirrorAxialVector(UERadiansPerSecond);
+        return UBot::RightHanded::AngularVelocityFromUE(UERadiansPerSecond);
     }
 
     FVector AngularVelocityROSToUE(const FVector& ROSRadiansPerSecond)
     {
-        return Private::MirrorAxialVector(ROSRadiansPerSecond);
+        return UBot::RightHanded::AngularVelocityToUE(ROSRadiansPerSecond);
     }
 
     FQuat RotationUEToROS(const FQuat& UERotation)
     {
-        return Private::MirrorRotation(UERotation);
+        return UBot::RightHanded::RotationFromUE(UERotation);
     }
 
     FQuat RotationROSToUE(const FQuat& ROSRotation)
     {
-        return Private::MirrorRotation(ROSRotation);
+        return UBot::RightHanded::RotationToUE(ROSRotation);
     }
 
     FTransform TransformUEToROS(const FTransform& UETransform)
     {
-        return FTransform(RotationUEToROS(UETransform.GetRotation()), PositionUEToROS(UETransform.GetTranslation()), FVector::OneVector);
+        return UBot::RightHanded::TransformFromUE(UETransform);
     }
 
     FTransform TransformROSToUE(const FTransform& ROSTransform)
     {
-        return FTransform(RotationROSToUE(ROSTransform.GetRotation()), PositionROSToUE(ROSTransform.GetTranslation()), FVector::OneVector);
+        return UBot::RightHanded::TransformToUE(ROSTransform);
     }
 
     double YawUEToROS(double UERadians)
     {
-        return -UERadians;
+        return UBot::RightHanded::YawFromUE(UERadians);
     }
 
     double YawROSToUE(double ROSRadians)
     {
-        return -ROSRadians;
+        return UBot::RightHanded::YawToUE(ROSRadians);
     }
 
     FQuat CameraLinkToOpticalRotation()
@@ -150,28 +128,6 @@ namespace UBot::Ros
 
     FString SanitizeRosName(const FString& Name)
     {
-        FString Result;
-        Result.Reserve(Name.Len() + 1);
-        for (int32 Index = 0; Index < Name.Len(); ++Index)
-        {
-            const TCHAR Character = Name[Index];
-            const TCHAR Output = Private::IsRosNameCharacter(Character) ? Character : TEXT('_');
-            // ROS 2 forbids repeated underscores, so runs collapse whether or not they were in the input.
-            if (Output == TEXT('_') && Result.Len() > 0 && Result[Result.Len() - 1] == TEXT('_'))
-            {
-                continue;
-            }
-            Result.AppendChar(Output);
-        }
-
-        if (Result.IsEmpty())
-        {
-            return TEXT("ubot");
-        }
-        if (Result[0] >= TEXT('0') && Result[0] <= TEXT('9'))
-        {
-            Result.InsertAt(0, TEXT('_'));
-        }
-        return Result;
+        return UBot::Identity::SanitizeNameToken(Name);
     }
 }

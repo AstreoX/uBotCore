@@ -3,6 +3,7 @@
 #include "Engine/World.h"
 #include "GameFramework/PlayerState.h"
 #include "GameFramework/WorldSettings.h"
+#include "Math/RandomStream.h"
 #include "Misc/AutomationTest.h"
 #include "UBotClock.h"
 #include "UBotClockSubsystem.h"
@@ -233,6 +234,156 @@ bool FUBotSchedulerInputValidationTest::RunTest(const FString& Parameters)
     TestFalse(TEXT("Absurd jump does not fire twice"), Scheduler.ConsumeDue(1.e300));
     TestTrue(TEXT("Next due is after the jump"), Scheduler.GetNextDueSeconds() > 1.e300);
     TestTrue(TEXT("Dropped samples are counted"), Scheduler.GetDroppedSampleCount() > 0);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotSchedulerConsumeDueStepsTest, "UBotCore.Scheduler.ConsumeDueSteps", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotSchedulerConsumeDueStepsTest::RunTest(const FString& Parameters)
+{
+    const double NaN = std::numeric_limits<double>::quiet_NaN();
+    const double Infinity = std::numeric_limits<double>::infinity();
+    constexpr double Unset = -1.0;
+
+    // 16 Hz: the interval 0.0625 is exact in binary, so every due time below is exact too.
+    {
+        FUBotSampleScheduler Scheduler;
+        Scheduler.Reset(16.0, 1.0);
+        double First = Unset;
+        TestEqual(TEXT("Nothing is due before the first due time"), Scheduler.ConsumeDueSteps(0.99, 10, &First), 0);
+        TestEqual(TEXT("A call that counts nothing leaves the first due time alone"), First, Unset, 0.0);
+        TestEqual(TEXT("The first due time itself counts"), Scheduler.ConsumeDueSteps(1.0, 10, &First), 1);
+        TestEqual(TEXT("First due time of the first step"), First, 1.0, 0.0);
+        TestEqual(TEXT("Next due follows the grid"), Scheduler.GetNextDueSeconds(), 1.0625, 0.0);
+        TestEqual(TEXT("The same time is not due twice"), Scheduler.ConsumeDueSteps(1.0, 10, &First), 0);
+
+        // Due times 1.0625, 1.125, 1.1875 and 1.25.
+        TestEqual(TEXT("Four steps in one call"), Scheduler.ConsumeDueSteps(1.25, 10, &First), 4);
+        TestEqual(TEXT("First due time of four steps"), First, 1.0625, 0.0);
+        TestEqual(TEXT("The k-th due time is first + k * interval"), First + 3.0 * Scheduler.GetIntervalSeconds(), 1.25, 0.0);
+        TestEqual(TEXT("Next due is the first grid point after the call"), Scheduler.GetNextDueSeconds(), 1.3125, 0.0);
+
+        TestEqual(TEXT("Not due just before the grid point"), Scheduler.ConsumeDueSteps(1.3124, 10, &First), 0);
+        TestEqual(TEXT("One step shortly after a grid point"), Scheduler.ConsumeDueSteps(1.3125 + 0.03, 10, &First), 1);
+        TestEqual(TEXT("First due time of that step"), First, 1.3125, 0.0);
+        TestEqual(TEXT("Next due after it"), Scheduler.GetNextDueSeconds(), 1.375, 0.0);
+        TestEqual(TEXT("The output pointer is optional"), Scheduler.ConsumeDueSteps(1.375, 10), 1);
+        TestEqual(TEXT("Nothing is dropped while the cap is not reached"), Scheduler.GetDroppedSampleCount(), int64(0));
+    }
+
+    // The cap counts the earliest due times and drops the later ones.
+    {
+        FUBotSampleScheduler Scheduler;
+        Scheduler.Reset(16.0, 0.0);
+        double First = Unset;
+        // Due times 0, 0.0625, ..., 10: 161 of them.
+        TestEqual(TEXT("MaxSteps caps the count"), Scheduler.ConsumeDueSteps(10.0, 5, &First), 5);
+        TestEqual(TEXT("The counted steps start at the first due time"), First, 0.0, 0.0);
+        TestEqual(TEXT("The remaining 156 due times are dropped"), Scheduler.GetDroppedSampleCount(), int64(156));
+        TestEqual(TEXT("Next due is after the call time, not after the counted steps"), Scheduler.GetNextDueSeconds(), 10.0625, 0.0);
+        TestEqual(TEXT("Nothing is left over for the same time"), Scheduler.ConsumeDueSteps(10.0, 5, &First), 0);
+        TestEqual(TEXT("Counting resumes on the grid"), Scheduler.ConsumeDueSteps(10.0625, 5, &First), 1);
+        TestEqual(TEXT("First due time after the drop"), First, 10.0625, 0.0);
+        TestEqual(TEXT("The dropped counter keeps its value"), Scheduler.GetDroppedSampleCount(), int64(156));
+
+        // Five due times (0 .. 0.25) against caps of 5, 4 and 1.
+        Scheduler.Reset(16.0, 0.0);
+        TestEqual(TEXT("A cap equal to the due times drops nothing"), Scheduler.ConsumeDueSteps(0.25, 5), 5);
+        TestEqual(TEXT("No drops at the exact cap"), Scheduler.GetDroppedSampleCount(), int64(0));
+        Scheduler.Reset(16.0, 0.0);
+        TestEqual(TEXT("A cap one below drops one"), Scheduler.ConsumeDueSteps(0.25, 4), 4);
+        TestEqual(TEXT("One dropped"), Scheduler.GetDroppedSampleCount(), int64(1));
+        TestEqual(TEXT("Next due"), Scheduler.GetNextDueSeconds(), 0.3125, 0.0);
+        Scheduler.Reset(16.0, 0.0);
+        TestEqual(TEXT("A cap of 1"), Scheduler.ConsumeDueSteps(0.25, 1), 1);
+        TestEqual(TEXT("Four dropped"), Scheduler.GetDroppedSampleCount(), int64(4));
+    }
+
+    // Calls that count nothing leave the schedule alone.
+    {
+        FUBotSampleScheduler Scheduler;
+        double First = Unset;
+        TestEqual(TEXT("An uninitialized scheduler counts nothing"), Scheduler.ConsumeDueSteps(1.0, 5, &First), 0);
+        Scheduler.Reset(16.0, NaN);
+        TestEqual(TEXT("A non-finite first due time leaves the scheduler uninitialized"), Scheduler.ConsumeDueSteps(1.0, 5, &First), 0);
+
+        Scheduler.Reset(16.0, 1.0);
+        TestEqual(TEXT("NaN time"), Scheduler.ConsumeDueSteps(NaN, 5, &First), 0);
+        TestEqual(TEXT("Infinite time"), Scheduler.ConsumeDueSteps(Infinity, 5, &First), 0);
+        TestEqual(TEXT("Time before the next due time"), Scheduler.ConsumeDueSteps(0.5, 5, &First), 0);
+        TestEqual(TEXT("MaxSteps of zero"), Scheduler.ConsumeDueSteps(2.0, 0, &First), 0);
+        TestEqual(TEXT("Negative MaxSteps"), Scheduler.ConsumeDueSteps(2.0, -3, &First), 0);
+        TestEqual(TEXT("The first due time was never written"), First, Unset, 0.0);
+        TestEqual(TEXT("Rejected calls leave next due alone"), Scheduler.GetNextDueSeconds(), 1.0, 0.0);
+        TestEqual(TEXT("Rejected calls drop nothing"), Scheduler.GetDroppedSampleCount(), int64(0));
+        TestEqual(TEXT("It still counts afterwards"), Scheduler.ConsumeDueSteps(1.0, 1, &First), 1);
+        TestEqual(TEXT("From the untouched first due time"), First, 1.0, 0.0);
+    }
+
+    // A rate change keeps the phase and the steps follow the new interval; ConsumeDue shares the schedule.
+    {
+        FUBotSampleScheduler Scheduler;
+        Scheduler.Reset(16.0, 0.0);
+        double First = Unset;
+        TestEqual(TEXT("First step"), Scheduler.ConsumeDueSteps(0.0, 1, &First), 1);
+        Scheduler.SetRateHz(32.0);
+        TestEqual(TEXT("Three steps at the new rate"), Scheduler.ConsumeDueSteps(0.125, 10, &First), 3);
+        TestEqual(TEXT("They start at the kept phase"), First, 0.0625, 0.0);
+        TestEqual(TEXT("The last one is first + 2 intervals"), First + 2.0 * Scheduler.GetIntervalSeconds(), 0.125, 0.0);
+
+        Scheduler.Reset(16.0, 0.0);
+        TestTrue(TEXT("ConsumeDue takes the first due time"), Scheduler.ConsumeDue(0.0));
+        TestEqual(TEXT("ConsumeDueSteps sees it as taken"), Scheduler.ConsumeDueSteps(0.0, 5, &First), 0);
+        TestEqual(TEXT("And counts from the next one"), Scheduler.ConsumeDueSteps(0.1875, 5, &First), 3);
+        TestEqual(TEXT("First of those"), First, 0.0625, 0.0);
+        TestFalse(TEXT("ConsumeDue sees them as taken"), Scheduler.ConsumeDue(0.1875));
+    }
+
+    // Irregular frames: a cap of 1 is exactly ConsumeDue, and without a cap the steps are the fires plus the drops.
+    {
+        FRandomStream Stream(20251015);
+        FUBotSampleScheduler Reference;
+        FUBotSampleScheduler Capped;
+        FUBotSampleScheduler Uncapped;
+        Reference.Reset(30.0, 0.5);
+        Capped.Reset(30.0, 0.5);
+        Uncapped.Reset(30.0, 0.5);
+
+        double Now = 0.0;
+        int32 Mismatches = 0;
+        int32 Fires = 0;
+        int64 UncappedSteps = 0;
+        for (int32 Frame = 0; Frame < 2000; ++Frame)
+        {
+            // Frames from 1 ms to 200 ms: some shorter than the 33 ms interval, many longer.
+            Now += Stream.FRandRange(0.001, 0.2);
+            const bool bFired = Reference.ConsumeDue(Now);
+            const int32 CappedSteps = Capped.ConsumeDueSteps(Now, 1);
+            const int32 Steps = Uncapped.ConsumeDueSteps(Now, MAX_int32);
+            Fires += bFired ? 1 : 0;
+            UncappedSteps += Steps;
+            const bool bSame = (CappedSteps == 1) == bFired && (Steps > 0) == bFired
+                && Capped.GetNextDueSeconds() == Reference.GetNextDueSeconds() && Uncapped.GetNextDueSeconds() == Reference.GetNextDueSeconds()
+                && Capped.GetDroppedSampleCount() == Reference.GetDroppedSampleCount();
+            Mismatches += bSame ? 0 : 1;
+        }
+        TestEqual(TEXT("A cap of 1 behaves exactly like ConsumeDue"), Mismatches, 0);
+        TestTrue(TEXT("The run did fire and drop"), Fires > 0 && Reference.GetDroppedSampleCount() > 0);
+        TestEqual(TEXT("Uncapped steps are ConsumeDue's fires plus drops"), UncappedSteps, static_cast<int64>(Fires) + Reference.GetDroppedSampleCount());
+        TestEqual(TEXT("An uncapped call never drops"), Uncapped.GetDroppedSampleCount(), int64(0));
+    }
+
+    // An absurd jump terminates, counts the cap from the old first due time and moves the schedule past it.
+    {
+        FUBotSampleScheduler Scheduler;
+        Scheduler.Reset(FUBotSampleScheduler::MaxRateHz, 0.0);
+        double First = Unset;
+        TestEqual(TEXT("Absurd jump is capped"), Scheduler.ConsumeDueSteps(1.e300, 8, &First), 8);
+        TestEqual(TEXT("From the first due time"), First, 0.0, 0.0);
+        TestTrue(TEXT("The rest is dropped"), Scheduler.GetDroppedSampleCount() > 8);
+        TestTrue(TEXT("Next due is after the jump"), Scheduler.GetNextDueSeconds() > 1.e300);
+        TestEqual(TEXT("Absurd jump does not count twice"), Scheduler.ConsumeDueSteps(1.e300, 8, &First), 0);
+    }
     return true;
 }
 

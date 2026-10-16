@@ -1,7 +1,7 @@
 {
   "format": 1,
   "plugin": "UBotCore",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "engine": "5.5",
   "repository": "https://github.com/AstreoX/uBotCore",
   "generator": "UBotDocExport 1",
@@ -100,7 +100,7 @@
       "module": "UBotCore",
       "header": "Source/UBotCore/Public/UBotConventionsLibrary.h",
       "category": "",
-      "tooltip": "Blueprint access to the UE <-> ROS (REP-103) conventions in UBot::Ros.",
+      "tooltip": "Blueprint access to the uBot coordinate conventions: UE (left-handed, centimeters) <-> right-handed FLU in SI units (ROS REP-103, MuJoCo, ...). C++: UBot::RightHanded.",
       "flags": {
         "abstract": false,
         "blueprintType": false,
@@ -111,22 +111,34 @@
       "properties": [],
       "nodes": [
         "UUBotConventionsLibrary.AngularVelocityROSToUE",
+        "UUBotConventionsLibrary.AngularVelocityRightHandedToUE",
         "UUBotConventionsLibrary.AngularVelocityUEToROS",
+        "UUBotConventionsLibrary.AngularVelocityUEToRightHanded",
         "UUBotConventionsLibrary.CameraLinkToOpticalRotation",
         "UUBotConventionsLibrary.GetOpticalFrameSuffix",
         "UUBotConventionsLibrary.PositionROSToUE",
+        "UUBotConventionsLibrary.PositionRightHandedToUE",
         "UUBotConventionsLibrary.PositionUEToROS",
+        "UUBotConventionsLibrary.PositionUEToRightHanded",
         "UUBotConventionsLibrary.RosTimeToSeconds",
         "UUBotConventionsLibrary.RotationROSToUE",
+        "UUBotConventionsLibrary.RotationRightHandedToUE",
         "UUBotConventionsLibrary.RotationUEToROS",
+        "UUBotConventionsLibrary.RotationUEToRightHanded",
         "UUBotConventionsLibrary.SanitizeRosName",
         "UUBotConventionsLibrary.SecondsToRosTime",
         "UUBotConventionsLibrary.TransformROSToUE",
+        "UUBotConventionsLibrary.TransformRightHandedToUE",
         "UUBotConventionsLibrary.TransformUEToROS",
+        "UUBotConventionsLibrary.TransformUEToRightHanded",
         "UUBotConventionsLibrary.VectorROSToUE",
+        "UUBotConventionsLibrary.VectorRightHandedToUE",
         "UUBotConventionsLibrary.VectorUEToROS",
+        "UUBotConventionsLibrary.VectorUEToRightHanded",
         "UUBotConventionsLibrary.YawROSToUE",
-        "UUBotConventionsLibrary.YawUEToROS"
+        "UUBotConventionsLibrary.YawRightHandedToUE",
+        "UUBotConventionsLibrary.YawUEToROS",
+        "UUBotConventionsLibrary.YawUEToRightHanded"
       ]
     },
     {
@@ -4095,7 +4107,7 @@
       "flags": {
         "static": true,
         "latent": false,
-        "deprecated": false,
+        "deprecated": true,
         "developmentOnly": false,
         "callInEditor": false,
         "compact": false
@@ -4139,6 +4151,62 @@
       ]
     },
     {
+      "id": "UUBotConventionsLibrary.AngularVelocityRightHandedToUE",
+      "kind": "pure",
+      "title": "Right-Handed To UE Angular Velocity",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "AngularVelocityRightHandedToUE",
+      "category": "uBot|Conventions",
+      "tooltip": "Axial vector (angular velocity, torque) in rad/s: (-x, y, -z).",
+      "keywords": "right handed FLU SI ROS REP103 MuJoCo convert torque",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "RadiansPerSecond",
+          "name": "Radians Per Second",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
       "id": "UUBotConventionsLibrary.AngularVelocityUEToROS",
       "kind": "pure",
       "title": "UE To ROS Angular Velocity",
@@ -4148,6 +4216,62 @@
       "category": "uBot|Conventions",
       "tooltip": "Axial vector (angular velocity, torque) in rad/s: (-x, y, -z).",
       "keywords": "ROS REP103 convert torque",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": true,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "UERadiansPerSecond",
+          "name": "UERadians Per Second",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary.AngularVelocityUEToRightHanded",
+      "kind": "pure",
+      "title": "UE To Right-Handed Angular Velocity",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "AngularVelocityUEToRightHanded",
+      "category": "uBot|Conventions",
+      "tooltip": "Axial vector (angular velocity, torque) in rad/s: (-x, y, -z).",
+      "keywords": "right handed FLU SI ROS REP103 MuJoCo convert torque",
       "flags": {
         "static": true,
         "latent": false,
@@ -4207,7 +4331,7 @@
       "flags": {
         "static": true,
         "latent": false,
-        "deprecated": false,
+        "deprecated": true,
         "developmentOnly": false,
         "callInEditor": false,
         "compact": false
@@ -4246,7 +4370,7 @@
       "flags": {
         "static": true,
         "latent": false,
-        "deprecated": false,
+        "deprecated": true,
         "developmentOnly": false,
         "callInEditor": false,
         "compact": false
@@ -4285,7 +4409,7 @@
       "flags": {
         "static": true,
         "latent": false,
-        "deprecated": false,
+        "deprecated": true,
         "developmentOnly": false,
         "callInEditor": false,
         "compact": false
@@ -4329,6 +4453,62 @@
       ]
     },
     {
+      "id": "UUBotConventionsLibrary.PositionRightHandedToUE",
+      "kind": "pure",
+      "title": "Right-Handed To UE Position",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "PositionRightHandedToUE",
+      "category": "uBot|Conventions",
+      "tooltip": "Right-handed position in meters -> UE position in centimeters: (x, -y, z) * 100.",
+      "keywords": "right handed FLU SI ROS REP103 MuJoCo convert location",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "Meters",
+          "name": "Meters",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
       "id": "UUBotConventionsLibrary.PositionUEToROS",
       "kind": "pure",
       "title": "UE To ROS Position",
@@ -4338,6 +4518,62 @@
       "category": "uBot|Conventions",
       "tooltip": "UE position in centimeters -> ROS position in meters: (x, -y, z) / 100.",
       "keywords": "ROS REP103 convert location",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": true,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "UECentimeters",
+          "name": "UECentimeters",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary.PositionUEToRightHanded",
+      "kind": "pure",
+      "title": "UE To Right-Handed Position",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "PositionUEToRightHanded",
+      "category": "uBot|Conventions",
+      "tooltip": "UE position in centimeters -> right-handed position in meters: (x, -y, z) / 100.",
+      "keywords": "right handed FLU SI ROS REP103 MuJoCo convert location",
       "flags": {
         "static": true,
         "latent": false,
@@ -4397,7 +4633,7 @@
       "flags": {
         "static": true,
         "latent": false,
-        "deprecated": false,
+        "deprecated": true,
         "developmentOnly": false,
         "callInEditor": false,
         "compact": false
@@ -4469,7 +4705,7 @@
       "flags": {
         "static": true,
         "latent": false,
-        "deprecated": false,
+        "deprecated": true,
         "developmentOnly": false,
         "callInEditor": false,
         "compact": false
@@ -4513,6 +4749,62 @@
       ]
     },
     {
+      "id": "UUBotConventionsLibrary.RotationRightHandedToUE",
+      "kind": "pure",
+      "title": "Right-Handed To UE Rotation",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "RotationRightHandedToUE",
+      "category": "uBot|Conventions",
+      "tooltip": "Rotation: (x, y, z, w) -> normalized (-x, y, -z, w).",
+      "keywords": "right handed FLU SI ROS REP103 MuJoCo convert quaternion orientation",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "Rotation",
+          "name": "Rotation",
+          "type": {
+            "category": "struct",
+            "subtype": "FQuat",
+            "subtypeDisplay": "Quat",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "struct",
+            "subtype": "FQuat",
+            "subtypeDisplay": "Quat",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
       "id": "UUBotConventionsLibrary.RotationUEToROS",
       "kind": "pure",
       "title": "UE To ROS Rotation",
@@ -4522,6 +4814,62 @@
       "category": "uBot|Conventions",
       "tooltip": "Rotation: (x, y, z, w) -> normalized (-x, y, -z, w).",
       "keywords": "ROS REP103 convert quaternion orientation",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": true,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "UERotation",
+          "name": "UERotation",
+          "type": {
+            "category": "struct",
+            "subtype": "FQuat",
+            "subtypeDisplay": "Quat",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "struct",
+            "subtype": "FQuat",
+            "subtypeDisplay": "Quat",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary.RotationUEToRightHanded",
+      "kind": "pure",
+      "title": "UE To Right-Handed Rotation",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "RotationUEToRightHanded",
+      "category": "uBot|Conventions",
+      "tooltip": "Rotation: (x, y, z, w) -> normalized (-x, y, -z, w).",
+      "keywords": "right handed FLU SI ROS REP103 MuJoCo convert quaternion orientation",
       "flags": {
         "static": true,
         "latent": false,
@@ -4581,7 +4929,7 @@
       "flags": {
         "static": true,
         "latent": false,
-        "deprecated": false,
+        "deprecated": true,
         "developmentOnly": false,
         "callInEditor": false,
         "compact": false
@@ -4637,7 +4985,7 @@
       "flags": {
         "static": true,
         "latent": false,
-        "deprecated": false,
+        "deprecated": true,
         "developmentOnly": false,
         "callInEditor": false,
         "compact": false
@@ -4709,7 +5057,7 @@
       "flags": {
         "static": true,
         "latent": false,
-        "deprecated": false,
+        "deprecated": true,
         "developmentOnly": false,
         "callInEditor": false,
         "compact": false
@@ -4753,6 +5101,62 @@
       ]
     },
     {
+      "id": "UUBotConventionsLibrary.TransformRightHandedToUE",
+      "kind": "pure",
+      "title": "Right-Handed To UE Transform",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "TransformRightHandedToUE",
+      "category": "uBot|Conventions",
+      "tooltip": "Rigid transform: rotation mirrored, translation meters -> centimeters, scale dropped.",
+      "keywords": "right handed FLU SI ROS REP103 MuJoCo convert pose tf",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "Transform",
+          "name": "Transform",
+          "type": {
+            "category": "transform",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "transform",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
       "id": "UUBotConventionsLibrary.TransformUEToROS",
       "kind": "pure",
       "title": "UE To ROS Transform",
@@ -4762,6 +5166,62 @@
       "category": "uBot|Conventions",
       "tooltip": "Rigid transform: rotation mirrored, translation centimeters -> meters, scale dropped.",
       "keywords": "ROS REP103 convert pose tf",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": true,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "UETransform",
+          "name": "UETransform",
+          "type": {
+            "category": "transform",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "transform",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary.TransformUEToRightHanded",
+      "kind": "pure",
+      "title": "UE To Right-Handed Transform",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "TransformUEToRightHanded",
+      "category": "uBot|Conventions",
+      "tooltip": "Rigid transform: rotation mirrored, translation centimeters -> meters, scale dropped.",
+      "keywords": "right handed FLU SI ROS REP103 MuJoCo convert pose tf",
       "flags": {
         "static": true,
         "latent": false,
@@ -4821,6 +5281,62 @@
       "flags": {
         "static": true,
         "latent": false,
+        "deprecated": true,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "Value",
+          "name": "Value",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary.VectorRightHandedToUE",
+      "kind": "pure",
+      "title": "Right-Handed To UE Vector",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "VectorRightHandedToUE",
+      "category": "uBot|Conventions",
+      "tooltip": "Polar vector in SI units: (x, -y, z).",
+      "keywords": "right handed FLU SI ROS REP103 MuJoCo convert velocity acceleration",
+      "flags": {
+        "static": true,
+        "latent": false,
         "deprecated": false,
         "developmentOnly": false,
         "callInEditor": false,
@@ -4874,6 +5390,62 @@
       "category": "uBot|Conventions",
       "tooltip": "Polar vector in SI units (linear velocity, acceleration, point in meters): (x, -y, z).",
       "keywords": "ROS REP103 convert velocity acceleration",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": true,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "Value",
+          "name": "Value",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": true,
+            "const": true
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "vector",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary.VectorUEToRightHanded",
+      "kind": "pure",
+      "title": "UE To Right-Handed Vector",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "VectorUEToRightHanded",
+      "category": "uBot|Conventions",
+      "tooltip": "Polar vector in SI units (linear velocity, acceleration, point in meters): (x, -y, z).",
+      "keywords": "right handed FLU SI ROS REP103 MuJoCo convert velocity acceleration",
       "flags": {
         "static": true,
         "latent": false,
@@ -4933,7 +5505,7 @@
       "flags": {
         "static": true,
         "latent": false,
-        "deprecated": false,
+        "deprecated": true,
         "developmentOnly": false,
         "callInEditor": false,
         "compact": false
@@ -4977,6 +5549,62 @@
       ]
     },
     {
+      "id": "UUBotConventionsLibrary.YawRightHandedToUE",
+      "kind": "pure",
+      "title": "Right-Handed To UE Yaw",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "YawRightHandedToUE",
+      "category": "uBot|Conventions",
+      "tooltip": "Planar heading, scan angle or yaw rate in radians: UE = -right-handed.",
+      "keywords": "right handed FLU SI ROS REP103 MuJoCo convert heading angle",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": false,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "Radians",
+          "name": "Radians",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "0.0",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
       "id": "UUBotConventionsLibrary.YawUEToROS",
       "kind": "pure",
       "title": "UE To ROS Yaw",
@@ -4986,6 +5614,62 @@
       "category": "uBot|Conventions",
       "tooltip": "Planar heading, scan angle or yaw rate in radians: ROS = -UE.",
       "keywords": "ROS REP103 convert heading angle",
+      "flags": {
+        "static": true,
+        "latent": false,
+        "deprecated": true,
+        "developmentOnly": false,
+        "callInEditor": false,
+        "compact": false
+      },
+      "compactTitle": "",
+      "inputs": [
+        {
+          "id": "UERadians",
+          "name": "UERadians",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "0.0",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ReturnValue",
+          "name": "Return Value",
+          "type": {
+            "category": "double",
+            "subtype": "",
+            "subtypeDisplay": "",
+            "container": "none",
+            "valueType": null,
+            "byRef": false,
+            "const": false
+          },
+          "default": "",
+          "advanced": false,
+          "tooltip": ""
+        }
+      ]
+    },
+    {
+      "id": "UUBotConventionsLibrary.YawUEToRightHanded",
+      "kind": "pure",
+      "title": "UE To Right-Handed Yaw",
+      "subtitle": "",
+      "owner": "UUBotConventionsLibrary",
+      "member": "YawUEToRightHanded",
+      "category": "uBot|Conventions",
+      "tooltip": "Planar heading, scan angle or yaw rate in radians: right-handed = -UE.",
+      "keywords": "right handed FLU SI ROS REP103 MuJoCo convert heading angle",
       "flags": {
         "static": true,
         "latent": false,
@@ -5155,7 +5839,7 @@
       "owner": "UUBotIdentityComponent",
       "member": "GetResolvedNamespace",
       "category": "uBot|Identity",
-      "tooltip": "Namespace, or UBot::Ros::SanitizeRosName(GetResolvedRobotId()) when empty.",
+      "tooltip": "Namespace, or UBot::Identity::SanitizeNameToken(GetResolvedRobotId()) when empty.",
       "keywords": "",
       "flags": {
         "static": false,

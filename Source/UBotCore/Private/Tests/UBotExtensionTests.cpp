@@ -1,5 +1,6 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
+#include "Async/Async.h"
 #include "Async/ParallelFor.h"
 #include "Misc/AutomationTest.h"
 #include "UBotExtensionRegistry.h"
@@ -297,6 +298,168 @@ bool FUBotExtensionConcurrencyTest::RunTest(const FString& Parameters)
 
     TestEqual(TEXT("Every concurrent operation succeeded"), Failures.load(), 0);
     TestEqual(TEXT("Half of the extensions remain"), Registry.GetExtensions(Point).Num(), ConcurrentTaskCount * ExtensionsPerTask / 2);
+
+    return true;
+}
+
+namespace UBotExtensionTests
+{
+    using FChangedDelegate = FUBotExtensionRegistry::FOnExtensionsChanged::FDelegate;
+
+    /** What one change handler saw. All atomic: the handler runs on the thread that changes the registry. */
+    struct FHandlerRecord
+    {
+        std::atomic<int32> Calls{ 0 };
+        /** Calls that began after the handler was removed (RemoveExtensionsChangedHandler had returned). */
+        std::atomic<int32> CallsAfterRemoval{ 0 };
+        /** Handler calls in progress right now. */
+        std::atomic<int32> Inside{ 0 };
+        std::atomic<bool> bRemoved{ false };
+        /** Calls counted when the removal returned. */
+        int32 CallsAtRemoval = 0;
+        /** True if a call was still running when the removal returned. */
+        bool bRunningAtRemoval = false;
+    };
+
+    FChangedDelegate MakeRecordingHandler(const TSharedRef<FHandlerRecord>& Record)
+    {
+        return FChangedDelegate::CreateLambda([Record](FName /*PointName*/)
+        {
+            ++Record->Inside;
+            ++Record->Calls;
+            if (Record->bRemoved)
+            {
+                ++Record->CallsAfterRemoval;
+            }
+            // Gives a removal on another thread the chance to arrive while the call is in progress.
+            FPlatformProcess::YieldThread();
+            --Record->Inside;
+        });
+    }
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotExtensionChangeHandlersTest, "UBotCore.Extensions.ChangeHandlers", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotExtensionChangeHandlersTest::RunTest(const FString& Parameters)
+{
+    using namespace UBotExtensionTests;
+
+    // The functions work like the delegate they wrap: one call per change until the handler is removed.
+    {
+        FUBotExtensionRegistry Registry;
+        const FName Point(TEXT("Test.HandlerBasics"));
+        int32 Calls = 0;
+        TArray<FName> Seen;
+
+        const FDelegateHandle Handle = Registry.AddExtensionsChangedHandler(FChangedDelegate::CreateLambda([&Calls, &Seen](FName PointName)
+        {
+            ++Calls;
+            Seen.Add(PointName);
+        }));
+        TestTrue(TEXT("A handler handle is valid"), Handle.IsValid());
+        TestTrue(TEXT("The delegate is bound"), Registry.OnExtensionsChanged.IsBound());
+
+        Registry.RegisterExtension(Point, TEXT("Pkg"), MakeExtension(TEXT("A")));
+        TestEqual(TEXT("A change calls the handler once"), Calls, 1);
+        TestEqual(TEXT("With the affected point"), Seen.Last(), Point);
+
+        // A handler bound the old way is called as well and stays removable the old way.
+        int32 DirectCalls = 0;
+        const FDelegateHandle DirectHandle = Registry.OnExtensionsChanged.AddLambda([&DirectCalls](FName) { ++DirectCalls; });
+        Registry.UnregisterExtension(Point, TEXT("A"));
+        TestEqual(TEXT("The handler sees the next change"), Calls, 2);
+        TestEqual(TEXT("So does the one bound directly"), DirectCalls, 1);
+        Registry.OnExtensionsChanged.Remove(DirectHandle);
+
+        Registry.RemoveExtensionsChangedHandler(Handle);
+        Registry.RegisterExtension(Point, TEXT("Pkg"), MakeExtension(TEXT("B")));
+        TestEqual(TEXT("A removed handler is not called"), Calls, 2);
+        TestFalse(TEXT("Nothing is bound any more"), Registry.OnExtensionsChanged.IsBound());
+
+        Registry.RemoveExtensionsChangedHandler(Handle);
+        Registry.RemoveExtensionsChangedHandler(FDelegateHandle());
+        TestEqual(TEXT("Removing a handler twice, or an invalid one, changes nothing"), Calls, 2);
+    }
+
+    // A worker thread registers and unregisters extensions in a loop while the game thread adds and removes
+    // handlers. Without the shared lock the multicast delegate is changed during a broadcast.
+    {
+        constexpr int32 WorkerIterations = 5000;
+        constexpr int32 MinimumCycles = 64;
+
+        FUBotExtensionRegistry Registry;
+        const FName Point(TEXT("Test.HandlerThreads"));
+        Registry.RegisterExtensionPoint(Point, TEXT("Owner"), INVTEXT("Handlers"));
+
+        // Bound for the whole run: it must hear every change exactly once, whatever the others do.
+        const TSharedRef<FHandlerRecord> Stable = MakeShared<FHandlerRecord>();
+        const FDelegateHandle StableHandle = Registry.AddExtensionsChangedHandler(MakeRecordingHandler(Stable));
+
+        TArray<FName> Names;
+        for (int32 Index = 0; Index < 32; ++Index)
+        {
+            Names.Add(FName(*FString::Printf(TEXT("Worker_%d"), Index)));
+        }
+
+        std::atomic<bool> bGo{ false };
+        std::atomic<bool> bWorkerDone{ false };
+        std::atomic<int32> WorkerFailures{ 0 };
+        TFuture<void> Worker = Async(EAsyncExecution::Thread, [&Registry, &Names, &bGo, &bWorkerDone, &WorkerFailures, Point]()
+        {
+            while (!bGo)
+            {
+                FPlatformProcess::YieldThread();
+            }
+            for (int32 Index = 0; Index < WorkerIterations; ++Index)
+            {
+                const FName Name = Names[Index % Names.Num()];
+                if (!Registry.RegisterExtension(Point, TEXT("Worker"), MakeExtension(Name)) || !Registry.UnregisterExtension(Point, Name))
+                {
+                    ++WorkerFailures;
+                }
+            }
+            bWorkerDone = true;
+        });
+
+        TArray<TSharedRef<FHandlerRecord>> Records;
+        bGo = true;
+        while (!bWorkerDone || Records.Num() < MinimumCycles)
+        {
+            const TSharedRef<FHandlerRecord> Record = MakeShared<FHandlerRecord>();
+            const FDelegateHandle Handle = Registry.AddExtensionsChangedHandler(MakeRecordingHandler(Record));
+            // Lets the worker broadcast to this handler before it goes away again, on most cycles.
+            FPlatformProcess::YieldThread();
+            Registry.RemoveExtensionsChangedHandler(Handle);
+            Record->CallsAtRemoval = Record->Calls;
+            Record->bRunningAtRemoval = Record->Inside != 0;
+            Record->bRemoved = true;
+            Records.Add(Record);
+        }
+        Worker.Wait();
+
+        Registry.RemoveExtensionsChangedHandler(StableHandle);
+
+        TestEqual(TEXT("Every registration and removal of the worker succeeded"), WorkerFailures.load(), 0);
+        TestEqual(TEXT("The handler that stayed heard every change exactly once"), Stable->Calls.load(), 2 * WorkerIterations);
+        TestFalse(TEXT("No handler is left bound"), Registry.OnExtensionsChanged.IsBound());
+        TestEqual(TEXT("The registry holds nothing of the worker"), Registry.GetExtensions(Point).Num(), 0);
+
+        int32 CallAfterRemoval = 0;
+        int32 RunningAtRemoval = 0;
+        int32 MoreThanBroadcast = 0;
+        int32 Heard = 0;
+        for (const TSharedRef<FHandlerRecord>& Record : Records)
+        {
+            CallAfterRemoval += Record->CallsAfterRemoval.load() > 0 || Record->Calls.load() != Record->CallsAtRemoval ? 1 : 0;
+            RunningAtRemoval += Record->bRunningAtRemoval ? 1 : 0;
+            MoreThanBroadcast += Record->Calls.load() > 2 * WorkerIterations ? 1 : 0;
+            Heard += Record->Calls.load() > 0 ? 1 : 0;
+        }
+        TestEqual(TEXT("No handler is called after its removal returned"), CallAfterRemoval, 0);
+        TestEqual(TEXT("No handler is still running when its removal returns"), RunningAtRemoval, 0);
+        TestEqual(TEXT("No handler hears more changes than there were"), MoreThanBroadcast, 0);
+        AddInfo(FString::Printf(TEXT("%d handlers were added and removed during %d changes; %d of them heard at least one."), Records.Num(), 2 * WorkerIterations, Heard));
+    }
 
     return true;
 }
