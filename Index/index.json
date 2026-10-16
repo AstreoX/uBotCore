@@ -148,6 +148,24 @@
                             }
                         }
                     }
+                },
+                {
+                    "version": "0.1.2",
+                    "planned": true,
+                    "requires": [
+                        { "name": "UBotCore", "version": "^0.1.3" }
+                    ],
+                    "enginePlugins": [],
+                    "provides": [
+                        "Sensor.Pose",
+                        "Sensor.Odometry",
+                        "Sensor.IMU",
+                        "Sensor.Lidar2D",
+                        "Sensor.Lidar3D",
+                        "Sensor.RGBCamera",
+                        "Sensor.DepthCamera",
+                        "Sensor.Medium"
+                    ]
                 }
             ]
         },
@@ -302,6 +320,15 @@
                             }
                         }
                     }
+                },
+                {
+                    "version": "0.1.1",
+                    "planned": true,
+                    "requires": [
+                        { "name": "UBotCore", "version": "^0.1.3" }
+                    ],
+                    "enginePlugins": [ "EnhancedInput" ],
+                    "provides": [ "Actuation.Velocity", "Actuation.Attitude", "Actuation.Motor", "Body.Multirotor", "Aerial.Wind" ]
                 }
             ]
         },
@@ -423,8 +450,8 @@
             "name": "UBotPhysics",
             "friendlyName": "uBot Physics",
             "description": {
-                "en": "Physics backends beside Chaos: each bound body is simulated by one backend on the sim clock and mapped back to UE.",
-                "zh-CN": "与 Chaos 并存的物理后端：绑定的物体由一个后端按仿真时钟计算，结果映射回 UE。"
+                "en": "Physics backends beside Chaos: each bound body is simulated by one backend on the sim clock and mapped back to UE; backends see the rest of the scene as static and kinematic colliders.",
+                "zh-CN": "与 Chaos 并存的物理后端：绑定的物体由一个后端按仿真时钟计算，结果映射回 UE；后端把场景的其余部分看作静态和运动学碰撞体。"
             },
             "layer": "Capability",
             "repository": "https://github.com/AstreoX/uBotPhysics.git",
@@ -438,7 +465,7 @@
                         { "name": "UBotCore", "version": "^0.1.3" }
                     ],
                     "enginePlugins": [],
-                    "provides": [ "Physics.Backends", "Physics.BodyBinding" ]
+                    "provides": [ "Physics.Backends", "Physics.BodyBinding", "Physics.SceneGeometry" ]
                 }
             ]
         }
