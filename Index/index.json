@@ -7,8 +7,8 @@
             "name": "UBotCore",
             "friendlyName": "uBot Core",
             "description": {
-                "en": "Frame header, sim clock, UE/ROS conventions, shared interfaces and package management.",
-                "zh-CN": "帧头、仿真时钟、UE/ROS 坐标约定、通用接口与 Package 管理。"
+                "en": "Frame header, sim clock, coordinate conventions between UE and right-handed SI, shared interfaces and package management.",
+                "zh-CN": "帧头、仿真时钟、UE 与右手系 SI 之间的坐标约定、通用接口与 Package 管理。"
             },
             "layer": "Foundation",
             "repository": "https://github.com/AstreoX/uBotCore.git",
@@ -74,6 +74,19 @@
                             }
                         }
                     }
+                },
+                {
+                    "version": "0.1.3",
+                    "planned": true,
+                    "requires": [],
+                    "enginePlugins": [],
+                    "provides": [
+                        "Core.FrameHeader",
+                        "Core.Clock",
+                        "Core.Conventions",
+                        "Core.Interfaces",
+                        "Core.PackageManager"
+                    ]
                 }
             ]
         },
@@ -217,6 +230,23 @@
                             }
                         }
                     }
+                },
+                {
+                    "version": "0.1.3",
+                    "planned": true,
+                    "requires": [
+                        { "name": "UBotCore", "version": "^0.1.3" },
+                        { "name": "UBotSensor", "version": "^0.1.0" }
+                    ],
+                    "enginePlugins": [],
+                    "provides": [
+                        "ROS.SensorPublishing",
+                        "ROS.TF",
+                        "ROS.Clock",
+                        "ROS.VelocityCommand",
+                        "ROS.AttitudeCommand",
+                        "ROS.MotorCommand"
+                    ]
                 }
             ]
         },
@@ -290,7 +320,8 @@
                     "version": "0.1.0",
                     "planned": true,
                     "requires": [
-                        { "name": "UBotCore", "version": "^0.1.0" }
+                        { "name": "UBotCore", "version": "^0.1.3" },
+                        { "name": "UBotPhysics", "version": "^0.1.0" }
                     ],
                     "enginePlugins": [],
                     "provides": [ "Physics.MuJoCo", "Body.Articulated" ]
@@ -385,6 +416,29 @@
                     ],
                     "enginePlugins": [],
                     "provides": [ "Content.Combat" ]
+                }
+            ]
+        },
+        {
+            "name": "UBotPhysics",
+            "friendlyName": "uBot Physics",
+            "description": {
+                "en": "Physics backends beside Chaos: each bound body is simulated by one backend on the sim clock and mapped back to UE.",
+                "zh-CN": "与 Chaos 并存的物理后端：绑定的物体由一个后端按仿真时钟计算，结果映射回 UE。"
+            },
+            "layer": "Capability",
+            "repository": "https://github.com/AstreoX/uBotPhysics.git",
+            "docsUrl": "https://github.com/AstreoX/uBotPhysics",
+            "tags": [ "physics" ],
+            "versions": [
+                {
+                    "version": "0.1.0",
+                    "planned": true,
+                    "requires": [
+                        { "name": "UBotCore", "version": "^0.1.3" }
+                    ],
+                    "enginePlugins": [],
+                    "provides": [ "Physics.Backends", "Physics.BodyBinding" ]
                 }
             ]
         }
