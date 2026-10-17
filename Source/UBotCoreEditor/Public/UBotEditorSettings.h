@@ -21,6 +21,6 @@ public:
      * uBot Manager registered (HKCU\Software\AstreoX\uBot Manager, value Executable), then
      * %LOCALAPPDATA%\uBot Manager\ubot-manager.exe.
      */
-    UPROPERTY(Config, EditAnywhere, Category = "uBot Manager", meta = (FilePathFilter = "exe"))
+    UPROPERTY(Config, EditAnywhere, Category = "Manager", meta = (FilePathFilter = "exe"))
     FFilePath ManagerExecutable;
 };

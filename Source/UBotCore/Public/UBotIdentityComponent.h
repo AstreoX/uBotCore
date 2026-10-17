@@ -22,19 +22,19 @@ public:
     UUBotIdentityComponent();
 
     /** Empty -> owner actor name. Surrounding whitespace is ignored. */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "uBot|Identity")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Identity")
     FString RobotId;
 
     /** Empty -> sanitized robot id. Surrounding whitespace and leading/trailing '/' are ignored. */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "uBot|Identity")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Identity")
     FString Namespace;
 
     /** Empty -> "base_link". */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "uBot|Identity")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Identity")
     FString BaseFrameId = TEXT("base_link");
 
     /** Empty, unresolved or not a scene component -> owner root component. */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "uBot|Identity", meta = (UseComponentPicker, AllowedClasses = "/Script/Engine.SceneComponent"))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Identity", meta = (UseComponentPicker, AllowedClasses = "/Script/Engine.SceneComponent"))
     FComponentReference BaseComponent;
 
     /** RobotId, or the owner actor name when empty (empty if there is no owner). */

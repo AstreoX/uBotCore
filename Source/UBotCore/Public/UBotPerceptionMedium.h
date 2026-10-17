@@ -14,19 +14,19 @@ struct UBOTCORE_API FUBotMediumCell
 {
     GENERATED_BODY()
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "uBot|Medium")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Medium")
     FVector WorldPositionCentimeters = FVector::ZeroVector;
 
     /** Values below 1 cm are treated as 1 cm by the intersection math. */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "uBot|Medium")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Medium")
     float RadiusCentimeters = 150.0f;
 
     /** 0..1 */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "uBot|Medium")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Medium")
     float Density = 0.0f;
 
     /** 0..1, attenuates Density towards the border of the medium. */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "uBot|Medium")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Medium")
     float EdgeFactor = 1.0f;
 };
 
@@ -36,16 +36,16 @@ struct UBOTCORE_API FUBotMediumSnapshot
 {
     GENERATED_BODY()
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "uBot|Medium")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Medium")
     FName MediumType = TEXT("Smoke");
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "uBot|Medium")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Medium")
     bool bActive = true;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "uBot|Medium")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Medium")
     FLinearColor Tint = FLinearColor(0.55f, 0.55f, 0.55f, 1.0f);
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "uBot|Medium")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Medium")
     TArray<FUBotMediumCell> Cells;
 
     /**
