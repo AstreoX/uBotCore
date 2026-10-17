@@ -309,7 +309,7 @@
             "const": false
           },
           "default": "()",
-          "category": "uBot Manager",
+          "category": "Manager",
           "access": "none",
           "editable": "anywhere",
           "tooltip": "ubot-manager.exe to start from the uBot panel. When empty (or missing) the panel uses the path\nuBot Manager registered (HKCU\\Software\\AstreoX\\uBot Manager, value Executable), then\n%LOCALAPPDATA%\\uBot Manager\\ubot-manager.exe.",
@@ -348,7 +348,7 @@
             "const": false
           },
           "default": "()",
-          "category": "uBot|Identity",
+          "category": "Identity",
           "access": "readOnly",
           "editable": "anywhere",
           "tooltip": "Empty, unresolved or not a scene component -> owner root component.",
@@ -367,7 +367,7 @@
             "const": false
           },
           "default": "base_link",
-          "category": "uBot|Identity",
+          "category": "Identity",
           "access": "readOnly",
           "editable": "anywhere",
           "tooltip": "Empty -> \"base_link\".",
@@ -386,7 +386,7 @@
             "const": false
           },
           "default": "",
-          "category": "uBot|Identity",
+          "category": "Identity",
           "access": "readOnly",
           "editable": "anywhere",
           "tooltip": "Empty -> sanitized robot id. Surrounding whitespace and leading/trailing '/' are ignored.",
@@ -405,7 +405,7 @@
             "const": false
           },
           "default": "",
-          "category": "uBot|Identity",
+          "category": "Identity",
           "access": "readOnly",
           "editable": "anywhere",
           "tooltip": "Empty -> owner actor name. Surrounding whitespace is ignored.",
