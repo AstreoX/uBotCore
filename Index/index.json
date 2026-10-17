@@ -86,7 +86,16 @@
                         "Core.Conventions",
                         "Core.Interfaces",
                         "Core.PackageManager"
-                    ]
+                    ],
+                    "binaries": {
+                        "5.5": {
+                            "Win64": {
+                                "url": "https://github.com/AstreoX/uBotCore/releases/download/v0.1.3/UBotCore-0.1.3-UE5.5-Win64.zip",
+                                "sha256": "9eaf372e87748e514386d44092402bdc6c3ed953b431ee252b470162022f9726",
+                                "size": 1223007
+                            }
+                        }
+                    }
                 }
             ]
         },
@@ -165,7 +174,16 @@
                         "Sensor.RGBCamera",
                         "Sensor.DepthCamera",
                         "Sensor.Medium"
-                    ]
+                    ],
+                    "binaries": {
+                        "5.5": {
+                            "Win64": {
+                                "url": "https://github.com/AstreoX/uBotSensor/releases/download/v0.1.2/UBotSensor-0.1.2-UE5.5-Win64.zip",
+                                "sha256": "e235b03d3f81deb668ddc93b6117a990f22d8c14bc47f1e58f727ccbbcb5ab31",
+                                "size": 979397
+                            }
+                        }
+                    }
                 }
             ]
         },
@@ -264,7 +282,16 @@
                         "ROS.VelocityCommand",
                         "ROS.AttitudeCommand",
                         "ROS.MotorCommand"
-                    ]
+                    ],
+                    "binaries": {
+                        "5.5": {
+                            "Win64": {
+                                "url": "https://github.com/AstreoX/uBotROS/releases/download/v0.1.3/UBotROS-0.1.3-UE5.5-Win64.zip",
+                                "sha256": "da1e3b99239032c496dcbe79db60b6feb733b8dd9fac03973d2fafe93f512a54",
+                                "size": 831878
+                            }
+                        }
+                    }
                 }
             ]
         },
@@ -328,7 +355,16 @@
                         { "name": "UBotCore", "version": "^0.1.3" }
                     ],
                     "enginePlugins": [ "EnhancedInput" ],
-                    "provides": [ "Actuation.Velocity", "Actuation.Attitude", "Actuation.Motor", "Body.Multirotor", "Aerial.Wind" ]
+                    "provides": [ "Actuation.Velocity", "Actuation.Attitude", "Actuation.Motor", "Body.Multirotor", "Aerial.Wind" ],
+                    "binaries": {
+                        "5.5": {
+                            "Win64": {
+                                "url": "https://github.com/AstreoX/uBotAerial/releases/download/v0.1.1/UBotAerial-0.1.1-UE5.5-Win64.zip",
+                                "sha256": "5d2de346d6dfad6a8270904ac1d59fb454fc8ea1993440fade4563b46f9c6c94",
+                                "size": 4076098
+                            }
+                        }
+                    }
                 }
             ]
         },
@@ -465,7 +501,16 @@
                         { "name": "UBotCore", "version": "^0.1.3" }
                     ],
                     "enginePlugins": [],
-                    "provides": [ "Physics.Backends", "Physics.BodyBinding", "Physics.SceneGeometry" ]
+                    "provides": [ "Physics.Backends", "Physics.BodyBinding", "Physics.SceneGeometry" ],
+                    "binaries": {
+                        "5.5": {
+                            "Win64": {
+                                "url": "https://github.com/AstreoX/uBotPhysics/releases/download/v0.1.0/UBotPhysics-0.1.0-UE5.5-Win64.zip",
+                                "sha256": "340ceb1fabc3fe34104412b12fc448650c9e1b37e2265cb515217d75251121a0",
+                                "size": 421409
+                            }
+                        }
+                    }
                 }
             ]
         }
