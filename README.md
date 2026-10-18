@@ -33,6 +33,7 @@ uBot Core is the foundation plugin of the uBot family for Unreal Engine 5.5. It 
 - **Simulation clock.** All uBot timestamps use the world's game time. Fixed time step, pause and single-step are available from Blueprints and C++.
 - **Coordinate conventions.** Conversion of positions, rotations, angular velocity and transforms between Unreal (left-handed, cm) and right-handed, Z-up SI frames such as ROS REP-103 or MuJoCo.
 - **Shared interfaces.** Sensor, actuator, command and perception-medium interfaces connect plugins without class dependencies between them.
+- **Wind queries.** `UUBotWindQuerySubsystem` asks an optional `IUBotWindProvider` in the same world for wind in UE world axes (m/s). Consumers depend only on Core; without a provider, queries return zero. Position is in centimeters and time is uBot simulation seconds. Registration and queries run on the game thread.
 - **Identity and sampling.** The `uBot Identity` component names a robot; the sample scheduler fires at most once per frame.
 - **Package management.** Package index, dependency and version checks, and the `Window > uBot` panel. uBot Manager installs and updates packages.
 

@@ -96,6 +96,13 @@
                             }
                         }
                     }
+                },
+                {
+                    "version": "0.1.4",
+                    "planned": true,
+                    "requires": [],
+                    "enginePlugins": [],
+                    "provides": [ "Core.FrameHeader", "Core.Clock", "Core.Conventions", "Core.Interfaces", "Core.PackageManager" ]
                 }
             ]
         },
@@ -365,6 +372,15 @@
                             }
                         }
                     }
+                },
+                {
+                    "version": "0.1.2",
+                    "planned": true,
+                    "requires": [
+                        { "name": "UBotCore", "version": "^0.1.4" }
+                    ],
+                    "enginePlugins": [ "EnhancedInput" ],
+                    "provides": [ "Actuation.Velocity", "Actuation.Attitude", "Actuation.Motor", "Body.Multirotor" ]
                 }
             ]
         },
@@ -395,8 +411,8 @@
             "name": "UBotEnvironment",
             "friendlyName": "uBot Environment",
             "description": {
-                "en": "Smoke, fog and other effects that degrade perception.",
-                "zh-CN": "烟雾、雾等影响感知的环境效果。"
+                "en": "Shared environmental fields: steady wind and deterministic gusts.",
+                "zh-CN": "通用环境场：恒定风与可复现阵风。"
             },
             "layer": "Capability",
             "repository": "https://github.com/AstreoX/uBotEnvironment.git",
@@ -406,10 +422,10 @@
                     "version": "0.1.0",
                     "planned": true,
                     "requires": [
-                        { "name": "UBotCore", "version": "^0.1.0" }
+                        { "name": "UBotCore", "version": "^0.1.4" }
                     ],
                     "enginePlugins": [],
-                    "provides": [ "Env.Smoke", "Env.Fog" ]
+                    "provides": [ "Env.Wind" ]
                 }
             ]
         },
