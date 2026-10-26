@@ -59,6 +59,28 @@ int32 FUBotSampleScheduler::ConsumeDueSteps(double NowSeconds, int32 MaxSteps, d
     return Steps;
 }
 
+bool FUBotSampleScheduler::ConsumeNextDue(double NowSeconds, double& OutDueSeconds)
+{
+    if (!bInitialized || !FMath::IsFinite(NowSeconds) || NowSeconds < NextDueSeconds)
+    {
+        return false;
+    }
+    OutDueSeconds = NextDueSeconds;
+    DroppedSampleCount += AdvancePastNow(NextDueSeconds) - 1;
+    return true;
+}
+
+int64 FUBotSampleScheduler::SkipBefore(double EarliestSeconds)
+{
+    if (!bInitialized || !FMath::IsFinite(EarliestSeconds) || NextDueSeconds >= EarliestSeconds)
+    {
+        return 0;
+    }
+    const int64 Count = AdvancePastNow(std::nextafter(EarliestSeconds, -std::numeric_limits<double>::infinity()));
+    DroppedSampleCount += Count;
+    return Count;
+}
+
 int64 FUBotSampleScheduler::AdvancePastNow(double NowSeconds)
 {
     using UBot::Scheduler::Private::MaxExactGridIntervals;

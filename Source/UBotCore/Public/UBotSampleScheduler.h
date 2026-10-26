@@ -44,6 +44,12 @@ public:
      */
     int32 ConsumeDueSteps(double NowSeconds, int32 MaxSteps, double* OutFirstDueSeconds = nullptr);
 
+    /** Consumes just the next due time, retaining all later due times for subsequent calls. */
+    bool ConsumeNextDue(double NowSeconds, double& OutDueSeconds);
+
+    /** Skips grid times strictly before EarliestSeconds, counting them as dropped. */
+    int64 SkipBefore(double EarliestSeconds);
+
     double GetRateHz() const { return RateHz; }
     double GetIntervalSeconds() const { return IntervalSeconds; }
     double GetNextDueSeconds() const { return NextDueSeconds; }

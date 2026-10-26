@@ -5,6 +5,7 @@
 #include "UBotBodyState.generated.h"
 
 class USceneComponent;
+class IUBotBodyStateHistory;
 
 /** Simulated state of a rigid body at its origin: UE world axes, SI units. Experimental. */
 struct UBOTCORE_API FUBotBodyState
@@ -58,6 +59,9 @@ public:
 
     /** Latest state of Body. False if Body is not provided or has no state yet. */
     virtual bool GetBodyState(const USceneComponent* Body, FUBotBodyState& OutState) const = 0;
+
+    /** Optional history capability. No recording is required until a consumer holds a handle. */
+    virtual TSharedPtr<const IUBotBodyStateHistory> AcquireBodyStateHistory(const USceneComponent* Body) { return nullptr; }
 };
 
 namespace UBot::BodyState
