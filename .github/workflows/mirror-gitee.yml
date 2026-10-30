@@ -1,0 +1,80 @@
+# GitHub is authoritative. The Gitee repository is a disposable, read-only code mirror.
+# Set GITEE_TOKEN (projects permission) and GITEE_MIRROR_ENABLED=true before enabling.
+# Only Git branches and tags are mirrored; releases, issues and pull requests stay on GitHub.
+name: Mirror to Gitee
+
+on:
+  push:
+  delete:
+  workflow_dispatch:
+  # Reconcile changes made by GITHUB_TOKEN, which do not trigger push workflows.
+  schedule:
+    - cron: "17 4 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mirror-gitee
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    if: github.repository_owner == 'AstreoX' && vars.GITEE_MIRROR_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # No checkout or execution of repository code is needed for a Git mirror.
+      - name: Mirror GitHub branches and tags
+        shell: bash
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          GITEE_OWNER: Gskyer
+          GITEE_USERNAME: Gskyer
+          SOURCE_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GIT_TERMINAL_PROMPT: "0"
+        run: |
+          set -euo pipefail
+          if [[ -z "$GITEE_TOKEN" ]]; then
+            echo '::error::Configure the GITEE_TOKEN repository secret first.'
+            exit 1
+          fi
+
+          umask 077
+          export GIT_ASKPASS="$RUNNER_TEMP/gitee-mirror-askpass.sh"
+          trap 'rm -f -- "$GIT_ASKPASS"' EXIT
+          cat > "$GIT_ASKPASS" <<'ASKPASS'
+          #!/usr/bin/env bash
+          case "$1" in
+            *Username*) printf '%s\n' "$GITEE_USERNAME" ;;
+            *Password*) printf '%s\n' "$GITEE_TOKEN" ;;
+            *) exit 1 ;;
+          esac
+          ASKPASS
+          chmod 700 "$GIT_ASKPASS"
+
+          mirror="$RUNNER_TEMP/gitee-mirror.git"
+          git init --bare "$mirror"
+          git -C "$mirror" -c credential.helper= fetch --force --no-tags \
+            "https://github.com/$GITHUB_REPOSITORY.git" \
+            '+refs/heads/*:refs/heads/*' '+refs/tags/*:refs/tags/*'
+
+          # Refuse to prune the destination if the authoritative default branch is absent.
+          git -C "$mirror" show-ref --verify --quiet "refs/heads/$SOURCE_DEFAULT_BRANCH"
+          repository="${GITHUB_REPOSITORY##*/}"
+          target="https://gitee.com/$GITEE_OWNER/$repository.git"
+          for attempt in 1 2 3; do
+            if git -C "$mirror" -c credential.helper= \
+              -c http.lowSpeedLimit=1 -c http.lowSpeedTime=60 \
+              push --prune "$target" \
+              '+refs/heads/*:refs/heads/*' '+refs/tags/*:refs/tags/*'; then
+              printf 'Mirrored branches and tags to [Gitee](https://gitee.com/%s/%s).\n' \
+                "$GITEE_OWNER" "$repository" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if [[ "$attempt" -lt 3 ]]; then
+              sleep "$((attempt * 10))"
+            fi
+          done
+          echo '::error::Gitee mirror push failed after three attempts.'
+          exit 1
