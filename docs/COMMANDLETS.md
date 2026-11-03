@@ -32,6 +32,8 @@ $Project = '<Project>\<Project>.uproject'
 
 `-Update` 只是 `git pull --ff-only`，适合跟随分支；按标签克隆出来的目录是游离 HEAD，pull 会失败。要换到另一个版本，请用 uBot Manager，它会检出对应的标签。
 
+`-Enable` 和 `-Install` 会在规划阶段检查该 Package 及其传递必需依赖的版本约束。已有依赖版本不兼容，或计划克隆的版本无法满足约束时，操作返回失败，不写入 `.uproject`，也不会开始克隆；无需附加 `-Validate`。请先用 uBot Manager 安装兼容的依赖版本，再重试。可选依赖的版本问题仍作为警告报告。
+
 `-Install` 的细节：仓库地址只取自 Package 索引；规划中的 Package 不能安装；克隆命令为 `git -c advice.detachedHead=false clone [--branch <ref>] -- <repository> <工程目录>/<PackageInstallDirectory>/<文件夹>`。`<ref>` 是所选索引版本的 `ref`：分支或标签用 `--branch` 直接克隆；提交 ID（7 到 40 位十六进制）不带 `--branch`，克隆后再执行 `git -c advice.detachedHead=false -C <目录> checkout --detach <提交> --`。`<文件夹>` 是索引条目的 `folder`，未设置时取仓库 URL 最后一段去掉 `.git`（二者都必须是单个安全的文件夹名）。目标文件夹已存在时拒绝，仓库根目录必须有 `<Package 名>.uplugin`；被取消的克隆留下的半成品目录会被删除。`EnginePlugins` 不会被安装或启用，只在缺失或未启用时给出提示。
 
 git 的运行方式：不经过 shell，参数逐个加引号；只允许 `https`、`http`、`ssh`、`file` 协议、scp 形式（`user@host:path`）和绝对本地路径；`git://`（无认证、无加密）、相对路径和 `host:path` 形式会被拒绝，以 `-` 开头的地址和 `<transport>::` 形式的 remote helper 同样被拒绝；输出和日志中的 URL 凭据会被替换为 `***`；设置了 `GIT_TERMINAL_PROMPT=0`，所以私有仓库需要事先配置好 SSH key 或 credential helper，git 不会弹出交互式提示。

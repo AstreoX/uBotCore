@@ -32,7 +32,7 @@ public:
     /**
      * Enables Name and every required uBot package it depends on, dependencies first, through
      * IProjectManager and saves the project file. Fails without changes when a required package
-     * is not installed.
+     * is not installed or its version does not satisfy a required dependency constraint.
      */
     bool EnablePackage(const FString& Name, TArray<FString>& OutMessages);
 
@@ -154,7 +154,7 @@ public:
      */
     static bool RemoveIncompleteClone(const FString& CloneDirectory, FString& OutMessage);
 
-    /** Packages to enable for Name (dependencies first). False when something required is missing. */
+    /** Packages to enable for Name (dependencies first). False on missing or incompatible required dependencies. */
     static bool PlanEnable(const TArray<FUBotPackageInfo>& Packages, const FString& Name,
         TArray<FString>& OutToEnable, TArray<FString>& OutMessages);
 
@@ -168,6 +168,7 @@ public:
      * install folder). RequestedVersion selects the version of Name itself, see FindInstallVersion().
      * An installed Name with a non-empty RequestedVersion also fails unless RequestedVersion equals the
      * installed version, since installing never changes the version of an installed package.
+     * Required dependency constraints must be satisfied by the installed and selected clone versions.
      */
     static bool PlanInstall(const TArray<FUBotPackageInfo>& Packages, const FString& Name,
         TArray<FString>& OutToInstall, TArray<FString>& OutMessages, const FString& RequestedVersion = FString());

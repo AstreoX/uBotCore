@@ -548,6 +548,100 @@ bool FUBotPackageManagerEnableOrderTest::RunTest(const FString& Parameters)
     return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotPackageManagerEnableDependencyVersionsTest, "UBotCore.PackageManager.EnableDependencyVersions",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotPackageManagerEnableDependencyVersionsTest::RunTest(const FString& Parameters)
+{
+    using namespace UBotCoreEditorTestsPrivate;
+
+    struct FCase
+    {
+        const TCHAR* InstalledVersion;
+        const TCHAR* Constraint;
+        bool bCompatible;
+    };
+    const FCase Cases[] = {
+        { TEXT("0.1.2"), TEXT("^0.1.3"), false },
+        { TEXT("0.1.3"), TEXT("^0.1.3"), true },
+        { TEXT("0.1.4"), TEXT("^0.1.3"), true },
+        { TEXT("0.2.0"), TEXT("^0.1.3"), false },
+        { TEXT("unknown"), TEXT("^0.1.3"), false },
+        { TEXT(""), TEXT("^0.1.3"), false },
+        { TEXT("0.1.3"), TEXT("invalid constraint"), false },
+        { TEXT("unknown"), TEXT("*"), true },
+    };
+    for (const FCase& Case : Cases)
+    {
+        TArray<FUBotPackageInfo> Packages = MakeInstalledChain(false, false);
+        Packages[0].Requires[0].Version = TEXT("*");
+        Packages[1].Requires[0].Version = Case.Constraint;
+        Packages[2].Version = Case.InstalledVersion;
+        // Cached problems must neither hide a new conflict nor reject a now-compatible plan.
+        Packages[1].Problems.Add(TEXT("stale diagnostic"));
+        TArray<FString> ToEnable = { TEXT("stale plan") };
+        TArray<FString> Messages;
+        TestEqual(FString::Printf(TEXT("Core '%s' satisfies transitive requirement '%s'"), Case.InstalledVersion, Case.Constraint),
+            FUBotPackageService::PlanEnable(Packages, TEXT("ubotros"), ToEnable, Messages), Case.bCompatible);
+        if (Case.bCompatible)
+        {
+            TestNames(*this, TEXT("Compatible disabled dependencies are enabled first"), ToEnable,
+                { TEXT("UBotSensor"), TEXT("UBotROS") });
+        }
+        else
+        {
+            TestEqual(TEXT("A conflict leaves no partial enable plan"), ToEnable.Num(), 0);
+            TestTrue(TEXT("The diagnostic identifies the root, dependent and dependency"),
+                MessagesMention(Messages, TEXT("UBotROS")) && MessagesMention(Messages, TEXT("UBotSensor"))
+                && MessagesMention(Messages, TEXT("UBotCore")));
+            if (FString(Case.Constraint) == TEXT("^0.1.3"))
+            {
+                TestTrue(TEXT("The diagnostic includes the constraint and a recovery step"),
+                    MessagesMention(Messages, TEXT("^0.1.3")) && MessagesMention(Messages, TEXT("compatible version")));
+            }
+        }
+        TestFalse(TEXT("Planning does not enable the target"), Packages[0].bEnabled);
+        TestFalse(TEXT("Planning does not enable its dependency"), Packages[1].bEnabled);
+        TestEqual(TEXT("Planning does not change the installed version"), Packages[2].Version, FString(Case.InstalledVersion));
+    }
+
+    // An already-enabled root must not turn an incompatible dependency set into a successful no-op.
+    TArray<FUBotPackageInfo> Enabled = MakeInstalledChain(true, true);
+    Enabled[1].Requires[0].Version = TEXT("^0.1.3");
+    TArray<FString> ToEnable;
+    TArray<FString> Messages;
+    TestFalse(TEXT("Already-enabled conflicts are rejected"),
+        FUBotPackageService::PlanEnable(Enabled, TEXT("UBotROS"), ToEnable, Messages));
+    TestEqual(TEXT("No enable work on conflict"), ToEnable.Num(), 0);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotPackageManagerRequiredVersionScopeTest, "UBotCore.PackageManager.RequiredVersionScope",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotPackageManagerRequiredVersionScopeTest::RunTest(const FString& Parameters)
+{
+    using namespace UBotCoreEditorTestsPrivate;
+
+    TArray<FUBotPackageInfo> Packages = MakeInstalledChain(false, false);
+    Packages.Add(MakePackage(TEXT("UBotExtras"), true, false)); // Optional >=1.0 is incompatible.
+    FUBotPackageInfo& Unrelated = Packages.Add_GetRef(MakePackage(TEXT("UBotUnrelated"), true, true));
+    AddRequire(Unrelated, TEXT("UBotCore"), TEXT(">=9.0.0"));
+    FUBotPackageRegistry::ValidatePackageSet(Packages);
+    TestFalse(TEXT("The root has optional dependency warnings"), Packages[0].Problems.IsEmpty());
+    TestFalse(TEXT("The unrelated package has a required version conflict"), Packages.Last().Problems.IsEmpty());
+
+    TArray<FString> Plan;
+    TArray<FString> Messages;
+    TestTrue(TEXT("Optional and unrelated conflicts do not block enabling"),
+        FUBotPackageService::PlanEnable(Packages, TEXT("UBotROS"), Plan, Messages));
+    TestNames(*this, TEXT("Optional packages are not enabled"), Plan, { TEXT("UBotSensor"), TEXT("UBotROS") });
+    TestTrue(TEXT("Optional and unrelated conflicts do not block installing"),
+        FUBotPackageService::PlanInstall(Packages, TEXT("UBotROS"), Plan, Messages));
+    TestEqual(TEXT("Installed packages need no clones"), Plan.Num(), 0);
+    return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotPackageManagerDisableOrderTest, "UBotCore.PackageManager.DisableOrder",
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
@@ -703,7 +797,7 @@ bool FUBotPackageManagerInstallPlanTest::RunTest(const FString& Parameters)
         // The request belongs to the target only: an installed dependency keeps its own version.
         {
             FUBotPackageInfo OlderSensor = InstalledSensor;
-            OlderSensor.Version = TEXT("0.0.5");
+            OlderSensor.Version = TEXT("0.1.1");
             const TArray<FUBotPackageInfo> WithOlderSensor = MakeChain(OlderSensor, MakeIndexOnlyPackage(TEXT("UBotROS"), RosRepository));
             TArray<FString> ToInstall;
             TArray<FString> Messages;
@@ -760,6 +854,86 @@ bool FUBotPackageManagerInstallPlanTest::RunTest(const FString& Parameters)
         TArray<FString> Messages;
         TestFalse(TEXT("Remote helper URL fails"), FUBotPackageService::PlanInstall(Packages, TEXT("UBotROS"), ToInstall, Messages));
         TestFalse(TEXT("Messages do not contain the token"), MessagesMention(Messages, TEXT("secret-token")));
+    }
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotPackageManagerInstallDependencyVersionsTest, "UBotCore.PackageManager.InstallDependencyVersions",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotPackageManagerInstallDependencyVersionsTest::RunTest(const FString& Parameters)
+{
+    using namespace UBotCoreEditorTestsPrivate;
+
+    for (const bool bInstalled : { false, true })
+    {
+        TArray<FUBotPackageInfo> Packages = MakeChain(MakePackage(TEXT("UBotSensor"), true, false),
+            bInstalled ? MakePackage(TEXT("UBotROS"), true, false)
+                : MakeIndexOnlyPackage(TEXT("UBotROS"), TEXT("https://github.com/AstreoX/uBotROS.git")));
+        Packages[1].Requires[0].Version = TEXT("^0.1.3");
+        Packages[2].Version = TEXT("0.1.2");
+        TArray<FString> ToInstall = { TEXT("stale plan") };
+        TArray<FString> Messages;
+        TestFalse(TEXT("An incompatible installed transitive dependency blocks installing"),
+            FUBotPackageService::PlanInstall(Packages, TEXT("UBotROS"), ToInstall, Messages));
+        TestEqual(TEXT("A conflict clears the entire clone plan"), ToInstall.Num(), 0);
+        TestTrue(TEXT("The diagnostic names the constraint and installed version"),
+            MessagesMention(Messages, TEXT("^0.1.3")) && MessagesMention(Messages, TEXT("0.1.2")));
+        TestEqual(TEXT("Installing does not silently update an existing dependency"), Packages[2].Version, FString(TEXT("0.1.2")));
+    }
+
+    // The selected clone version, not the index view's Version, satisfies the root's requirement.
+    {
+        FUBotPackageInfo Sensor = MakeIndexOnlyPackage(TEXT("UBotSensor"), TEXT("https://github.com/AstreoX/uBotSensor.git"));
+        AddIndexVersion(Sensor, TEXT("0.2.0"), TEXT("v0.2.0"));
+        TArray<FUBotPackageInfo> Packages = MakeChain(Sensor,
+            MakeIndexOnlyPackage(TEXT("UBotROS"), TEXT("https://github.com/AstreoX/uBotROS.git")));
+        Packages[0].Requires[1].Version = TEXT("^0.2.0");
+        TArray<FString> ToInstall;
+        TArray<FString> Messages;
+        TestTrue(TEXT("The selected dependency version is used"),
+            FUBotPackageService::PlanInstall(Packages, TEXT("UBotROS"), ToInstall, Messages, TEXT("0.1.0")));
+        TestNames(*this, TEXT("Compatible clones remain dependencies first"), ToInstall, { TEXT("UBotSensor"), TEXT("UBotROS") });
+        Packages[0].Requires[1].Version = TEXT("^0.1.0");
+        TestFalse(TEXT("An incompatible selected clone is rejected"),
+            FUBotPackageService::PlanInstall(Packages, TEXT("UBotROS"), ToInstall, Messages));
+        TestEqual(TEXT("No clones on selected-version conflict"), ToInstall.Num(), 0);
+        TestEqual(TEXT("The source index view stays unchanged"), Packages[1].Version, FString(TEXT("0.1.0")));
+    }
+
+    // A pinned older release must use its own dependency graph, including an explicitly empty one.
+    {
+        TArray<FUBotPackageInfo> Packages;
+        FString Error;
+        if (!TestTrue(TEXT("Version-specific requirements parse"), FUBotPackageIndex::ParseIndexJson(TEXT(R"json({
+            "formatVersion": 2,
+            "packages": [{ "name": "UBotSensor", "repository": "https://github.com/AstreoX/uBotSensor.git",
+                "versions": [
+                    { "version": "0.2.0", "ref": "v0.2.0", "requires": [{ "name": "UBotFuture", "version": "^1.0.0" }] },
+                    { "version": "0.1.2", "ref": "v0.1.2", "requires": [{ "name": "UBotCore", "version": "^0.1.3" }] },
+                    { "version": "0.1.0", "ref": "v0.1.0", "requires": [] }
+                ] }]
+        })json"), Packages, &Error)))
+        {
+            AddError(Error);
+            return false;
+        }
+        FUBotPackageInfo Core = MakePackage(TEXT("UBotCore"), true, false, EUBotPackageLayer::Foundation);
+        Core.Version = TEXT("0.1.3");
+        Packages.Add(Core);
+        TArray<FString> ToInstall;
+        TArray<FString> Messages;
+        TestTrue(TEXT("An older pinned release uses its own compatible requirements"),
+            FUBotPackageService::PlanInstall(Packages, TEXT("UBotSensor"), ToInstall, Messages, TEXT("v0.1.2")));
+        TestNames(*this, TEXT("The installed dependency is not cloned"), ToInstall, { TEXT("UBotSensor") });
+        TestFalse(TEXT("The newest release still needs its own missing dependency"),
+            FUBotPackageService::PlanInstall(Packages, TEXT("UBotSensor"), ToInstall, Messages));
+        Packages[1].Version = TEXT("0.1.2");
+        TestFalse(TEXT("A pinned release with an incompatible installed dependency fails"),
+            FUBotPackageService::PlanInstall(Packages, TEXT("UBotSensor"), ToInstall, Messages, TEXT("0.1.2")));
+        TestEqual(TEXT("A failed pinned install leaves no clone plan"), ToInstall.Num(), 0);
+        TestTrue(TEXT("An explicitly empty old dependency graph replaces the latest one"),
+            FUBotPackageService::PlanInstall(Packages, TEXT("UBotSensor"), ToInstall, Messages, TEXT("0.1.0")));
     }
     return true;
 }
@@ -1093,7 +1267,8 @@ bool FUBotPackageManagerInstallVersionTest::RunTest(const FString& Parameters)
     // PlanInstall: the requested version applies to the requested package only.
     {
         const FUBotPackageInfo Ros = MakeIndexOnlyPackage(TEXT("UBotROS"), TEXT("https://github.com/AstreoX/uBotROS.git"));
-        const TArray<FUBotPackageInfo> Packages = MakeChain(Sensor, Ros);
+        TArray<FUBotPackageInfo> Packages = MakeChain(Sensor, Ros);
+        Packages[0].Requires[1].Version = TEXT(">=0.2.0");
 
         TArray<FString> ToInstall;
         TArray<FString> Messages;

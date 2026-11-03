@@ -53,6 +53,43 @@ namespace UBotPackageServicePrivate
         return FString::Join(Names, TEXT(", "));
     }
 
+    bool ValidateRequiredDependencies(const TArray<FUBotPackageInfo>& Packages, const TArray<FString>& Order,
+        const TCHAR* Action, const FString& RootName, TArray<FString>& OutMessages)
+    {
+        // Validate the proposed enabled closure, not the current states or cached problems. Optional
+        // requirements remain warnings and unrelated packages must not block this operation.
+        TArray<FUBotPackageInfo> Proposed;
+        for (const FString& PackageName : Order)
+        {
+            const FUBotPackageInfo* Package = FindByName(Packages, PackageName);
+            check(Package);
+            FUBotPackageInfo& Entry = Proposed.Add_GetRef(*Package);
+            Entry.bInstalled = true;
+            Entry.bEnabled = true;
+            Entry.State = EUBotPackageState::Enabled;
+            Entry.Requires.RemoveAll([](const FUBotPackageDependency& Dependency) { return Dependency.bOptional; });
+        }
+        FUBotPackageRegistry::ValidatePackageSet(Proposed);
+
+        bool bSuccess = true;
+        for (const FUBotPackageInfo& Package : Proposed)
+        {
+            for (const FUBotPackageProblem& Problem : Package.ProblemDetails)
+            {
+                FString Message = FString::Printf(TEXT("Cannot %s %s: %s: %s"),
+                    Action, *RootName, *Package.Name, *Problem.Message);
+                if (Problem.Kind == EUBotPackageProblemKind::RequiresVersion)
+                {
+                    Message += FString::Printf(TEXT(" Use uBot Manager to install a compatible version of %s before retrying."),
+                        *Problem.Dependency);
+                }
+                OutMessages.Add(MoveTemp(Message));
+                bSuccess = false;
+            }
+        }
+        return bSuccess;
+    }
+
     bool HasUnsafeArgumentCharacters(const FString& Value)
     {
         for (const TCHAR Character : Value)
@@ -364,7 +401,7 @@ bool FUBotPackageService::EnablePackageInternal(const FString& Name, TArray<FStr
         return false;
     }
 
-    // Problems that remain once the change is applied, for example version mismatches.
+    // Non-blocking problems, such as incompatible optional dependencies, remain warnings.
     const TArray<FUBotPackageInfo> After = BuildEffectiveView();
     for (const FString& OrderedName : Order)
     {
@@ -1660,6 +1697,11 @@ bool FUBotPackageService::PlanEnable(const TArray<FUBotPackageInfo>& Packages, c
             *Package->Name, *JoinNames(Missing)));
         return false;
     }
+    if (!ValidateRequiredDependencies(Packages, Order, TEXT("enable"), Package->Name, OutMessages))
+    {
+        OutToEnable.Reset();
+        return false;
+    }
     return true;
 }
 
@@ -1741,9 +1783,31 @@ bool FUBotPackageService::PlanInstall(const TArray<FUBotPackageInfo>& Packages, 
         return false;
     }
 
+    // Resolve the dependency graph of the versions we will clone. Installed descriptors remain
+    // authoritative; their versions and requirements must never be replaced by index metadata.
+    TArray<FUBotPackageInfo> Proposed = Packages;
+    for (FUBotPackageInfo& Entry : Proposed)
+    {
+        if (IsInstalled(Entry))
+        {
+            continue;
+        }
+        FString Reason;
+        const FUBotPackageIndexVersion* Version = FindInstallVersion(Entry,
+            Entry.Name.Equals(Package->Name, ESearchCase::IgnoreCase) ? RequestedVersion : FString(), Reason);
+        if (Version)
+        {
+            Entry.Version = Version->Version;
+            if (Version->Requirements.IsSet())
+            {
+                Entry.Requires = Version->Requirements.GetValue();
+            }
+        }
+    }
+
     TArray<FString> Order;
     FString Error;
-    if (!FUBotPackageRegistry::ResolveDependencyOrder(Packages, Package->Name, Order, &Error))
+    if (!FUBotPackageRegistry::ResolveDependencyOrder(Proposed, Package->Name, Order, &Error))
     {
         OutMessages.Add(FString::Printf(TEXT("Cannot install %s: %s"), *Package->Name, *Error));
         return false;
@@ -1752,7 +1816,7 @@ bool FUBotPackageService::PlanInstall(const TArray<FUBotPackageInfo>& Packages, 
     bool bSuccess = true;
     for (const FString& OrderedName : Order)
     {
-        const FUBotPackageInfo* Entry = FindByName(Packages, OrderedName);
+        const FUBotPackageInfo* Entry = FindByName(Proposed, OrderedName);
         if (!Entry)
         {
             OutMessages.Add(FString::Printf(TEXT("Cannot install %s: required package %s is unknown."), *Package->Name, *OrderedName));
@@ -1825,6 +1889,10 @@ bool FUBotPackageService::PlanInstall(const TArray<FUBotPackageInfo>& Packages, 
         }
     }
 
+    if (bSuccess)
+    {
+        bSuccess = ValidateRequiredDependencies(Proposed, Order, TEXT("install"), Package->Name, OutMessages);
+    }
     if (!bSuccess)
     {
         OutToInstall.Reset();

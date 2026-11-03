@@ -315,6 +315,7 @@ namespace UBot::PackageIndexPrivate
             IndexVersion.Version = Version.Text;
             IndexVersion.Ref = Version.Ref;
             IndexVersion.bPlanned = Version.bPlanned;
+            IndexVersion.Requirements = Version.Requires;
 
             if (Version.bPlanned)
             {

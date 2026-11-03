@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Misc/Optional.h"
 #include "UBotPackageTypes.generated.h"
 
 /** Architectural layer of a uBot package, from the "UBot" block of its descriptor. */
@@ -99,6 +100,10 @@ struct UBOTCORE_API FUBotPackageIndexVersion
     /** True when the version is announced but not installable yet. */
     UPROPERTY(BlueprintReadOnly, Category = "uBot|Packages")
     bool bPlanned = false;
+
+    // Native install-planning metadata. Unset for entries supplied without per-version metadata;
+    // a parsed index sets this even when the version has no requirements.
+    TOptional<TArray<FUBotPackageDependency>> Requirements;
 };
 
 /** Everything known about a uBot package, merged from its descriptor and the package index. */

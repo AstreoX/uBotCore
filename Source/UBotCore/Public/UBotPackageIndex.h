@@ -37,6 +37,7 @@ struct UBOTCORE_API FUBotPackageReplacement
  * its Version is then the newest planned version. Requires, Provides and ExternalRequires (from
  * "enginePlugins") come from that same version. IndexVersions lists every version newest first with
  * its git "ref" (what FUBotPackageService clones), and InstallFolder is the entry's "folder".
+ * Each version also retains its native Requirements for version-specific install planning.
  * Description is the text for the current UI language (see SelectLocalizedText). Recipes and a
  * version's "binaries" (prebuilt downloads for uBot Manager; an object or null) are not used by
  * Unreal and are ignored without being checked.
