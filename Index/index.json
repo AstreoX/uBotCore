@@ -191,6 +191,15 @@
                             }
                         }
                     }
+                },
+                {
+                    "version": "0.1.3",
+                    "planned": true,
+                    "requires": [
+                        { "name": "UBotCore", "version": "^0.1.4" }
+                    ],
+                    "enginePlugins": [],
+                    "provides": [ "Sensor.Pose", "Sensor.Odometry", "Sensor.IMU", "Sensor.Lidar2D", "Sensor.Lidar3D", "Sensor.RGBCamera", "Sensor.DepthCamera", "Sensor.Medium" ]
                 }
             ]
         },
@@ -299,6 +308,16 @@
                             }
                         }
                     }
+                },
+                {
+                    "version": "0.1.4",
+                    "planned": true,
+                    "requires": [
+                        { "name": "UBotCore", "version": "^0.1.4" },
+                        { "name": "UBotSensor", "version": "^0.1.3" }
+                    ],
+                    "enginePlugins": [],
+                    "provides": [ "ROS.SensorPublishing", "ROS.TF", "ROS.Clock", "ROS.VelocityCommand", "ROS.AttitudeCommand", "ROS.MotorCommand" ]
                 }
             ]
         },
