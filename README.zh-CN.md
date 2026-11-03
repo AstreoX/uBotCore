@@ -85,6 +85,7 @@ git clone --branch v0.1.2 https://github.com/AstreoX/uBotCore <Project>/Plugins/
 
 ## 开发
 
+- **环境交互约定**：Core 提供共用数据契约和现有使用者需要的最小查询机制。环境插件负责场或介质的生成、演化，使用者负责飞行或传感器响应。新增 API 前先复用风速和感知介质接口；环境接入无需单独的连接插件，也不按每种效果增加 Core 服务。见[环境架构约定](https://astreox.github.io/uBotDocs/develop/package-authoring/#环境与使用者的职责边界)。
 - **构建**：将仓库克隆到 UE 5.5 C++ 工程的 `Plugins/uBot/uBotCore` 目录。首次启动时，编辑器会提示编译模块。
 - **测试**：自动化测试以 `UBotCore.` 开头。打开 `Tools > Session Frontend`，切换到 Automation 标签页并过滤 `UBotCore`；命令行运行方式见 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
 - **问题反馈**：在 [GitHub Issues](https://github.com/AstreoX/uBotCore/issues) 提交，并注明 uBot Core 版本和编辑器日志中相关的 `LogUBot` 记录。

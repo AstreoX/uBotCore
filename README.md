@@ -85,6 +85,7 @@ The manual is published on the [documentation site](https://astreox.github.io/uB
 
 ## Development
 
+- **Environment contracts:** Core holds shared data contracts and the small query mechanisms required by existing consumers. Environment plugins own field generation and evolution; consumers own flight or sensor response. Reuse the wind and perception-medium contracts before adding APIs. Environment integration does not require a separate connector plugin or a Core service for each effect. See the [environment architecture contract](https://astreox.github.io/uBotDocs/develop/package-authoring/#环境与使用者的职责边界).
 - **Build:** clone into the `Plugins/uBot/uBotCore` folder of a UE 5.5 C++ project. The editor prompts to compile the modules on first launch.
 - **Test:** the Automation tests are named `UBotCore.*`. Open `Tools > Session Frontend`, select the Automation tab and filter by `UBotCore`. The command-line invocation is in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 - **Issues:** report them on [GitHub Issues](https://github.com/AstreoX/uBotCore/issues), stating the uBot Core version and the relevant `LogUBot` lines from the editor log.
