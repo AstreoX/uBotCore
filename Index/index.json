@@ -431,7 +431,8 @@
                     "version": "0.2.0",
                     "planned": true,
                     "requires": [
-                        { "name": "UBotCore", "version": "^0.2.0" }
+                        { "name": "UBotCore", "version": "^0.2.0" },
+                        { "name": "UBotEnvironment", "version": "^0.2.0", "optional": true }
                     ],
                     "enginePlugins": [ "EnhancedInput" ],
                     "provides": [ "Actuation.Velocity", "Actuation.Attitude", "Actuation.Motor", "Body.Multirotor" ]
