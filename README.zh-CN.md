@@ -37,6 +37,16 @@ uBot Core 是 uBot 系列插件中的基础插件，适用于 Unreal Engine 5.5�
 - **身份与采样**：`uBot Identity` 组件用于给机器人命名；采样调度器每帧最多触发一次。
 - **插件管理**：提供 Package 索引、依赖与版本校验和 `Window > uBot` 面板；安装与更新由 uBot Manager 完成。
 
+## 0.2.0 源码迁移
+
+当前源码面向尚未发布的 **0.2.0**，暂不能通过 uBot Manager 安装。此版本删除 `UBotRosConventions.h`、其中的 17 个 `UBot::Ros` 换算函数，以及 `UUBotConventionsLibrary` 的 17 个已弃用节点。
+
+- 轴向与单位换算改用 `UBotRightHandedConventions.h` / `UBot::RightHanded`；12 个 Right-Handed 蓝图节点继续留在 Core。
+- 相机光学系、ROS 时间和 ROS 名称工具改用 uBotROS 的 `UBotROSConventionHelpers.h` / `UBot::ROSConventions`。只有调用这些工具的模块才需依赖 `UBotROS`。
+- Core 的重定向迁移 12 个旧数学节点及其改名引脚；启用 uBotROS 后，其重定向迁移 5 个 ROS 专属节点。重启编辑器后，编译并重新保存受影响的资产。C++ 调用方须修改头文件、命名空间和函数名，统一重编所有依赖模块；0.1.x DLL 不能与 0.2.0 混用。
+
+对应关系见 [C++ API 迁移](docs/CPP-API.md#迁移到-020)。下方安装示例仍使用已发布的 0.1.x 标签。
+
 ## 安装
 
 **使用 uBot Manager 安装（推荐）**，详细步骤见[安装教程](https://astreox.github.io/uBotDocs/start/install/)：

@@ -49,10 +49,32 @@ UE 是左手系（X 前、Y 右、Z 上，单位厘米）。外部世界通常�
 
 两个方向共 12 个蓝图节点，函数名为 `PositionUEToRightHanded` / `PositionRightHandedToUE`，其余类推（`Vector`、`AngularVelocity`、`Rotation`、`Transform`、`Yaw`）。
 
-旧入口仍然可用，但已标记弃用，结果与新入口逐位相同：
+### 迁移到 0.2.0
 
-- 蓝图的 12 个 `UE To ROS …` / `ROS To UE …` 节点（如 `PositionUEToROS`）和 C++ `UBot::Ros` 里对应的 12 个函数。蓝图里使用它们会看到弃用提示，指向对应的 `UE To Right-Handed …` 节点；C++ 里它们直接转发到 `UBot::RightHanded`。
-- ROS 专属的内容属于 [uBot ROS](https://github.com/AstreoX/uBotROS) 插件，已移到那里：相机光学系旋转 `CameraLinkToOpticalRotation`、光学系后缀 `OpticalFrameSuffix`（`_optical`）、秒与 `builtin_interfaces/Time` 互转的 `SecondsToRosTime` / `RosTimeToSeconds`、ROS 名字合法化 `SanitizeRosName`。C++ 在 `UBot::ROSConventions`（`UBotROSConventionHelpers.h`），蓝图节点在类别 `uBot|ROS|Conventions`，名字和显示名不变。Core 里同名的 5 个蓝图节点和 `UBot::Ros` 函数保持原有行为，但已弃用；其中 `UBot::Ros::SanitizeRosName` 转发到 `UBot::Identity::SanitizeNameToken`（身份组件命名空间回退时用的同一规则，见 [Identity 组件](https://astreox.github.io/uBotDocs/core/identity/)）。
+尚未发布的 0.2.0 删除 `UBotRosConventions.h`、17 个旧 `UBot::Ros` 换算函数和 17 个已弃用蓝图节点。正式入口的数学、光学系、时间与名称处理行为不变。
+
+12 个数学函数将头文件改为 `UBotRightHandedConventions.h`，命名空间由 `UBot::Ros` 改为 `UBot::RightHanded`，并按下表替换函数名；参数类型及换算行为不变：
+
+| 量 | UE → 右手系 | 右手系 → UE |
+| --- | --- | --- |
+| 位置 | `PositionUEToROS` → `PositionFromUE` | `PositionROSToUE` → `PositionToUE` |
+| 线性向量 | `VectorUEToROS` → `VectorFromUE` | `VectorROSToUE` → `VectorToUE` |
+| 角速度 | `AngularVelocityUEToROS` → `AngularVelocityFromUE` | `AngularVelocityROSToUE` → `AngularVelocityToUE` |
+| 旋转 | `RotationUEToROS` → `RotationFromUE` | `RotationROSToUE` → `RotationToUE` |
+| 变换 | `TransformUEToROS` → `TransformFromUE` | `TransformROSToUE` → `TransformToUE` |
+| 航向 | `YawUEToROS` → `YawFromUE` | `YawROSToUE` → `YawToUE` |
+
+以下 5 个 ROS 专属函数使用 [uBotROS](https://github.com/AstreoX/uBotROS) 的 `UBotROSConventionHelpers.h`，命名空间由 `UBot::Ros` 改为 `UBot::ROSConventions`，函数名和参数不变。直接调用它们的模块须依赖 `UBotROS`；通用名称片段处理仍可只用 Core 的 `UBot::Identity::SanitizeNameToken`。
+
+| 用途 | 函数 |
+| --- | --- |
+| 相机光学系 | `CameraLinkToOpticalRotation`、`OpticalFrameSuffix` |
+| ROS 时间 | `SecondsToRosTime`、`RosTimeToSeconds` |
+| ROS 名称 | `SanitizeRosName` |
+
+旧蓝图的 12 个 `UE To ROS …` / `ROS To UE …` 节点由 Core 重定向到同类的 `…RightHanded` 函数，5 个 ROS 专属节点由 uBotROS 重定向到 `UUBotROSConventionsLibrary`。启用需要的插件并重启编辑器后，打开、编译和重存相关蓝图与关卡；重定向也处理数学节点的 5 个改名输入引脚。
+
+Core 的重定向不依赖 uBotROS。它们只处理序列化资产；C++ 调用方须完成上述修改，统一重编所有依赖模块，不能混用 0.1.x 和 0.2.0 DLL。
 
 `UBotUnits.h` 里还有只含头文件的 `UBot::Units`：`CentimetersToMeters`、`MetersToCentimeters`（标量与 `FVector`）、`DegreesToRadians`、`RadiansToDegrees`。uBot 公共 API 默认使用 SI（米、秒、弧度），名字中带 `Centimeters` 或 `Degrees` 的除外。
 
