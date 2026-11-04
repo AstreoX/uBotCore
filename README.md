@@ -33,7 +33,6 @@ uBot Core is the foundation plugin of the uBot family for Unreal Engine 5.5. It 
 - **Simulation clock.** All uBot timestamps use the world's game time. Fixed time step, pause and single-step are available from Blueprints and C++.
 - **Coordinate conventions.** Conversion of positions, rotations, angular velocity and transforms between Unreal (left-handed, cm) and right-handed, Z-up SI frames such as ROS REP-103 or MuJoCo.
 - **Shared interfaces.** Sensor, actuator, command and perception-medium interfaces connect plugins without class dependencies between them.
-- **Wind queries.** `UUBotWindQuerySubsystem` asks an optional `IUBotWindProvider` in the same world for wind in UE world axes (m/s). Consumers depend only on Core; without a provider, queries return zero. Position is in centimeters and time is uBot simulation seconds. Registration and queries run on the game thread.
 - **Identity and sampling.** The `uBot Identity` component names a robot; the sample scheduler fires at most once per frame.
 - **Package management.** Package index, dependency and version checks, and the `Window > uBot` panel. uBot Manager installs and updates packages.
 
@@ -44,6 +43,7 @@ The current source targets **0.2.0**, which is not released or installable throu
 - Axis and unit conversions use `UBotRightHandedConventions.h` / `UBot::RightHanded`; the 12 Right-Handed Blueprint nodes remain in Core.
 - Camera optical frames, ROS time and ROS name helpers use `UBotROSConventionHelpers.h` / `UBot::ROSConventions` in uBotROS. Only callers of these helpers need a `UBotROS` module dependency.
 - Core redirects migrate the 12 old math nodes and their renamed pins; uBotROS redirects migrate the five ROS-specific nodes when that plugin is enabled. Restart the editor, compile and resave affected assets. C++ callers must update headers, namespaces and function names and rebuild all dependent modules together; 0.1.x DLLs cannot be mixed with 0.2.0.
+- Wind contracts and queries (`IUBotWindProvider`, `UUBotWindQuerySubsystem`) belong to uBotEnvironment. Native consumers must add that module dependency and rebuild; their header names are unchanged. uBotEnvironment redirects saved references from the former Core type paths. uBotAerial integrates wind through an optional build dependency and compiles with zero wind when uBotEnvironment is absent or disabled.
 
 See [C++ API migration](docs/CPP-API.md#迁移到-020) for the mapping. The installation examples below use released 0.1.x tags.
 
@@ -89,13 +89,14 @@ The manual is published on the [documentation site](https://astreox.github.io/uB
 | **[uBotCore](https://github.com/AstreoX/uBotCore)** | **Simulation clock, frame header, shared interfaces, package management** |
 | [uBotSensor](https://github.com/AstreoX/uBotSensor) | Pose, IMU, odometry, 2D/3D lidar, RGB and depth cameras |
 | [uBotROS](https://github.com/AstreoX/uBotROS) | ROS 2 over a TCP bridge: sensors, TF, /clock, cmd_vel |
-| [uBotAerial](https://github.com/AstreoX/uBotAerial) | Multirotor drones: simplified flight, rigid-body dynamics, wind |
+| [uBotAerial](https://github.com/AstreoX/uBotAerial) | Multirotor drones: simplified flight, rigid-body dynamics, wind response |
+| [uBotEnvironment](https://github.com/AstreoX/uBotEnvironment) | Environmental fields: wind contracts, queries, steady wind and deterministic gusts |
 | [uBotManager](https://github.com/AstreoX/uBotManager) | Desktop app and CLI to install, update and build uBot packages |
 | [uBotDocs](https://github.com/AstreoX/uBotDocs) | Documentation site: https://astreox.github.io/uBotDocs/ |
 
 ## Development
 
-- **Environment contracts:** Core holds shared data contracts and the small query mechanisms required by existing consumers. Environment plugins own field generation and evolution; consumers own flight or sensor response. Reuse the wind and perception-medium contracts before adding APIs. Environment integration does not require a separate connector plugin or a Core service for each effect. See the [environment architecture contract](https://astreox.github.io/uBotDocs/develop/package-authoring/#环境与使用者的职责边界).
+- **Environment contracts:** Wind interfaces, queries, generation and evolution belong to uBotEnvironment; consumers own their response and may compile that integration optionally. Core keeps foundational contracts, including the existing perception-medium interface used by uBotSensor. Do not add connector plugins or a Core service for each effect. See the [environment architecture contract](https://astreox.github.io/uBotDocs/develop/package-authoring/#环境与使用者的职责边界).
 - **Build:** clone into the `Plugins/uBot/uBotCore` folder of a UE 5.5 C++ project. The editor prompts to compile the modules on first launch.
 - **Test:** the Automation tests are named `UBotCore.*`. Open `Tools > Session Frontend`, select the Automation tab and filter by `UBotCore`. The command-line invocation is in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 - **Issues:** report them on [GitHub Issues](https://github.com/AstreoX/uBotCore/issues), stating the uBot Core version and the relevant `LogUBot` lines from the editor log.
