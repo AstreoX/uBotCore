@@ -103,6 +103,13 @@
                     "requires": [],
                     "enginePlugins": [],
                     "provides": [ "Core.FrameHeader", "Core.Clock", "Core.Conventions", "Core.Interfaces", "Core.PackageManager" ]
+                },
+                {
+                    "version": "0.2.0",
+                    "planned": true,
+                    "requires": [],
+                    "enginePlugins": [],
+                    "provides": [ "Core.FrameHeader", "Core.Clock", "Core.Conventions", "Core.Interfaces", "Core.PackageManager" ]
                 }
             ]
         },
@@ -197,6 +204,15 @@
                     "planned": true,
                     "requires": [
                         { "name": "UBotCore", "version": "^0.1.4" }
+                    ],
+                    "enginePlugins": [],
+                    "provides": [ "Sensor.Pose", "Sensor.Odometry", "Sensor.IMU", "Sensor.Lidar2D", "Sensor.Lidar3D", "Sensor.RGBCamera", "Sensor.DepthCamera", "Sensor.Medium" ]
+                },
+                {
+                    "version": "0.2.0",
+                    "planned": true,
+                    "requires": [
+                        { "name": "UBotCore", "version": "^0.2.0" }
                     ],
                     "enginePlugins": [],
                     "provides": [ "Sensor.Pose", "Sensor.Odometry", "Sensor.IMU", "Sensor.Lidar2D", "Sensor.Lidar3D", "Sensor.RGBCamera", "Sensor.DepthCamera", "Sensor.Medium" ]
@@ -318,6 +334,16 @@
                     ],
                     "enginePlugins": [],
                     "provides": [ "ROS.SensorPublishing", "ROS.TF", "ROS.Clock", "ROS.VelocityCommand", "ROS.AttitudeCommand", "ROS.MotorCommand" ]
+                },
+                {
+                    "version": "0.2.0",
+                    "planned": true,
+                    "requires": [
+                        { "name": "UBotCore", "version": "^0.2.0" },
+                        { "name": "UBotSensor", "version": "^0.2.0" }
+                    ],
+                    "enginePlugins": [],
+                    "provides": [ "ROS.SensorPublishing", "ROS.TF", "ROS.Clock", "ROS.VelocityCommand", "ROS.AttitudeCommand", "ROS.MotorCommand" ]
                 }
             ]
         },
@@ -336,7 +362,7 @@
                     "version": "0.1.0",
                     "planned": true,
                     "requires": [
-                        { "name": "UBotCore", "version": "^0.1.0" }
+                        { "name": "UBotCore", "version": "^0.2.0" }
                     ],
                     "enginePlugins": [ "ChaosVehiclesPlugin" ],
                     "provides": [ "Actuation.Velocity", "Body.Wheeled" ]
@@ -400,6 +426,15 @@
                     ],
                     "enginePlugins": [ "EnhancedInput" ],
                     "provides": [ "Actuation.Velocity", "Actuation.Attitude", "Actuation.Motor", "Body.Multirotor" ]
+                },
+                {
+                    "version": "0.2.0",
+                    "planned": true,
+                    "requires": [
+                        { "name": "UBotCore", "version": "^0.2.0" }
+                    ],
+                    "enginePlugins": [ "EnhancedInput" ],
+                    "provides": [ "Actuation.Velocity", "Actuation.Attitude", "Actuation.Motor", "Body.Multirotor" ]
                 }
             ]
         },
@@ -418,8 +453,8 @@
                     "version": "0.1.0",
                     "planned": true,
                     "requires": [
-                        { "name": "UBotCore", "version": "^0.1.3" },
-                        { "name": "UBotPhysics", "version": "^0.1.0" }
+                        { "name": "UBotCore", "version": "^0.2.0" },
+                        { "name": "UBotPhysics", "version": "^0.2.0" }
                     ],
                     "enginePlugins": [],
                     "provides": [ "Physics.MuJoCo", "Body.Articulated" ]
@@ -445,6 +480,15 @@
                     ],
                     "enginePlugins": [],
                     "provides": [ "Env.Wind" ]
+                },
+                {
+                    "version": "0.2.0",
+                    "planned": true,
+                    "requires": [
+                        { "name": "UBotCore", "version": "^0.2.0" }
+                    ],
+                    "enginePlugins": [],
+                    "provides": [ "Env.Wind" ]
                 }
             ]
         },
@@ -463,8 +507,8 @@
                     "version": "0.1.0",
                     "planned": true,
                     "requires": [
-                        { "name": "UBotCore", "version": "^0.1.0" },
-                        { "name": "UBotSensor", "version": "^0.1.0" }
+                        { "name": "UBotCore", "version": "^0.2.0" },
+                        { "name": "UBotSensor", "version": "^0.2.0" }
                     ],
                     "enginePlugins": [],
                     "provides": [ "MCP.Tools" ]
@@ -486,7 +530,7 @@
                     "version": "0.1.0",
                     "planned": true,
                     "requires": [
-                        { "name": "UBotCore", "version": "^0.1.0" }
+                        { "name": "UBotCore", "version": "^0.2.0" }
                     ],
                     "enginePlugins": [ "LearningAgents" ],
                     "provides": [ "Learning.Observations", "Learning.Actions" ]
@@ -508,9 +552,9 @@
                     "version": "0.1.0",
                     "planned": true,
                     "requires": [
-                        { "name": "UBotCore", "version": "^0.1.0" },
-                        { "name": "UBotSensor", "version": "^0.1.0" },
-                        { "name": "UBotEnvironment", "version": "^0.1.0" }
+                        { "name": "UBotCore", "version": "^0.2.0" },
+                        { "name": "UBotSensor", "version": "^0.2.0" },
+                        { "name": "UBotEnvironment", "version": "^0.2.0" }
                     ],
                     "enginePlugins": [],
                     "provides": [ "Content.Combat" ]
@@ -546,6 +590,15 @@
                             }
                         }
                     }
+                },
+                {
+                    "version": "0.2.0",
+                    "planned": true,
+                    "requires": [
+                        { "name": "UBotCore", "version": "^0.2.0" }
+                    ],
+                    "enginePlugins": [],
+                    "provides": [ "Physics.Backends", "Physics.BodyBinding", "Physics.SceneGeometry" ]
                 }
             ]
         }
