@@ -2,13 +2,9 @@
 #include "Math/RandomStream.h"
 #include "Misc/AutomationTest.h"
 #include "UBotConventionsLibrary.h"
-#include "UBotIdentityComponent.h"
 #include "UBotRightHandedConventions.h"
-#include "UBotRosConventions.h"
 #include "UBotUnits.h"
 #include "UObject/Class.h"
-
-#include <limits>
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -67,7 +63,7 @@ namespace UBotConventionsTests
         return FMath::Min(Same, Opposite);
     }
 
-    /** Exact equality: the forwarding functions must not differ by a single ulp. */
+    /** Thin Blueprint wrappers must not differ from the C++ functions by a single ulp. */
     bool SameVector(const FVector& A, const FVector& B)
     {
         return A.X == B.X && A.Y == B.Y && A.Z == B.Z;
@@ -81,20 +77,6 @@ namespace UBotConventionsTests
     bool SameTransform(const FTransform& A, const FTransform& B)
     {
         return SameQuat(A.GetRotation(), B.GetRotation()) && SameVector(A.GetTranslation(), B.GetTranslation()) && SameVector(A.GetScale3D(), B.GetScale3D());
-    }
-
-    /** Random string over characters a sanitizer has to keep, replace or collapse. */
-    FString RandomNameInput(FRandomStream& Stream)
-    {
-        const TCHAR Alphabet[] = TEXT("aZ09_ -./:~!\u00E9\u4E2D");
-        const int32 AlphabetLength = UE_ARRAY_COUNT(Alphabet) - 1;
-        FString Input;
-        const int32 Length = Stream.RandRange(0, 12);
-        for (int32 Index = 0; Index < Length; ++Index)
-        {
-            Input.AppendChar(Alphabet[Stream.RandRange(0, AlphabetLength - 1)]);
-        }
-        return Input;
     }
 
     /**
@@ -117,27 +99,6 @@ namespace UBotConventionsTests
         }
         const double Angle = 2.0 * FMath::Atan2(SinHalfAngle, Delta.W);
         return Imaginary * (Angle / (SinHalfAngle * DeltaSeconds));
-    }
-
-    bool IsValidRosName(const FString& Name)
-    {
-        if (Name.IsEmpty() || (Name[0] >= TEXT('0') && Name[0] <= TEXT('9')))
-        {
-            return false;
-        }
-        for (int32 Index = 0; Index < Name.Len(); ++Index)
-        {
-            const TCHAR Character = Name[Index];
-            const bool bAllowed = (Character >= TEXT('a') && Character <= TEXT('z'))
-                || (Character >= TEXT('A') && Character <= TEXT('Z'))
-                || (Character >= TEXT('0') && Character <= TEXT('9'))
-                || Character == TEXT('_');
-            if (!bAllowed || (Character == TEXT('_') && Index > 0 && Name[Index - 1] == TEXT('_')))
-            {
-                return false;
-            }
-        }
-        return true;
     }
 }
 
@@ -469,309 +430,44 @@ bool FUBotConventionsBlueprintNodesTest::RunTest(const FString& Parameters)
     }
     TestEqual(TEXT("Nodes that differ from the C++ functions"), Mismatched.Num(), 0);
 
-#if WITH_METADATA
-    // Twelve new nodes; the seventeen old ones are deprecated with a message, none of the new ones is.
-    const TCHAR* const NewNodes[] =
+    const TCHAR* const CurrentNodes[] =
     {
         TEXT("PositionUEToRightHanded"), TEXT("PositionRightHandedToUE"), TEXT("VectorUEToRightHanded"), TEXT("VectorRightHandedToUE"),
         TEXT("AngularVelocityUEToRightHanded"), TEXT("AngularVelocityRightHandedToUE"), TEXT("RotationUEToRightHanded"), TEXT("RotationRightHandedToUE"),
         TEXT("TransformUEToRightHanded"), TEXT("TransformRightHandedToUE"), TEXT("YawUEToRightHanded"), TEXT("YawRightHandedToUE"),
     };
-    const TCHAR* const DeprecatedNodes[] =
+    const UClass* LibraryClass = UUBotConventionsLibrary::StaticClass();
+    for (const TCHAR* Name : CurrentNodes)
+    {
+        const UFunction* Function = LibraryClass->FindFunctionByName(Name);
+        if (TestNotNull(*FString::Printf(TEXT("Node %s exists"), Name), Function))
+        {
+#if WITH_METADATA
+            TestFalse(*FString::Printf(TEXT("Node %s is not deprecated"), Name), Function->HasMetaData(TEXT("DeprecatedFunction")));
+#endif
+        }
+    }
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotConventionsRemovedRosApiTest, "UBotCore.Conventions.RemovedRosApi", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUBotConventionsRemovedRosApiTest::RunTest(const FString& Parameters)
+{
+    // Core exposes only generic coordinate conventions. Migration redirects must not recreate old UFunctions.
+    const TCHAR* const RemovedNodes[] =
     {
         TEXT("PositionUEToROS"), TEXT("PositionROSToUE"), TEXT("VectorUEToROS"), TEXT("VectorROSToUE"),
         TEXT("AngularVelocityUEToROS"), TEXT("AngularVelocityROSToUE"), TEXT("RotationUEToROS"), TEXT("RotationROSToUE"),
         TEXT("TransformUEToROS"), TEXT("TransformROSToUE"), TEXT("YawUEToROS"), TEXT("YawROSToUE"),
         TEXT("CameraLinkToOpticalRotation"), TEXT("GetOpticalFrameSuffix"), TEXT("SecondsToRosTime"), TEXT("RosTimeToSeconds"), TEXT("SanitizeRosName"),
     };
-    const UClass* LibraryClass = UUBotConventionsLibrary::StaticClass();
-    for (const TCHAR* Name : NewNodes)
+    for (const TCHAR* Name : RemovedNodes)
     {
-        const UFunction* Function = LibraryClass->FindFunctionByName(Name);
-        if (TestNotNull(*FString::Printf(TEXT("Node %s exists"), Name), Function))
-        {
-            TestFalse(*FString::Printf(TEXT("Node %s is not deprecated"), Name), Function->HasMetaData(TEXT("DeprecatedFunction")));
-        }
+        TestNull(*FString::Printf(TEXT("Removed Core node %s has no reflected function"), Name),
+            UUBotConventionsLibrary::StaticClass()->FindFunctionByName(Name));
     }
-    for (const TCHAR* Name : DeprecatedNodes)
-    {
-        const UFunction* Function = LibraryClass->FindFunctionByName(Name);
-        if (TestNotNull(*FString::Printf(TEXT("Node %s still exists"), Name), Function))
-        {
-            TestTrue(*FString::Printf(TEXT("Node %s is deprecated"), Name), Function->HasMetaData(TEXT("DeprecatedFunction")));
-            TestFalse(*FString::Printf(TEXT("Node %s says what to use"), Name), Function->GetMetaData(TEXT("DeprecationMessage")).IsEmpty());
-        }
-    }
-#endif // WITH_METADATA
     return true;
 }
-
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotConventionsDeprecatedForwardersTest, "UBotCore.Conventions.DeprecatedForwarders", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
-PRAGMA_DISABLE_DEPRECATION_WARNINGS
-
-bool FUBotConventionsDeprecatedForwardersTest::RunTest(const FString& Parameters)
-{
-    using namespace UBotConventionsTests;
-
-    // The deprecated UBot::Ros math functions and the deprecated math nodes return exactly what the
-    // UBot::RightHanded function returns, so migrating cannot change a result.
-    FRandomStream Stream(RandomSeed + 8);
-    TSet<FString> Mismatched;
-    const auto Check = [&Mismatched](const TCHAR* Name, bool bSame)
-    {
-        if (!bSame)
-        {
-            Mismatched.Add(FString(Name));
-        }
-    };
-    const auto CheckRotation = [&Check](const FQuat& Rotation)
-    {
-        Check(TEXT("UBot::Ros::RotationUEToROS"), SameQuat(UBot::Ros::RotationUEToROS(Rotation), UBot::RightHanded::RotationFromUE(Rotation)));
-        Check(TEXT("UBot::Ros::RotationROSToUE"), SameQuat(UBot::Ros::RotationROSToUE(Rotation), UBot::RightHanded::RotationToUE(Rotation)));
-        Check(TEXT("RotationUEToROS node"), SameQuat(UUBotConventionsLibrary::RotationUEToROS(Rotation), UBot::RightHanded::RotationFromUE(Rotation)));
-        Check(TEXT("RotationROSToUE node"), SameQuat(UUBotConventionsLibrary::RotationROSToUE(Rotation), UBot::RightHanded::RotationToUE(Rotation)));
-    };
-
-    // Unnormalized and degenerate rotations take the same path through the forwarders.
-    CheckRotation(FQuat(0.2, 0.4, 0.6, 0.8));
-    CheckRotation(FQuat(0.0, 0.0, 0.0, 0.0));
-
-    for (int32 Iteration = 0; Iteration < RandomIterations; ++Iteration)
-    {
-        const FVector Centimeters = RandomVector(Stream, 100000.0);
-        const FVector Meters = RandomVector(Stream, 1000.0);
-        const FVector Value = RandomVector(Stream, 50.0);
-        const FQuat Rotation = RandomRotation(Stream);
-        const FQuat TransformRotation = RandomRotation(Stream);
-        const FVector TransformTranslation = RandomVector(Stream, 10000.0);
-        const FVector TransformScale = FVector::OneVector + RandomVector(Stream, 0.5);
-        const FTransform Transform(TransformRotation, TransformTranslation, TransformScale);
-        const double Yaw = Stream.FRandRange(-UE_DOUBLE_PI, UE_DOUBLE_PI);
-
-        Check(TEXT("UBot::Ros::PositionUEToROS"), SameVector(UBot::Ros::PositionUEToROS(Centimeters), UBot::RightHanded::PositionFromUE(Centimeters)));
-        Check(TEXT("UBot::Ros::PositionROSToUE"), SameVector(UBot::Ros::PositionROSToUE(Meters), UBot::RightHanded::PositionToUE(Meters)));
-        Check(TEXT("UBot::Ros::VectorUEToROS"), SameVector(UBot::Ros::VectorUEToROS(Value), UBot::RightHanded::VectorFromUE(Value)));
-        Check(TEXT("UBot::Ros::VectorROSToUE"), SameVector(UBot::Ros::VectorROSToUE(Value), UBot::RightHanded::VectorToUE(Value)));
-        Check(TEXT("UBot::Ros::AngularVelocityUEToROS"), SameVector(UBot::Ros::AngularVelocityUEToROS(Value), UBot::RightHanded::AngularVelocityFromUE(Value)));
-        Check(TEXT("UBot::Ros::AngularVelocityROSToUE"), SameVector(UBot::Ros::AngularVelocityROSToUE(Value), UBot::RightHanded::AngularVelocityToUE(Value)));
-        Check(TEXT("UBot::Ros::TransformUEToROS"), SameTransform(UBot::Ros::TransformUEToROS(Transform), UBot::RightHanded::TransformFromUE(Transform)));
-        Check(TEXT("UBot::Ros::TransformROSToUE"), SameTransform(UBot::Ros::TransformROSToUE(Transform), UBot::RightHanded::TransformToUE(Transform)));
-        Check(TEXT("UBot::Ros::YawUEToROS"), UBot::Ros::YawUEToROS(Yaw) == UBot::RightHanded::YawFromUE(Yaw));
-        Check(TEXT("UBot::Ros::YawROSToUE"), UBot::Ros::YawROSToUE(Yaw) == UBot::RightHanded::YawToUE(Yaw));
-        CheckRotation(Rotation);
-
-        Check(TEXT("PositionUEToROS node"), SameVector(UUBotConventionsLibrary::PositionUEToROS(Centimeters), UBot::RightHanded::PositionFromUE(Centimeters)));
-        Check(TEXT("PositionROSToUE node"), SameVector(UUBotConventionsLibrary::PositionROSToUE(Meters), UBot::RightHanded::PositionToUE(Meters)));
-        Check(TEXT("VectorUEToROS node"), SameVector(UUBotConventionsLibrary::VectorUEToROS(Value), UBot::RightHanded::VectorFromUE(Value)));
-        Check(TEXT("VectorROSToUE node"), SameVector(UUBotConventionsLibrary::VectorROSToUE(Value), UBot::RightHanded::VectorToUE(Value)));
-        Check(TEXT("AngularVelocityUEToROS node"), SameVector(UUBotConventionsLibrary::AngularVelocityUEToROS(Value), UBot::RightHanded::AngularVelocityFromUE(Value)));
-        Check(TEXT("AngularVelocityROSToUE node"), SameVector(UUBotConventionsLibrary::AngularVelocityROSToUE(Value), UBot::RightHanded::AngularVelocityToUE(Value)));
-        Check(TEXT("TransformUEToROS node"), SameTransform(UUBotConventionsLibrary::TransformUEToROS(Transform), UBot::RightHanded::TransformFromUE(Transform)));
-        Check(TEXT("TransformROSToUE node"), SameTransform(UUBotConventionsLibrary::TransformROSToUE(Transform), UBot::RightHanded::TransformToUE(Transform)));
-        Check(TEXT("YawUEToROS node"), UUBotConventionsLibrary::YawUEToROS(Yaw) == UBot::RightHanded::YawFromUE(Yaw));
-        Check(TEXT("YawROSToUE node"), UUBotConventionsLibrary::YawROSToUE(Yaw) == UBot::RightHanded::YawToUE(Yaw));
-
-        const FString Name = RandomNameInput(Stream);
-        Check(TEXT("UBot::Ros::SanitizeRosName"), UBot::Ros::SanitizeRosName(Name).Equals(UBot::Identity::SanitizeNameToken(Name), ESearchCase::CaseSensitive));
-        Check(TEXT("SanitizeRosName node"), UUBotConventionsLibrary::SanitizeRosName(Name).Equals(UBot::Identity::SanitizeNameToken(Name), ESearchCase::CaseSensitive));
-    }
-    TestTrue(TEXT("SanitizeRosName of an empty string"), UBot::Ros::SanitizeRosName(FString()).Equals(UBot::Identity::SanitizeNameToken(FString()), ESearchCase::CaseSensitive));
-
-    for (const FString& Name : Mismatched)
-    {
-        AddError(FString::Printf(TEXT("%s differs from its replacement"), *Name));
-    }
-    TestEqual(TEXT("Deprecated forwarders that differ from their replacement"), Mismatched.Num(), 0);
-    return true;
-}
-
-PRAGMA_ENABLE_DEPRECATION_WARNINGS
-
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotConventionsCameraOpticalTest, "UBotCore.Conventions.CameraOpticalFrame", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
-PRAGMA_DISABLE_DEPRECATION_WARNINGS
-
-bool FUBotConventionsCameraOpticalTest::RunTest(const FString& Parameters)
-{
-    using namespace UBotConventionsTests;
-
-    const FQuat LinkToOptical = UBot::Ros::CameraLinkToOpticalRotation();
-    TestTrue(TEXT("Optical rotation is normalized"), FMath::Abs(LinkToOptical.Size() - 1.0) <= Tolerance);
-    TestTrue(TEXT("Optical rotation components"), FMath::Abs(LinkToOptical.X + 0.5) <= Tolerance && FMath::Abs(LinkToOptical.Y - 0.5) <= Tolerance
-        && FMath::Abs(LinkToOptical.Z + 0.5) <= Tolerance && FMath::Abs(LinkToOptical.W - 0.5) <= Tolerance);
-    TestTrue(TEXT("Optical +Z (forward) is link +X"), VectorError(LinkToOptical.RotateVector(FVector(0.0, 0.0, 1.0)), FVector(1.0, 0.0, 0.0)) <= Tolerance);
-    TestTrue(TEXT("Optical +X (right) is link -Y"), VectorError(LinkToOptical.RotateVector(FVector(1.0, 0.0, 0.0)), FVector(0.0, -1.0, 0.0)) <= Tolerance);
-    TestTrue(TEXT("Optical +Y (down) is link -Z"), VectorError(LinkToOptical.RotateVector(FVector(0.0, 1.0, 0.0)), FVector(0.0, 0.0, -1.0)) <= Tolerance);
-
-    // End to end: a UE camera's forward, right and down directions are the ROS optical +Z, +X and +Y.
-    FRandomStream Stream(RandomSeed + 5);
-    double AxisError = 0.0;
-    for (int32 Iteration = 0; Iteration < RandomIterations; ++Iteration)
-    {
-        const FQuat CameraUE = RandomRotation(Stream);
-        const FQuat OpticalROS = UBot::RightHanded::RotationFromUE(CameraUE) * LinkToOptical;
-        AxisError = FMath::Max(AxisError, VectorError(OpticalROS.RotateVector(FVector::ZAxisVector), UBot::RightHanded::VectorFromUE(CameraUE.GetForwardVector())));
-        AxisError = FMath::Max(AxisError, VectorError(OpticalROS.RotateVector(FVector::XAxisVector), UBot::RightHanded::VectorFromUE(CameraUE.GetRightVector())));
-        AxisError = FMath::Max(AxisError, VectorError(OpticalROS.RotateVector(FVector::YAxisVector), UBot::RightHanded::VectorFromUE(-CameraUE.GetUpVector())));
-    }
-    TestTrue(*FString::Printf(TEXT("UE camera axes match the ROS optical frame (max error %g)"), AxisError), AxisError <= Tolerance);
-
-    TestEqualSensitive(TEXT("Optical frame suffix"), UBot::Ros::OpticalFrameSuffix(), TEXT("_optical"));
-    TestEqualSensitive(TEXT("Blueprint optical frame suffix"), UUBotConventionsLibrary::GetOpticalFrameSuffix(), TEXT("_optical"));
-    return true;
-}
-
-PRAGMA_ENABLE_DEPRECATION_WARNINGS
-
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotConventionsRosTimeTest, "UBotCore.Conventions.RosTime", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
-PRAGMA_DISABLE_DEPRECATION_WARNINGS
-
-bool FUBotConventionsRosTimeTest::RunTest(const FString& Parameters)
-{
-    using namespace UBotConventionsTests;
-
-    const auto Check = [this](double Seconds, int32 ExpectedSec, uint32 ExpectedNanosec)
-    {
-        int32 Sec = -1;
-        uint32 Nanosec = MAX_uint32;
-        UBot::Ros::SecondsToRosTime(Seconds, Sec, Nanosec);
-        TestEqual(*FString::Printf(TEXT("%.10f s -> sec"), Seconds), Sec, ExpectedSec);
-        TestEqual(*FString::Printf(TEXT("%.10f s -> nanosec"), Seconds), static_cast<int64>(Nanosec), static_cast<int64>(ExpectedNanosec));
-    };
-
-    Check(0.0, 0, 0);
-    Check(-1.0, 0, 0);
-    Check(-1.e-12, 0, 0);
-    Check(std::numeric_limits<double>::quiet_NaN(), 0, 0);
-    Check(std::numeric_limits<double>::infinity(), 0, 0);
-    Check(-std::numeric_limits<double>::infinity(), 0, 0);
-    Check(0.9999999999, 1, 0);
-    Check(41.9999999996, 42, 0);
-    Check(1.5, 1, 500000000);
-    Check(1.25, 1, 250000000);
-    Check(2.000000001, 2, 1);
-    Check(12345.678, 12345, 678000000);
-    Check(2147483647.25, MAX_int32, 250000000);
-    Check(3.0e9, MAX_int32, 999999999);
-
-    for (int32 WholeSeconds = 1; WholeSeconds <= 100; ++WholeSeconds)
-    {
-        int32 Sec = 0;
-        uint32 Nanosec = 0;
-        UBot::Ros::SecondsToRosTime(static_cast<double>(WholeSeconds) - 1.e-11, Sec, Nanosec);
-        if (Sec != WholeSeconds || Nanosec != 0)
-        {
-            AddError(FString::Printf(TEXT("%d s - 10 ps should carry to (%d, 0), got (%d, %u)"), WholeSeconds, WholeSeconds, Sec, Nanosec));
-            break;
-        }
-    }
-
-    TestEqual(TEXT("ROS time to seconds"), UBot::Ros::RosTimeToSeconds(1, 500000000), 1.5, 0.0);
-    TestEqual(TEXT("ROS time zero"), UBot::Ros::RosTimeToSeconds(0, 0), 0.0, 0.0);
-    TestEqual(TEXT("ROS time quarter"), UBot::Ros::RosTimeToSeconds(12, 250000000), 12.25, 0.0);
-
-    FRandomStream Stream(RandomSeed + 6);
-    int32 RoundTripFailures = 0;
-    double MaxQuantizationError = 0.0;
-    bool bNanosecondsInRange = true;
-    for (int32 Iteration = 0; Iteration < 2000; ++Iteration)
-    {
-        const int32 Sec = Stream.RandRange(0, 1000000);
-        const uint32 Milliseconds = static_cast<uint32>(Stream.RandRange(0, 999));
-        const uint32 Nanosec = Milliseconds * 1000000u + static_cast<uint32>(Stream.RandRange(0, 999999));
-        int32 OutSec = 0;
-        uint32 OutNanosec = 0;
-        UBot::Ros::SecondsToRosTime(UBot::Ros::RosTimeToSeconds(Sec, Nanosec), OutSec, OutNanosec);
-        RoundTripFailures += (OutSec != Sec || OutNanosec != Nanosec) ? 1 : 0;
-
-        const double Seconds = Stream.FRandRange(0.0, 1000000.0);
-        UBot::Ros::SecondsToRosTime(Seconds, OutSec, OutNanosec);
-        bNanosecondsInRange = bNanosecondsInRange && OutNanosec <= 999999999u;
-        MaxQuantizationError = FMath::Max(MaxQuantizationError, FMath::Abs(UBot::Ros::RosTimeToSeconds(OutSec, OutNanosec) - Seconds));
-    }
-    TestEqual(TEXT("(sec, nanosec) -> seconds -> (sec, nanosec) round trip failures"), RoundTripFailures, 0);
-    TestTrue(TEXT("Nanoseconds stay within [0, 999999999]"), bNanosecondsInRange);
-    TestTrue(*FString::Printf(TEXT("Conversion error is at most half a nanosecond (max %g s)"), MaxQuantizationError), MaxQuantizationError <= 0.6e-9);
-
-    int32 BlueprintSec = -1;
-    int32 BlueprintNanosec = -1;
-    UUBotConventionsLibrary::SecondsToRosTime(0.9999999999, BlueprintSec, BlueprintNanosec);
-    TestTrue(TEXT("Blueprint seconds to ROS time carries"), BlueprintSec == 1 && BlueprintNanosec == 0);
-    UUBotConventionsLibrary::SecondsToRosTime(7.125, BlueprintSec, BlueprintNanosec);
-    TestTrue(TEXT("Blueprint seconds to ROS time"), BlueprintSec == 7 && BlueprintNanosec == 125000000);
-    TestEqual(TEXT("Blueprint ROS time to seconds"), UUBotConventionsLibrary::RosTimeToSeconds(7, 125000000), 7.125, 0.0);
-    TestEqual(TEXT("Blueprint negative nanoseconds count as zero"), UUBotConventionsLibrary::RosTimeToSeconds(7, -5), 7.0, 0.0);
-    return true;
-}
-
-PRAGMA_ENABLE_DEPRECATION_WARNINGS
-
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FUBotConventionsSanitizeTest, "UBotCore.Conventions.SanitizeRosName", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
-PRAGMA_DISABLE_DEPRECATION_WARNINGS
-
-bool FUBotConventionsSanitizeTest::RunTest(const FString& Parameters)
-{
-    using namespace UBotConventionsTests;
-
-    struct FCase
-    {
-        const TCHAR* Input;
-        const TCHAR* Expected;
-    };
-    const FCase Cases[] =
-    {
-        { TEXT(""), TEXT("ubot") },
-        { TEXT("robot_1"), TEXT("robot_1") },
-        { TEXT("BaseLink"), TEXT("BaseLink") },
-        { TEXT("Robot A"), TEXT("Robot_A") },
-        { TEXT("Rover-01"), TEXT("Rover_01") },
-        { TEXT("/fleet/rover_a/"), TEXT("_fleet_rover_a_") },
-        { TEXT("a--b"), TEXT("a_b") },
-        { TEXT("a__b"), TEXT("a_b") },
-        { TEXT("a - b"), TEXT("a_b") },
-        { TEXT("robot.v2"), TEXT("robot_v2") },
-        { TEXT("1robot"), TEXT("_1robot") },
-        { TEXT("9"), TEXT("_9") },
-        { TEXT("-1robot"), TEXT("_1robot") },
-        { TEXT("_1robot"), TEXT("_1robot") },
-        { TEXT("rob\u00F6t"), TEXT("rob_t") },
-        { TEXT("\u673A\u5668\u4EBA_7"), TEXT("_7") },
-        { TEXT("!!!"), TEXT("_") },
-    };
-    for (const FCase& Case : Cases)
-    {
-        TestEqualSensitive(*FString::Printf(TEXT("SanitizeRosName(\"%s\")"), Case.Input), UBot::Ros::SanitizeRosName(Case.Input), Case.Expected);
-    }
-
-    // Every output must be a valid ROS name token, whatever the input.
-    const TCHAR Alphabet[] = TEXT("aZ09_ -./:~!\u00E9\u4E2D");
-    const int32 AlphabetLength = UE_ARRAY_COUNT(Alphabet) - 1;
-    FRandomStream Stream(RandomSeed + 7);
-    int32 InvalidCount = 0;
-    for (int32 Iteration = 0; Iteration < RandomIterations; ++Iteration)
-    {
-        FString Input;
-        const int32 Length = Stream.RandRange(0, 12);
-        for (int32 Index = 0; Index < Length; ++Index)
-        {
-            Input.AppendChar(Alphabet[Stream.RandRange(0, AlphabetLength - 1)]);
-        }
-        const FString Output = UBot::Ros::SanitizeRosName(Input);
-        if (!IsValidRosName(Output))
-        {
-            ++InvalidCount;
-            AddError(FString::Printf(TEXT("SanitizeRosName(\"%s\") produced invalid name \"%s\""), *Input, *Output));
-        }
-    }
-    TestEqual(TEXT("Invalid sanitized names"), InvalidCount, 0);
-
-    TestEqualSensitive(TEXT("Blueprint sanitize"), UUBotConventionsLibrary::SanitizeRosName(TEXT("Robot A")), TEXT("Robot_A"));
-    return true;
-}
-
-PRAGMA_ENABLE_DEPRECATION_WARNINGS
 
 #endif // WITH_DEV_AUTOMATION_TESTS

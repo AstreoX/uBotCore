@@ -1,7 +1,7 @@
 {
   "format": 1,
   "plugin": "UBotCore",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "engine": "5.5",
   "repository": "https://github.com/AstreoX/uBotCore",
   "generator": "UBotDocExport 1",
@@ -110,34 +110,17 @@
       },
       "properties": [],
       "nodes": [
-        "UUBotConventionsLibrary.AngularVelocityROSToUE",
         "UUBotConventionsLibrary.AngularVelocityRightHandedToUE",
-        "UUBotConventionsLibrary.AngularVelocityUEToROS",
         "UUBotConventionsLibrary.AngularVelocityUEToRightHanded",
-        "UUBotConventionsLibrary.CameraLinkToOpticalRotation",
-        "UUBotConventionsLibrary.GetOpticalFrameSuffix",
-        "UUBotConventionsLibrary.PositionROSToUE",
         "UUBotConventionsLibrary.PositionRightHandedToUE",
-        "UUBotConventionsLibrary.PositionUEToROS",
         "UUBotConventionsLibrary.PositionUEToRightHanded",
-        "UUBotConventionsLibrary.RosTimeToSeconds",
-        "UUBotConventionsLibrary.RotationROSToUE",
         "UUBotConventionsLibrary.RotationRightHandedToUE",
-        "UUBotConventionsLibrary.RotationUEToROS",
         "UUBotConventionsLibrary.RotationUEToRightHanded",
-        "UUBotConventionsLibrary.SanitizeRosName",
-        "UUBotConventionsLibrary.SecondsToRosTime",
-        "UUBotConventionsLibrary.TransformROSToUE",
         "UUBotConventionsLibrary.TransformRightHandedToUE",
-        "UUBotConventionsLibrary.TransformUEToROS",
         "UUBotConventionsLibrary.TransformUEToRightHanded",
-        "UUBotConventionsLibrary.VectorROSToUE",
         "UUBotConventionsLibrary.VectorRightHandedToUE",
-        "UUBotConventionsLibrary.VectorUEToROS",
         "UUBotConventionsLibrary.VectorUEToRightHanded",
-        "UUBotConventionsLibrary.YawROSToUE",
         "UUBotConventionsLibrary.YawRightHandedToUE",
-        "UUBotConventionsLibrary.YawUEToROS",
         "UUBotConventionsLibrary.YawUEToRightHanded"
       ]
     },
@@ -4095,62 +4078,6 @@
       ]
     },
     {
-      "id": "UUBotConventionsLibrary.AngularVelocityROSToUE",
-      "kind": "pure",
-      "title": "ROS To UE Angular Velocity",
-      "subtitle": "",
-      "owner": "UUBotConventionsLibrary",
-      "member": "AngularVelocityROSToUE",
-      "category": "uBot|Conventions",
-      "tooltip": "Axial vector (angular velocity, torque) in rad/s: (-x, y, -z).",
-      "keywords": "ROS REP103 convert torque",
-      "flags": {
-        "static": true,
-        "latent": false,
-        "deprecated": true,
-        "developmentOnly": false,
-        "callInEditor": false,
-        "compact": false
-      },
-      "compactTitle": "",
-      "inputs": [
-        {
-          "id": "ROSRadiansPerSecond",
-          "name": "ROSRadians Per Second",
-          "type": {
-            "category": "vector",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": true,
-            "const": true
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ],
-      "outputs": [
-        {
-          "id": "ReturnValue",
-          "name": "Return Value",
-          "type": {
-            "category": "vector",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": false,
-            "const": false
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ]
-    },
-    {
       "id": "UUBotConventionsLibrary.AngularVelocityRightHandedToUE",
       "kind": "pure",
       "title": "Right-Handed To UE Angular Velocity",
@@ -4173,62 +4100,6 @@
         {
           "id": "RadiansPerSecond",
           "name": "Radians Per Second",
-          "type": {
-            "category": "vector",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": true,
-            "const": true
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ],
-      "outputs": [
-        {
-          "id": "ReturnValue",
-          "name": "Return Value",
-          "type": {
-            "category": "vector",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": false,
-            "const": false
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ]
-    },
-    {
-      "id": "UUBotConventionsLibrary.AngularVelocityUEToROS",
-      "kind": "pure",
-      "title": "UE To ROS Angular Velocity",
-      "subtitle": "",
-      "owner": "UUBotConventionsLibrary",
-      "member": "AngularVelocityUEToROS",
-      "category": "uBot|Conventions",
-      "tooltip": "Axial vector (angular velocity, torque) in rad/s: (-x, y, -z).",
-      "keywords": "ROS REP103 convert torque",
-      "flags": {
-        "static": true,
-        "latent": false,
-        "deprecated": true,
-        "developmentOnly": false,
-        "callInEditor": false,
-        "compact": false
-      },
-      "compactTitle": "",
-      "inputs": [
-        {
-          "id": "UERadiansPerSecond",
-          "name": "UERadians Per Second",
           "type": {
             "category": "vector",
             "subtype": "",
@@ -4319,140 +4190,6 @@
       ]
     },
     {
-      "id": "UUBotConventionsLibrary.CameraLinkToOpticalRotation",
-      "kind": "pure",
-      "title": "Camera Link To Optical Rotation",
-      "subtitle": "",
-      "owner": "UUBotConventionsLibrary",
-      "member": "CameraLinkToOpticalRotation",
-      "category": "uBot|Conventions",
-      "tooltip": "Rotation of the camera optical frame (z forward, x right, y down) relative to the camera link frame, in ROS conventions.",
-      "keywords": "ROS camera optical frame",
-      "flags": {
-        "static": true,
-        "latent": false,
-        "deprecated": true,
-        "developmentOnly": false,
-        "callInEditor": false,
-        "compact": false
-      },
-      "compactTitle": "",
-      "inputs": [],
-      "outputs": [
-        {
-          "id": "ReturnValue",
-          "name": "Return Value",
-          "type": {
-            "category": "struct",
-            "subtype": "FQuat",
-            "subtypeDisplay": "Quat",
-            "container": "none",
-            "valueType": null,
-            "byRef": false,
-            "const": false
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ]
-    },
-    {
-      "id": "UUBotConventionsLibrary.GetOpticalFrameSuffix",
-      "kind": "pure",
-      "title": "Get Optical Frame Suffix",
-      "subtitle": "",
-      "owner": "UUBotConventionsLibrary",
-      "member": "GetOpticalFrameSuffix",
-      "category": "uBot|Conventions",
-      "tooltip": "Suffix appended to a camera frame id to name its optical frame (\"_optical\").",
-      "keywords": "ROS camera optical frame",
-      "flags": {
-        "static": true,
-        "latent": false,
-        "deprecated": true,
-        "developmentOnly": false,
-        "callInEditor": false,
-        "compact": false
-      },
-      "compactTitle": "",
-      "inputs": [],
-      "outputs": [
-        {
-          "id": "ReturnValue",
-          "name": "Return Value",
-          "type": {
-            "category": "string",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": false,
-            "const": false
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ]
-    },
-    {
-      "id": "UUBotConventionsLibrary.PositionROSToUE",
-      "kind": "pure",
-      "title": "ROS To UE Position",
-      "subtitle": "",
-      "owner": "UUBotConventionsLibrary",
-      "member": "PositionROSToUE",
-      "category": "uBot|Conventions",
-      "tooltip": "ROS position in meters -> UE position in centimeters: (x, -y, z) * 100.",
-      "keywords": "ROS REP103 convert location",
-      "flags": {
-        "static": true,
-        "latent": false,
-        "deprecated": true,
-        "developmentOnly": false,
-        "callInEditor": false,
-        "compact": false
-      },
-      "compactTitle": "",
-      "inputs": [
-        {
-          "id": "ROSMeters",
-          "name": "ROSMeters",
-          "type": {
-            "category": "vector",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": true,
-            "const": true
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ],
-      "outputs": [
-        {
-          "id": "ReturnValue",
-          "name": "Return Value",
-          "type": {
-            "category": "vector",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": false,
-            "const": false
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ]
-    },
-    {
       "id": "UUBotConventionsLibrary.PositionRightHandedToUE",
       "kind": "pure",
       "title": "Right-Handed To UE Position",
@@ -4475,62 +4212,6 @@
         {
           "id": "Meters",
           "name": "Meters",
-          "type": {
-            "category": "vector",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": true,
-            "const": true
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ],
-      "outputs": [
-        {
-          "id": "ReturnValue",
-          "name": "Return Value",
-          "type": {
-            "category": "vector",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": false,
-            "const": false
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ]
-    },
-    {
-      "id": "UUBotConventionsLibrary.PositionUEToROS",
-      "kind": "pure",
-      "title": "UE To ROS Position",
-      "subtitle": "",
-      "owner": "UUBotConventionsLibrary",
-      "member": "PositionUEToROS",
-      "category": "uBot|Conventions",
-      "tooltip": "UE position in centimeters -> ROS position in meters: (x, -y, z) / 100.",
-      "keywords": "ROS REP103 convert location",
-      "flags": {
-        "static": true,
-        "latent": false,
-        "deprecated": true,
-        "developmentOnly": false,
-        "callInEditor": false,
-        "compact": false
-      },
-      "compactTitle": "",
-      "inputs": [
-        {
-          "id": "UECentimeters",
-          "name": "UECentimeters",
           "type": {
             "category": "vector",
             "subtype": "",
@@ -4621,134 +4302,6 @@
       ]
     },
     {
-      "id": "UUBotConventionsLibrary.RosTimeToSeconds",
-      "kind": "pure",
-      "title": "ROS Time To Seconds",
-      "subtitle": "",
-      "owner": "UUBotConventionsLibrary",
-      "member": "RosTimeToSeconds",
-      "category": "uBot|Conventions",
-      "tooltip": "builtin_interfaces/Time fields -> seconds. Negative nanoseconds are treated as 0.",
-      "keywords": "ROS stamp nanoseconds",
-      "flags": {
-        "static": true,
-        "latent": false,
-        "deprecated": true,
-        "developmentOnly": false,
-        "callInEditor": false,
-        "compact": false
-      },
-      "compactTitle": "",
-      "inputs": [
-        {
-          "id": "Sec",
-          "name": "Sec",
-          "type": {
-            "category": "int",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": false,
-            "const": false
-          },
-          "default": "0",
-          "advanced": false,
-          "tooltip": ""
-        },
-        {
-          "id": "Nanosec",
-          "name": "Nanosec",
-          "type": {
-            "category": "int",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": false,
-            "const": false
-          },
-          "default": "0",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ],
-      "outputs": [
-        {
-          "id": "ReturnValue",
-          "name": "Return Value",
-          "type": {
-            "category": "double",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": false,
-            "const": false
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ]
-    },
-    {
-      "id": "UUBotConventionsLibrary.RotationROSToUE",
-      "kind": "pure",
-      "title": "ROS To UE Rotation",
-      "subtitle": "",
-      "owner": "UUBotConventionsLibrary",
-      "member": "RotationROSToUE",
-      "category": "uBot|Conventions",
-      "tooltip": "Rotation: (x, y, z, w) -> normalized (-x, y, -z, w).",
-      "keywords": "ROS REP103 convert quaternion orientation",
-      "flags": {
-        "static": true,
-        "latent": false,
-        "deprecated": true,
-        "developmentOnly": false,
-        "callInEditor": false,
-        "compact": false
-      },
-      "compactTitle": "",
-      "inputs": [
-        {
-          "id": "ROSRotation",
-          "name": "ROSRotation",
-          "type": {
-            "category": "struct",
-            "subtype": "FQuat",
-            "subtypeDisplay": "Quat",
-            "container": "none",
-            "valueType": null,
-            "byRef": true,
-            "const": true
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ],
-      "outputs": [
-        {
-          "id": "ReturnValue",
-          "name": "Return Value",
-          "type": {
-            "category": "struct",
-            "subtype": "FQuat",
-            "subtypeDisplay": "Quat",
-            "container": "none",
-            "valueType": null,
-            "byRef": false,
-            "const": false
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ]
-    },
-    {
       "id": "UUBotConventionsLibrary.RotationRightHandedToUE",
       "kind": "pure",
       "title": "Right-Handed To UE Rotation",
@@ -4771,62 +4324,6 @@
         {
           "id": "Rotation",
           "name": "Rotation",
-          "type": {
-            "category": "struct",
-            "subtype": "FQuat",
-            "subtypeDisplay": "Quat",
-            "container": "none",
-            "valueType": null,
-            "byRef": true,
-            "const": true
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ],
-      "outputs": [
-        {
-          "id": "ReturnValue",
-          "name": "Return Value",
-          "type": {
-            "category": "struct",
-            "subtype": "FQuat",
-            "subtypeDisplay": "Quat",
-            "container": "none",
-            "valueType": null,
-            "byRef": false,
-            "const": false
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ]
-    },
-    {
-      "id": "UUBotConventionsLibrary.RotationUEToROS",
-      "kind": "pure",
-      "title": "UE To ROS Rotation",
-      "subtitle": "",
-      "owner": "UUBotConventionsLibrary",
-      "member": "RotationUEToROS",
-      "category": "uBot|Conventions",
-      "tooltip": "Rotation: (x, y, z, w) -> normalized (-x, y, -z, w).",
-      "keywords": "ROS REP103 convert quaternion orientation",
-      "flags": {
-        "static": true,
-        "latent": false,
-        "deprecated": true,
-        "developmentOnly": false,
-        "callInEditor": false,
-        "compact": false
-      },
-      "compactTitle": "",
-      "inputs": [
-        {
-          "id": "UERotation",
-          "name": "UERotation",
           "type": {
             "category": "struct",
             "subtype": "FQuat",
@@ -4917,190 +4414,6 @@
       ]
     },
     {
-      "id": "UUBotConventionsLibrary.SanitizeRosName",
-      "kind": "pure",
-      "title": "Sanitize ROS Name",
-      "subtitle": "",
-      "owner": "UUBotConventionsLibrary",
-      "member": "SanitizeRosName",
-      "category": "uBot|Conventions",
-      "tooltip": "Makes a valid ROS name token: [A-Za-z0-9_] only, no repeated underscores, no leading digit, never empty.",
-      "keywords": "ROS topic namespace frame",
-      "flags": {
-        "static": true,
-        "latent": false,
-        "deprecated": true,
-        "developmentOnly": false,
-        "callInEditor": false,
-        "compact": false
-      },
-      "compactTitle": "",
-      "inputs": [
-        {
-          "id": "Name",
-          "name": "Name",
-          "type": {
-            "category": "string",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": false,
-            "const": false
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ],
-      "outputs": [
-        {
-          "id": "ReturnValue",
-          "name": "Return Value",
-          "type": {
-            "category": "string",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": false,
-            "const": false
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ]
-    },
-    {
-      "id": "UUBotConventionsLibrary.SecondsToRosTime",
-      "kind": "pure",
-      "title": "Seconds To ROS Time",
-      "subtitle": "",
-      "owner": "UUBotConventionsLibrary",
-      "member": "SecondsToRosTime",
-      "category": "uBot|Conventions",
-      "tooltip": "Seconds -> builtin_interfaces/Time fields. Negative or non-finite input yields (0, 0).",
-      "keywords": "ROS stamp nanoseconds",
-      "flags": {
-        "static": true,
-        "latent": false,
-        "deprecated": true,
-        "developmentOnly": false,
-        "callInEditor": false,
-        "compact": false
-      },
-      "compactTitle": "",
-      "inputs": [
-        {
-          "id": "Seconds",
-          "name": "Seconds",
-          "type": {
-            "category": "double",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": false,
-            "const": false
-          },
-          "default": "0.0",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ],
-      "outputs": [
-        {
-          "id": "Sec",
-          "name": "Sec",
-          "type": {
-            "category": "int",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": false,
-            "const": false
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        },
-        {
-          "id": "Nanosec",
-          "name": "Nanosec",
-          "type": {
-            "category": "int",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": false,
-            "const": false
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ]
-    },
-    {
-      "id": "UUBotConventionsLibrary.TransformROSToUE",
-      "kind": "pure",
-      "title": "ROS To UE Transform",
-      "subtitle": "",
-      "owner": "UUBotConventionsLibrary",
-      "member": "TransformROSToUE",
-      "category": "uBot|Conventions",
-      "tooltip": "Rigid transform: rotation mirrored, translation meters -> centimeters, scale dropped.",
-      "keywords": "ROS REP103 convert pose tf",
-      "flags": {
-        "static": true,
-        "latent": false,
-        "deprecated": true,
-        "developmentOnly": false,
-        "callInEditor": false,
-        "compact": false
-      },
-      "compactTitle": "",
-      "inputs": [
-        {
-          "id": "ROSTransform",
-          "name": "ROSTransform",
-          "type": {
-            "category": "transform",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": true,
-            "const": true
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ],
-      "outputs": [
-        {
-          "id": "ReturnValue",
-          "name": "Return Value",
-          "type": {
-            "category": "transform",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": false,
-            "const": false
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ]
-    },
-    {
       "id": "UUBotConventionsLibrary.TransformRightHandedToUE",
       "kind": "pure",
       "title": "Right-Handed To UE Transform",
@@ -5123,62 +4436,6 @@
         {
           "id": "Transform",
           "name": "Transform",
-          "type": {
-            "category": "transform",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": true,
-            "const": true
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ],
-      "outputs": [
-        {
-          "id": "ReturnValue",
-          "name": "Return Value",
-          "type": {
-            "category": "transform",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": false,
-            "const": false
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ]
-    },
-    {
-      "id": "UUBotConventionsLibrary.TransformUEToROS",
-      "kind": "pure",
-      "title": "UE To ROS Transform",
-      "subtitle": "",
-      "owner": "UUBotConventionsLibrary",
-      "member": "TransformUEToROS",
-      "category": "uBot|Conventions",
-      "tooltip": "Rigid transform: rotation mirrored, translation centimeters -> meters, scale dropped.",
-      "keywords": "ROS REP103 convert pose tf",
-      "flags": {
-        "static": true,
-        "latent": false,
-        "deprecated": true,
-        "developmentOnly": false,
-        "callInEditor": false,
-        "compact": false
-      },
-      "compactTitle": "",
-      "inputs": [
-        {
-          "id": "UETransform",
-          "name": "UETransform",
           "type": {
             "category": "transform",
             "subtype": "",
@@ -5269,62 +4526,6 @@
       ]
     },
     {
-      "id": "UUBotConventionsLibrary.VectorROSToUE",
-      "kind": "pure",
-      "title": "ROS To UE Vector",
-      "subtitle": "",
-      "owner": "UUBotConventionsLibrary",
-      "member": "VectorROSToUE",
-      "category": "uBot|Conventions",
-      "tooltip": "Polar vector in SI units: (x, -y, z).",
-      "keywords": "ROS REP103 convert velocity acceleration",
-      "flags": {
-        "static": true,
-        "latent": false,
-        "deprecated": true,
-        "developmentOnly": false,
-        "callInEditor": false,
-        "compact": false
-      },
-      "compactTitle": "",
-      "inputs": [
-        {
-          "id": "Value",
-          "name": "Value",
-          "type": {
-            "category": "vector",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": true,
-            "const": true
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ],
-      "outputs": [
-        {
-          "id": "ReturnValue",
-          "name": "Return Value",
-          "type": {
-            "category": "vector",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": false,
-            "const": false
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ]
-    },
-    {
       "id": "UUBotConventionsLibrary.VectorRightHandedToUE",
       "kind": "pure",
       "title": "Right-Handed To UE Vector",
@@ -5338,62 +4539,6 @@
         "static": true,
         "latent": false,
         "deprecated": false,
-        "developmentOnly": false,
-        "callInEditor": false,
-        "compact": false
-      },
-      "compactTitle": "",
-      "inputs": [
-        {
-          "id": "Value",
-          "name": "Value",
-          "type": {
-            "category": "vector",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": true,
-            "const": true
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ],
-      "outputs": [
-        {
-          "id": "ReturnValue",
-          "name": "Return Value",
-          "type": {
-            "category": "vector",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": false,
-            "const": false
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ]
-    },
-    {
-      "id": "UUBotConventionsLibrary.VectorUEToROS",
-      "kind": "pure",
-      "title": "UE To ROS Vector",
-      "subtitle": "",
-      "owner": "UUBotConventionsLibrary",
-      "member": "VectorUEToROS",
-      "category": "uBot|Conventions",
-      "tooltip": "Polar vector in SI units (linear velocity, acceleration, point in meters): (x, -y, z).",
-      "keywords": "ROS REP103 convert velocity acceleration",
-      "flags": {
-        "static": true,
-        "latent": false,
-        "deprecated": true,
         "developmentOnly": false,
         "callInEditor": false,
         "compact": false
@@ -5493,62 +4638,6 @@
       ]
     },
     {
-      "id": "UUBotConventionsLibrary.YawROSToUE",
-      "kind": "pure",
-      "title": "ROS To UE Yaw",
-      "subtitle": "",
-      "owner": "UUBotConventionsLibrary",
-      "member": "YawROSToUE",
-      "category": "uBot|Conventions",
-      "tooltip": "Planar heading, scan angle or yaw rate in radians: UE = -ROS.",
-      "keywords": "ROS REP103 convert heading angle",
-      "flags": {
-        "static": true,
-        "latent": false,
-        "deprecated": true,
-        "developmentOnly": false,
-        "callInEditor": false,
-        "compact": false
-      },
-      "compactTitle": "",
-      "inputs": [
-        {
-          "id": "ROSRadians",
-          "name": "ROSRadians",
-          "type": {
-            "category": "double",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": false,
-            "const": false
-          },
-          "default": "0.0",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ],
-      "outputs": [
-        {
-          "id": "ReturnValue",
-          "name": "Return Value",
-          "type": {
-            "category": "double",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": false,
-            "const": false
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ]
-    },
-    {
       "id": "UUBotConventionsLibrary.YawRightHandedToUE",
       "kind": "pure",
       "title": "Right-Handed To UE Yaw",
@@ -5571,62 +4660,6 @@
         {
           "id": "Radians",
           "name": "Radians",
-          "type": {
-            "category": "double",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": false,
-            "const": false
-          },
-          "default": "0.0",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ],
-      "outputs": [
-        {
-          "id": "ReturnValue",
-          "name": "Return Value",
-          "type": {
-            "category": "double",
-            "subtype": "",
-            "subtypeDisplay": "",
-            "container": "none",
-            "valueType": null,
-            "byRef": false,
-            "const": false
-          },
-          "default": "",
-          "advanced": false,
-          "tooltip": ""
-        }
-      ]
-    },
-    {
-      "id": "UUBotConventionsLibrary.YawUEToROS",
-      "kind": "pure",
-      "title": "UE To ROS Yaw",
-      "subtitle": "",
-      "owner": "UUBotConventionsLibrary",
-      "member": "YawUEToROS",
-      "category": "uBot|Conventions",
-      "tooltip": "Planar heading, scan angle or yaw rate in radians: ROS = -UE.",
-      "keywords": "ROS REP103 convert heading angle",
-      "flags": {
-        "static": true,
-        "latent": false,
-        "deprecated": true,
-        "developmentOnly": false,
-        "callInEditor": false,
-        "compact": false
-      },
-      "compactTitle": "",
-      "inputs": [
-        {
-          "id": "UERadians",
-          "name": "UERadians",
           "type": {
             "category": "double",
             "subtype": "",

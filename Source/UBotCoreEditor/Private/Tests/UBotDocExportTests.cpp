@@ -1,6 +1,7 @@
 #include "BlueprintActionDatabase.h"
 #include "Components/ActorComponent.h"
 #include "CoreMinimal.h"
+#include "UBotDocExportTestTypes.h"
 #include "Dom/JsonObject.h"
 #include "EdGraph/EdGraphNode.h"
 #include "EdGraph/EdGraphPin.h"
@@ -220,27 +221,27 @@ bool FUBotDocExportFunctionNodesTest::RunTest(const FString& Parameters)
     }
 
     // A static pure library function: no target, DisplayName and Keywords metadata, const reference input.
-    if (!TestTrue(TEXT("PositionUEToROS exports"), Exporter.ExportFunctionNode(FindFunction(UUBotConventionsLibrary::StaticClass(), TEXT("PositionUEToROS")), Node, Error)))
+    if (!TestTrue(TEXT("Deprecated fixture exports"), Exporter.ExportFunctionNode(FindFunction(UUBotDocExportTestLibrary::StaticClass(), TEXT("DeprecatedVector")), Node, Error)))
     {
         AddError(Error);
         return false;
     }
-    TestEqual(TEXT("Library id"), Node.Id, FString(TEXT("UUBotConventionsLibrary.PositionUEToROS")));
+    TestEqual(TEXT("Library id"), Node.Id, FString(TEXT("UUBotDocExportTestLibrary.DeprecatedVector")));
     TestEqual(TEXT("Library kind"), Node.Kind, FString(TEXT("pure")));
-    TestEqual(TEXT("Library title"), Node.Title, FString(TEXT("UE To ROS Position")));
+    TestEqual(TEXT("Library title"), Node.Title, FString(TEXT("Deprecated Test Vector")));
     TestEqual(TEXT("Library subtitle"), Node.Subtitle, FString());
     TestTrue(TEXT("Library static"), Node.bStatic);
-    TestEqual(TEXT("Library keywords"), Node.Keywords, FString(TEXT("ROS REP103 convert location")));
-    TestEqual(TEXT("Library inputs"), DescribePins(Node.Inputs), FString(TEXT("UECentimeters|UECentimeters|vector")));
+    TestEqual(TEXT("Library keywords"), Node.Keywords, FString(TEXT("test deprecated vector")));
+    TestEqual(TEXT("Library inputs"), DescribePins(Node.Inputs), FString(TEXT("Value|Value|vector")));
     TestEqual(TEXT("Library outputs"), DescribePins(Node.Outputs), FString(TEXT("ReturnValue|Return Value|vector")));
     if (Node.Inputs.Num() == 1)
     {
         TestTrue(TEXT("const FVector& is a const reference"), Node.Inputs[0].Type.bByRef && Node.Inputs[0].Type.bConst);
     }
     // DeprecatedFunction metadata is what the exporter reads.
-    TestTrue(TEXT("The UE To ROS node is deprecated"), Node.bDeprecated);
+    TestTrue(TEXT("The fixture node is deprecated"), Node.bDeprecated);
 
-    // The neutral node that replaced it: same pin, not deprecated, found by the old and the new keywords.
+    // A production coordinate node is not deprecated and retains its discoverability metadata.
     if (!TestTrue(TEXT("PositionUEToRightHanded exports"), Exporter.ExportFunctionNode(FindFunction(UUBotConventionsLibrary::StaticClass(), TEXT("PositionUEToRightHanded")), Node, Error)))
     {
         AddError(Error);

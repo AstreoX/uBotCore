@@ -37,6 +37,16 @@ uBot Core is the foundation plugin of the uBot family for Unreal Engine 5.5. It 
 - **Identity and sampling.** The `uBot Identity` component names a robot; the sample scheduler fires at most once per frame.
 - **Package management.** Package index, dependency and version checks, and the `Window > uBot` panel. uBot Manager installs and updates packages.
 
+## 0.2.0 source migration
+
+The current source targets **0.2.0**, which is not released or installable through uBot Manager yet. It removes `UBotRosConventions.h`, its 17 `UBot::Ros` conversion functions, and the 17 deprecated `UUBotConventionsLibrary` nodes.
+
+- Axis and unit conversions use `UBotRightHandedConventions.h` / `UBot::RightHanded`; the 12 Right-Handed Blueprint nodes remain in Core.
+- Camera optical frames, ROS time and ROS name helpers use `UBotROSConventionHelpers.h` / `UBot::ROSConventions` in uBotROS. Only callers of these helpers need a `UBotROS` module dependency.
+- Core redirects migrate the 12 old math nodes and their renamed pins; uBotROS redirects migrate the five ROS-specific nodes when that plugin is enabled. Restart the editor, compile and resave affected assets. C++ callers must update headers, namespaces and function names and rebuild all dependent modules together; 0.1.x DLLs cannot be mixed with 0.2.0.
+
+See [C++ API migration](docs/CPP-API.md#迁移到-020) for the mapping. The installation examples below use released 0.1.x tags.
+
 ## Install
 
 **With uBot Manager (recommended)**, see the [step-by-step guide](https://astreox.github.io/uBotDocs/start/install/):
