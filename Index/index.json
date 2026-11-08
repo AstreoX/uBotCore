@@ -448,11 +448,13 @@
             },
             "layer": "Capability",
             "repository": "https://github.com/AstreoX/uBotMuJoCo.git",
+            "docsUrl": "https://github.com/AstreoX/uBotMuJoCo",
             "tags": [ "physics", "mujoco" ],
             "versions": [
                 {
                     "version": "0.1.0",
                     "planned": true,
+                    "engine": "~5.5",
                     "requires": [
                         { "name": "UBotCore", "version": "^0.2.0" },
                         { "name": "UBotPhysics", "version": "^0.2.0" }
