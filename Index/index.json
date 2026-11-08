@@ -443,16 +443,18 @@
             "name": "UBotMuJoCo",
             "friendlyName": "uBot MuJoCo",
             "description": {
-                "en": "MuJoCo physics for articulated robots, mapped back to UE.",
-                "zh-CN": "用 MuJoCo 计算关节型机器人的物理，结果映射回 UE。"
+                "en": "Native CPU MuJoCo solver for rigid and articulated models, with UE body-state write-back.",
+                "zh-CN": "原生 CPU MuJoCo 求解器：刚体与关节模型，状态映射回 UE。"
             },
             "layer": "Capability",
             "repository": "https://github.com/AstreoX/uBotMuJoCo.git",
+            "docsUrl": "https://github.com/AstreoX/uBotMuJoCo",
             "tags": [ "physics", "mujoco" ],
             "versions": [
                 {
                     "version": "0.1.0",
                     "planned": true,
+                    "engine": "~5.5",
                     "requires": [
                         { "name": "UBotCore", "version": "^0.2.0" },
                         { "name": "UBotPhysics", "version": "^0.2.0" }
@@ -599,7 +601,7 @@
                         { "name": "UBotCore", "version": "^0.2.0" }
                     ],
                     "enginePlugins": [],
-                    "provides": [ "Physics.Backends", "Physics.BodyBinding", "Physics.SceneGeometry" ]
+                    "provides": [ "Physics.Backends", "Physics.BodyBinding", "Physics.SceneGeometry", "Physics.Models" ]
                 }
             ]
         }
